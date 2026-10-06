@@ -52,8 +52,11 @@ Ab jetzt gilt: Änderungen per Pull Request nach `main` mergen → Vercel und Su
    - **Working directory:** `.` (der Ordner `supabase/` liegt im Repo-Root)
    - **Deploy to production:** **an**, Production branch: `main`
    - „Automatic branching" kannst du aus lassen (Preview-Branches sind ein Pro-Feature).
-2. Nach dem Push/Merge nach `main` wendet Supabase die Migration
-   `supabase/migrations/20261006120000_init.sql` an.
+2. Supabase wendet die Migration `supabase/migrations/20261006120000_init.sql` erst beim **nächsten
+   Push nach `main`** an – nicht für Commits, die schon vor dem Einschalten der Integration da waren.
+   Einfachster Auslöser: auf GitHub die Datei `changeToPushFile.txt` öffnen → Stift-Symbol → eine
+   Zeile ändern → **Commit changes** direkt auf `main`. Im Commit erscheint dann der Check
+   „Supabase Preview" bzw. die Migration unter **Database → Migrations**.
 3. Kontrolle: **Table Editor** zeigt `user_settings`, `shopping_items`, `shopping_history`, `todos`,
    `plan_blocks`, `day_notes` – alle mit Schloss-Symbol (RLS aktiv).
 
@@ -70,6 +73,11 @@ Die Migration vergibt Rechte explizit (`grant … to authenticated`). Es ist als
    insert into private.allowed_emails (email) values ('deine@mail.de');
    ```
    (Weitere Adressen einfach genauso hinzufügen. Groß-/Kleinschreibung egal, aber hier klein schreiben.)
+
+   > Die Login-Adresse muss an **drei Stellen exakt gleich** sein: hier, beim Supabase-User (2.3) und in
+   > `ALLOWED_EMAILS` bei Vercel (3). Vorsicht bei Punkten – `vorname.nachname@web.de` und
+   > `vornamenachname@web.de` sind zwei verschiedene Postfächer. Kontrolle:
+   > `select * from private.allowed_emails;`
 2. **Authentication → Hooks → Add hook → „Before User Created"**
    - Hook type: **Postgres**
    - Schema: `public`, Function: `hook_before_user_created`
@@ -86,10 +94,44 @@ Jetzt lehnt Supabase jede Registrierung ab, deren E-Mail nicht in dieser Liste s
    - Unter „User Signups": **Allow new users to sign up → aus** → Save
    - Provider **Email** muss **aktiviert** bleiben.
 
-### 2.4 Login-Code statt Link per E-Mail
+### 2.4 E-Mail-Versand und Login-Code
 
 Die App meldet dich mit einem 6-stelligen Code an (funktioniert auch auf dem Wanddisplay und in der
-Handy-App). Dafür muss die Mail den Code enthalten:
+Handy-App). Dafür braucht es zwei Dinge: einen eigenen Mailserver (SMTP) und ein Mail-Template mit
+dem Code.
+
+**a) Eigener SMTP-Server – hier: dein web.de-Postfach**
+
+Der eingebaute Supabase-Mailer schickt nur ~2 Mails pro Stunde und lässt das Template **nicht
+bearbeiten** (Subject/Body ausgegraut), solange kein eigener SMTP-Server eingetragen ist. Dienste wie
+Brevo oder Resend verlangen inzwischen eine **eigene Domain** als Absender – ohne Domain ist der
+einfachste Weg, über das eigene web.de-Postfach zu senden:
+
+1. **web.de → Einstellungen (Zahnrad) → POP3/IMAP Abruf:** „POP3 und IMAP Zugriff erlauben" an
+   (schaltet auch SMTP frei; wer schon Thunderbird o. Ä. nutzt, hat das bereits).
+2. **App-Passwort** (nötig bei aktivierter Zwei-Faktor-Authentifizierung, empfohlen sowieso):
+   web.de → oben rechts Name → **Mein Account → Login & Sicherheit → App-Passwörter (für externe
+   Apps) → App-Passwörter verwalten** → neues Passwort mit Namen `Supabase` erstellen und sofort
+   kopieren (wird nur einmal angezeigt). Es lässt sich dort jederzeit einzeln widerrufen.
+   *(Nicht verwechseln mit Postfach → Einstellungen → Sicherheit – das ist nur Spam-/Virenschutz.)*
+3. **Supabase → Authentication → Emails → SMTP Settings → Enable custom SMTP:**
+
+   | Feld | Wert |
+   | --- | --- |
+   | Sender email address | deine web.de-Adresse (muss genau das Postfach sein) |
+   | Sender name | `Smart Assistant` |
+   | Host | `smtp.web.de` |
+   | Port number | `587` |
+   | Minimum interval per user | `60` |
+   | Username | deine web.de-Adresse |
+   | Password | das App-Passwort aus Schritt 2 |
+
+   → **Save changes**.
+
+Andere Anbieter funktionieren genauso (GMX: `mail.gmx.net`, Port 587; Gmail: `smtp.gmail.com`,
+Port 587, App-Passwort aus dem Google-Konto). Mit eigener Domain ginge auch Brevo/Resend.
+
+**b) Template mit Code**
 
 1. **Authentication → Emails → Templates → „Magic Link"** (bzw. „Magic link or OTP")
 2. Subject: `Your Smart Assistant sign-in code`
@@ -97,11 +139,9 @@ Handy-App). Dafür muss die Mail den Code enthalten:
    einfügen – entscheidend ist der Platzhalter `{{ .Token }}`.
 4. Save. Lass die OTP-Länge auf **6** (Authentication → Sign In / Providers → Email → Email OTP Length).
 
-> **Hinweis zum E-Mail-Versand:** Der eingebaute Supabase-Mailserver schickt nur an Mitglieder deiner
-> Supabase-Organisation und nur ~2 Mails pro Stunde. Wenn du dich mit einer anderen Adresse anmeldest
-> als mit der deines Supabase-Kontos, oder Mails nicht ankommen: unter **Authentication → Emails → SMTP
-> Settings** einen kostenlosen SMTP-Dienst eintragen (z. B. Resend oder Brevo, beide mit Free-Tier).
-> Nach dem ersten Login kannst du außerdem Passkeys nutzen und brauchst kaum noch Mails.
+Kommt beim Login kein Code an: Spam-Ordner prüfen, dann **Logs → Auth** in Supabase. „authentication
+failed" heißt meist falsches App-Passwort oder POP3/IMAP nicht freigeschaltet. Nach dem ersten Login
+kannst du Passkeys nutzen und brauchst kaum noch Mails.
 
 ### 2.5 URLs eintragen (nach Schritt 3, wenn du die Vercel-URL kennst)
 
@@ -137,9 +177,10 @@ Account passt (gleiche E-Mail wird automatisch verknüpft).
 
 ### 2.8 Werte für Vercel kopieren
 
-**Project Settings → API Keys** (bzw. **Connect**):
-- **Project URL**, z. B. `https://abcdefghijkl.supabase.co`
-- **Publishable key** (`sb_publishable_…`)
+- **Project URL:** steht nicht als eigene Zeile unter „API Keys". Entweder oben auf **Connect** klicken
+  (Zeile `NEXT_PUBLIC_SUPABASE_URL=https://….supabase.co`) oder unter **Project Settings → General**
+  die **Project ID** ablesen und `https://<Project ID>.supabase.co` daraus machen.
+- **Publishable key:** **Project Settings → API Keys** → `sb_publishable_…` (darf öffentlich sein).
 
 Den **Secret key** (`sb_secret_…`) brauchst du **nicht** – nirgends eintragen.
 
@@ -181,7 +222,9 @@ Preview-Deployments (Pull Requests) sind standardmäßig per **Vercel Authentica
 
 ## 4. Erster Login
 
-1. `https://<dein-projekt>.vercel.app` öffnen → E-Mail eingeben → **Send me a code**.
+1. Die **Production-URL** öffnen: Vercel → Projekt → **Overview → Domains**, z. B.
+   `https://<dein-projekt>.vercel.app` (nicht die langen Deployment-URLs mit Zufallsteil – die sind
+   per Vercel-Login geschützt). Dort → E-Mail eingeben → **Send me a code**.
 2. Code aus der Mail eintippen → du bist drin. Die Sitzung bleibt bestehen (kein ständiges Neu-Anmelden).
 3. **Settings:** Wetter-Ort suchen (z. B. „München"), Schlafenszeiten einstellen, ggf. Passkey hinzufügen.
 
@@ -259,6 +302,11 @@ npm run lint && npm run typecheck && npm test      # schnell
 npm run test:integration                           # RLS-/Auth-Sicherheitstests (lokale Supabase)
 npm run build && npx playwright test               # End-to-End inkl. Realtime, Passkeys, Touch
 ```
+
+Abhängigkeiten installieren am besten mit `npm ci` statt `npm install`. Eine `package-lock.json`, die
+sich nur durch ein lokales `npm install` geändert hat, **nicht committen** – sonst bricht `npm ci` in
+der GitHub-CI ab („package.json and package-lock.json … are not in sync"). Zurücksetzen mit
+`git checkout -- package-lock.json`.
 
 Schema ändern: neue Datei `supabase/migrations/<zeitstempel>_<name>.sql` anlegen (nie alte Migrationen
 ändern), lokal mit `npx supabase db reset` prüfen, Typen mit `npm run db:types` aktualisieren, mergen –
