@@ -96,7 +96,7 @@ Jetzt lehnt Supabase jede Registrierung ab, deren E-Mail nicht in dieser Liste s
 
 ### 2.4 E-Mail-Versand und Login-Code
 
-Die App meldet dich mit einem 6-stelligen Code an (funktioniert auch auf dem Wanddisplay und in der
+Die App meldet dich mit einem 8-stelligen Code an (funktioniert auch auf dem Wanddisplay und in der
 Handy-App). Dafür braucht es zwei Dinge: einen eigenen Mailserver (SMTP) und ein Mail-Template mit
 dem Code.
 
@@ -137,7 +137,8 @@ Port 587, App-Passwort aus dem Google-Konto). Mit eigener Domain ginge auch Brev
 2. Subject: `Your Smart Assistant sign-in code`
 3. Body (Source): den Inhalt von [`supabase/templates/magic_link.html`](../supabase/templates/magic_link.html)
    einfügen – entscheidend ist der Platzhalter `{{ .Token }}`.
-4. Save. Lass die OTP-Länge auf **6** (Authentication → Sign In / Providers → Email → Email OTP Length).
+4. Save. Die OTP-Länge muss **8** sein – das ist bei neuen Projekten Standard (Authentication → Sign In /
+   Providers → Email → Email OTP Length). Die App erwartet genau so viele Ziffern (`src/lib/auth/otp.ts`).
 
 Kommt beim Login kein Code an: Spam-Ordner prüfen, dann **Logs → Auth** in Supabase. „authentication
 failed" heißt meist falsches App-Passwort oder POP3/IMAP nicht freigeschaltet. Nach dem ersten Login

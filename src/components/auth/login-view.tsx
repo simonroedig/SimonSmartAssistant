@@ -7,6 +7,7 @@ import { clearPersistedCache } from "@/components/providers/query-provider";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import type { AuthCapabilities } from "@/lib/auth/capabilities";
+import { OTP_LENGTH } from "@/lib/auth/otp";
 import { useHydrated, useStoredValue } from "@/hooks/use-hydrated";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -114,7 +115,7 @@ export function LoginView({
   };
 
   const verify = async (token: string) => {
-    if (token.length < 6) return;
+    if (token.length < OTP_LENGTH) return;
     setBusy("code");
     setMessage(null);
     const { error: verifyError } = await createClient().auth.verifyOtp({
@@ -258,18 +259,18 @@ export function LoginView({
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   pattern="[0-9]*"
-                  maxLength={10}
+                  maxLength={OTP_LENGTH + 4}
                   value={code}
                   onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, "");
+                    const digits = e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH);
                     setCode(digits);
-                    if (digits.length === 6) void verify(digits);
+                    if (digits.length === OTP_LENGTH) void verify(digits);
                   }}
-                  placeholder="••••••"
+                  placeholder={"•".repeat(OTP_LENGTH)}
                   className="h-16 text-center text-3xl font-semibold tracking-[0.5em] tabular"
                 />
               </div>
-              <Button type="submit" size="lg" variant="primary" disabled={busy !== null || code.length < 6}>
+              <Button type="submit" size="lg" variant="primary" disabled={busy !== null || code.length < OTP_LENGTH}>
                 {busy === "code" ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
                 Sign in
               </Button>

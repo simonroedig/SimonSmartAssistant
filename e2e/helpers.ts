@@ -8,7 +8,7 @@ export async function waitForCode(email: string, since: number): Promise<string>
     const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`);
     const body = (await res.json()) as { messages: { Created: string; Snippet: string }[] };
     const fresh = body.messages.find((m) => new Date(m.Created).getTime() >= since - 1500);
-    const code = fresh?.Snippet.match(/\b(\d{6})\b/)?.[1];
+    const code = fresh?.Snippet.match(/\b(\d{8})\b/)?.[1];
     if (code) return code;
     await new Promise((r) => setTimeout(r, 250));
   }
@@ -21,7 +21,8 @@ export async function signIn(page: Page, email = "dev@example.com") {
   const since = Date.now();
   await page.getByRole("button", { name: "Send me a code" }).click();
   const code = await waitForCode(email, since);
-  await page.getByLabel("Code").fill(code);
+  // Typed digit by digit like on the wall display; it signs in after the last one.
+  await page.getByLabel("Code").pressSequentially(code, { delay: 30 });
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 

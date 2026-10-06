@@ -21,7 +21,7 @@ for (let i = 0; i < 40 && !code; i++) {
   const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:${EMAIL}`)}`);
   const body = await res.json();
   const fresh = body.messages.find((m) => new Date(m.Created).getTime() >= since - 1500);
-  code = fresh?.Snippet.match(/\b(\d{6})\b/)?.[1];
+  code = fresh?.Snippet.match(/\b(\d{8})\b/)?.[1];
   if (!code) await new Promise((r) => setTimeout(r, 250));
 }
 const { error: verifyError } = await supabase.auth.verifyOtp({ email: EMAIL, token: code, type: "email" });

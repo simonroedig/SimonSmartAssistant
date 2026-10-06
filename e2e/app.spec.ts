@@ -208,9 +208,10 @@ test("dashboard: browse the plan of the next days with arrows and swipes", async
   await expect(card.getByText("Today", { exact: true })).toBeVisible();
 
   // A sideways finger swipe over the timeline switches the day without opening the editor.
-  const box = (await card.getByRole("button", { name: "Add a block" }).boundingBox())!;
+  // Middle of the card: the timeline itself may be scrolled to the current time.
+  const box = (await card.boundingBox())!;
   const cdp = await page.context().newCDPSession(page);
-  const y = box.y + 120;
+  const y = box.y + box.height * 0.6;
   const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number) =>
     cdp.send("Input.dispatchTouchEvent", {
       type,

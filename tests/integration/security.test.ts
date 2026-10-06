@@ -35,7 +35,7 @@ async function latestCodeFor(email: string, after: number): Promise<string> {
     };
     const fresh = body.messages.find((m) => new Date(m.Created).getTime() >= after - 1000);
     if (fresh) {
-      const match = fresh.Snippet.match(/\b(\d{6})\b/);
+      const match = fresh.Snippet.match(/\b(\d{8})\b/);
       if (match) return match[1];
     }
     await new Promise((r) => setTimeout(r, 250));

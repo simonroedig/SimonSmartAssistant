@@ -36,6 +36,14 @@ test("passkeys: register on this device, then sign in with it", async ({ page, c
   });
 
   await page.goto("/settings");
+  // Earlier runs leave passkeys behind and Supabase caps them per user.
+  const removeButtons = page.getByRole("button", { name: "Remove passkey" });
+  await expect(page.getByRole("button", { name: "Add a passkey for this device" })).toBeVisible();
+  while ((await removeButtons.count()) > 0) {
+    const before = await removeButtons.count();
+    await removeButtons.first().click();
+    await expect(removeButtons).toHaveCount(before - 1);
+  }
   await page.getByRole("button", { name: "Add a passkey for this device" }).click();
   await expect(page.getByText("Passkey added")).toBeVisible();
   await expect(page.getByRole("button", { name: "Remove passkey" }).first()).toBeVisible();
