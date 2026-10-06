@@ -10,6 +10,8 @@
 :root {
   --bg: #eceff7;
   --surface: rgb(255 255 255 / 0.66);
+  /* Opaque so the phone tab bar stays legible over scrolling content. */
+  --nav-bg: #fbfcfe;
   --surface-strong: rgb(255 255 255 / 0.92);
   --surface-sunken: rgb(15 23 42 / 0.045);
   --surface-hover: rgb(15 23 42 / 0.05);
@@ -39,6 +41,7 @@
 :root.dark {
   --bg: #060913;
   --surface: rgb(255 255 255 / 0.05);
+  --nav-bg: #121726;
   --surface-strong: rgb(20 25 42 / 0.94);
   --surface-sunken: rgb(0 0 0 / 0.22);
   --surface-hover: rgb(255 255 255 / 0.06);

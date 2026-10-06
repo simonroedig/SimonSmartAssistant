@@ -56,7 +56,7 @@ export function Dashboard() {
 
       {/* Column 2: today's plan */}
       {today ? (
-        <TodayCard day={today} fit={wide} className="min-h-[28rem] md:row-span-1 xl:h-full xl:min-h-0" />
+        <TodayCard today={today} fit={wide} className="min-h-[28rem] md:row-span-1 xl:h-full xl:min-h-0" />
       ) : (
         <div className="skeleton min-h-[28rem] rounded-[1.75rem]" />
       )}

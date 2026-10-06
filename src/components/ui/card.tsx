@@ -19,6 +19,7 @@ export function Card({
 export function CardHeader({
   icon,
   title,
+  subtitle,
   count,
   href,
   tone = "accent",
@@ -27,6 +28,7 @@ export function CardHeader({
 }: {
   icon: React.ReactNode;
   title: string;
+  subtitle?: string;
   count?: number;
   href?: string;
   tone?: "accent" | "sky" | "emerald" | "amber" | "rose";
@@ -44,7 +46,8 @@ export function CardHeader({
   const label = (
     <>
       <span className={cn("grid size-9 place-items-center rounded-xl [&_svg]:size-[18px]", tones[tone])}>{icon}</span>
-      <span className="text-[0.95rem] font-semibold tracking-tight">{title}</span>
+      <span className="truncate text-[0.95rem] font-semibold tracking-tight">{title}</span>
+      {subtitle && <span className="-ml-1.5 hidden shrink-0 text-sm text-muted tabular sm:inline">{subtitle}</span>}
       {typeof count === "number" && count > 0 && (
         <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-semibold text-muted tabular">
           {count}

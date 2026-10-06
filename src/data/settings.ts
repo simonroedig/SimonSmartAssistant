@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import type { Json } from "@/lib/database.types";
 import { DEFAULT_SLEEP_SCHEDULE, normalizeSleepSchedule, type SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
@@ -88,7 +89,9 @@ export function useSettingsRow() {
 
 export function useSettings(): { settings: Settings; isLoading: boolean; isError: boolean } {
   const query = useSettingsRow();
-  return { settings: parseSettings(query.data ?? null), isLoading: query.isLoading, isError: query.isError };
+  // Parse once per row version: callers use the nested objects as effect dependencies.
+  const settings = useMemo(() => parseSettings(query.data ?? null), [query.data]);
+  return { settings, isLoading: query.isLoading, isError: query.isError };
 }
 
 type SettingsPatch = {

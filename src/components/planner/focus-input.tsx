@@ -3,6 +3,7 @@
 import { Target } from "lucide-react";
 import { useState } from "react";
 import { useDayNotes, useSetDayNote } from "@/data/planner";
+import { useToday } from "@/hooks/use-today";
 import type { DayKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
 export function FocusInput({ day, week, className }: { day: DayKey; week: DayKey[]; className?: string }) {
   const notes = useDayNotes(week[0], week[6]);
   const save = useSetDayNote();
+  const today = useToday();
   const stored = notes.data?.find((n) => n.day === day)?.focus ?? "";
   // While typing we keep a local draft; otherwise remote changes show up live.
   const [draft, setDraft] = useState<string | null>(null);
@@ -40,7 +42,9 @@ export function FocusInput({ day, week, className }: { day: DayKey; week: DayKey
         onChange={(e) => setDraft(e.target.value)}
         onFocus={() => setDraft((d) => d ?? stored)}
         onBlur={commit}
-        placeholder="What's the one thing that matters today?"
+        placeholder={
+          today && today !== day ? "What matters most that day?" : "What's the one thing that matters today?"
+        }
         maxLength={200}
         enterKeyHint="done"
         aria-label="Focus of the day"

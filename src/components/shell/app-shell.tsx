@@ -76,7 +76,7 @@ function BottomNav({ pathname }: { pathname: string }) {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-[1.6rem] p-1.5 glass md:hidden"
+      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-[1.6rem] border border-line bg-(--nav-bg) p-1.5 shadow-(--shadow-card) md:hidden"
     >
       {NAV_ITEMS.map((item) => {
         const active = isActive(pathname, item.href);
@@ -88,7 +88,7 @@ function BottomNav({ pathname }: { pathname: string }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[0.65rem] font-medium transition-colors",
-              active ? "text-fg" : "text-faint",
+              active ? "text-fg" : "text-muted",
             )}
           >
             {active && (

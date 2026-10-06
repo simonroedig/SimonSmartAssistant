@@ -172,3 +172,54 @@ test("weather: pick a city, then a day to see its hours", async ({ page }) => {
   await expect(page).toHaveURL(/\/weather\?day=/);
   await expect(page.getByRole("heading", { name: /Freitag/ })).toBeVisible();
 });
+
+test("settings: navigating away works after changing preferences", async ({ page }) => {
+  // Regression: a render loop on the settings page blocked every navigation.
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await page.getByRole("radio", { name: "15 min" }).click();
+  await page.locator('nav a[href="/planner"]').first().click();
+  await expect(page).toHaveURL(/\/planner$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/settings$/);
+  await page.locator('nav a[href="/"]:visible').last().click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test("dashboard: browse the plan of the next days with arrows and swipes", async ({ browser }) => {
+  const context = await browser.newContext({
+    storageState: "e2e/.auth/user.json",
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await mockWeather(page);
+  await page.goto("/");
+  const card = page.locator("section", { has: page.getByRole("button", { name: "Next day" }) });
+  await expect(card.getByText("Today", { exact: true })).toBeVisible();
+
+  await card.getByRole("button", { name: "Next day" }).click();
+  await expect(card.getByText("Tomorrow", { exact: true })).toBeVisible();
+  await expect(card.getByRole("link", { name: /Tomorrow/ })).toHaveAttribute(
+    "href",
+    /\/planner\?day=\d{4}-\d{2}-\d{2}/,
+  );
+  await card.getByRole("button", { name: "Previous day" }).click();
+  await expect(card.getByText("Today", { exact: true })).toBeVisible();
+
+  // A sideways finger swipe over the timeline switches the day without opening the editor.
+  const box = (await card.getByRole("button", { name: "Add a block" }).boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  const y = box.y + 120;
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: type === "touchEnd" ? [] : [{ x, y }],
+    });
+  await touch("touchStart", box.x + box.width - 30);
+  for (let i = 1; i <= 3; i++) await touch("touchMove", box.x + box.width - 30 - i * 60);
+  await touch("touchEnd", 0);
+  await expect(card.getByText("Tomorrow", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await context.close();
+});
