@@ -1,0 +1,356 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant kiosk (&:where(.kiosk, .kiosk *));
+
+/* -------------------------------------------------------------------------- */
+/* Design tokens                                                              */
+/* -------------------------------------------------------------------------- */
+
+:root {
+  --bg: #eceff7;
+  --surface: rgb(255 255 255 / 0.66);
+  --surface-strong: rgb(255 255 255 / 0.92);
+  --surface-sunken: rgb(15 23 42 / 0.045);
+  --surface-hover: rgb(15 23 42 / 0.05);
+  --line: rgb(15 23 42 / 0.08);
+  --line-strong: rgb(15 23 42 / 0.14);
+  --text: #0e1424;
+  --text-muted: #4a556d;
+  --text-faint: #8a94ab;
+  --accent: #6553f5;
+  --accent-soft: rgb(101 83 245 / 0.12);
+  --accent-fg: #ffffff;
+  --danger: #e5484d;
+  --success: #12a46b;
+  --warning: #d97706;
+  --sleep: rgb(15 23 42 / 0.035);
+  --sleep-stripe: rgb(15 23 42 / 0.05);
+  --now: #f43f5e;
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -24px rgb(30 41 82 / 0.28);
+  --shadow-pop: 0 30px 80px -20px rgb(15 23 42 / 0.35);
+  --blob-1: #c7d2fe;
+  --blob-2: #fbcfe8;
+  --blob-3: #bae6fd;
+  --osk-height: 0px;
+  color-scheme: light;
+}
+
+:root.dark {
+  --bg: #060913;
+  --surface: rgb(255 255 255 / 0.05);
+  --surface-strong: rgb(20 25 42 / 0.94);
+  --surface-sunken: rgb(0 0 0 / 0.22);
+  --surface-hover: rgb(255 255 255 / 0.06);
+  --line: rgb(255 255 255 / 0.075);
+  --line-strong: rgb(255 255 255 / 0.13);
+  --text: #eef1fb;
+  --text-muted: #a2abc4;
+  --text-faint: #646e8c;
+  --accent: #8d7dff;
+  --accent-soft: rgb(141 125 255 / 0.16);
+  --accent-fg: #0b0c1a;
+  --danger: #ff6369;
+  --success: #3dd68c;
+  --warning: #ffb224;
+  --sleep: rgb(0 0 0 / 0.24);
+  --sleep-stripe: rgb(255 255 255 / 0.025);
+  --now: #ff5c7a;
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.05) inset, 0 24px 60px -30px rgb(0 0 0 / 0.75);
+  --shadow-pop: 0 40px 100px -20px rgb(0 0 0 / 0.8);
+  --blob-1: #3b2f9e;
+  --blob-2: #6b1f5c;
+  --blob-3: #0f4c6e;
+  color-scheme: dark;
+}
+
+/* Time of day tints the ambient background. */
+:root[data-phase="dawn"] {
+  --blob-1: #c4b5fd;
+  --blob-2: #fecaca;
+  --blob-3: #fed7aa;
+}
+:root[data-phase="day"] {
+  --blob-1: #bfdbfe;
+  --blob-2: #c7d2fe;
+  --blob-3: #a5f3fc;
+}
+:root[data-phase="dusk"] {
+  --blob-1: #c4b5fd;
+  --blob-2: #fbcfe8;
+  --blob-3: #fdba74;
+}
+:root.dark[data-phase="dawn"] {
+  --blob-1: #3f2d8c;
+  --blob-2: #7a2e4a;
+  --blob-3: #8a4a1c;
+}
+:root.dark[data-phase="day"] {
+  --blob-1: #1e3a8a;
+  --blob-2: #3730a3;
+  --blob-3: #0e5a6b;
+}
+:root.dark[data-phase="dusk"] {
+  --blob-1: #4c1d95;
+  --blob-2: #831843;
+  --blob-3: #9a3412;
+}
+:root.dark[data-phase="night"] {
+  --blob-1: #26206b;
+  --blob-2: #3b154f;
+  --blob-3: #0b3954;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-now: var(--now);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Base                                                                       */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    background: var(--bg);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  input,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-faint);
+  }
+
+  /* Calm, thin scrollbars everywhere. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+/* Wall display: no cursor, no accidental text selection. */
+.kiosk,
+.kiosk * {
+  cursor: none !important;
+}
+.kiosk body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.kiosk input,
+.kiosk textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Low-power mode for weak GPUs (e.g. a Raspberry Pi driving a large screen). */
+.reduce-effects * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.reduce-effects {
+  --surface: rgb(255 255 255 / 0.9);
+}
+.reduce-effects.dark {
+  --surface: rgb(19 23 38 / 0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Utilities                                                                  */
+/* -------------------------------------------------------------------------- */
+
+@utility glass {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+}
+
+@utility glass-strong {
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility sleep-shade {
+  background-color: var(--sleep);
+  background-image: repeating-linear-gradient(-45deg, var(--sleep-stripe) 0 6px, transparent 6px 14px);
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+@utility safe-top {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ambient background                                                         */
+/* -------------------------------------------------------------------------- */
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg);
+}
+.ambient::before,
+.ambient::after,
+.ambient > span {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.55;
+  transition: background-color 3s ease;
+  will-change: transform;
+}
+.ambient::before {
+  width: 62vmax;
+  height: 62vmax;
+  left: -18vmax;
+  top: -26vmax;
+  background-color: var(--blob-1);
+  animation: drift-a 48s ease-in-out infinite alternate;
+}
+.ambient::after {
+  width: 54vmax;
+  height: 54vmax;
+  right: -20vmax;
+  bottom: -24vmax;
+  background-color: var(--blob-2);
+  animation: drift-b 56s ease-in-out infinite alternate;
+}
+.ambient > span {
+  width: 40vmax;
+  height: 40vmax;
+  right: 8vmax;
+  top: -14vmax;
+  background-color: var(--blob-3);
+  opacity: 0.4;
+  animation: drift-c 64s ease-in-out infinite alternate;
+}
+.dark .ambient::before,
+.dark .ambient::after {
+  opacity: 0.42;
+}
+.dark .ambient > span {
+  opacity: 0.32;
+}
+.reduce-effects .ambient::before,
+.reduce-effects .ambient::after,
+.reduce-effects .ambient > span {
+  animation: none;
+  filter: blur(60px);
+}
+
+@keyframes drift-a {
+  to {
+    transform: translate3d(8vmax, 6vmax, 0) scale(1.08);
+  }
+}
+@keyframes drift-b {
+  to {
+    transform: translate3d(-7vmax, -5vmax, 0) scale(1.05);
+  }
+}
+@keyframes drift-c {
+  to {
+    transform: translate3d(-10vmax, 8vmax, 0) scale(0.92);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  border-radius: 12px;
+  background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-hover) 50%, var(--surface-sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}

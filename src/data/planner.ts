@@ -1,0 +1,179 @@
+"use client";
+
+import { type QueryKey, useQuery } from "@tanstack/react-query";
+import { type DayKey } from "@/lib/date";
+import { createClient } from "@/lib/supabase/client";
+import { type DayNote, newId, nowIso, type PlanBlock, queryKeys, useOptimisticMutation } from "./core";
+
+export const BLOCK_COLORS = [
+  "violet",
+  "indigo",
+  "sky",
+  "teal",
+  "emerald",
+  "lime",
+  "amber",
+  "orange",
+  "rose",
+  "pink",
+  "slate",
+] as const;
+export type BlockColor = (typeof BLOCK_COLORS)[number];
+
+export function useBlocks(from: DayKey, to: DayKey) {
+  return useQuery({
+    queryKey: queryKeys.blockRange(from, to),
+    queryFn: async () => {
+      const { data, error } = await createClient()
+        .from("plan_blocks")
+        .select("*")
+        .gte("day", from)
+        .lte("day", to)
+        .order("day")
+        .order("start_min");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+function rangeOf(key: QueryKey): [DayKey, DayKey] {
+  // ["plan_blocks", from, to] or ["plan_blocks", "recent", since]
+  if (key[1] === "recent") return [key[2] as DayKey, "9999-12-31"];
+  return [key[1] as DayKey, key[2] as DayKey];
+}
+
+/** Re-inserts `blocks` into a cached range list, keeping only those inside the range. */
+function mergeIntoRange(list: PlanBlock[], blocks: PlanBlock[], key: QueryKey): PlanBlock[] {
+  const [from, to] = rangeOf(key);
+  const ids = new Set(blocks.map((b) => b.id));
+  const kept = list.filter((b) => !ids.has(b.id));
+  const added = blocks.filter((b) => b.day >= from && b.day <= to);
+  return [...kept, ...added].sort((a, b) => a.day.localeCompare(b.day) || a.start_min - b.start_min);
+}
+
+export type BlockInput = Pick<PlanBlock, "day" | "start_min" | "end_min" | "title"> &
+  Partial<Pick<PlanBlock, "color" | "notes" | "icon" | "todo_id" | "done">> & { id?: string };
+
+export function prepareBlock(input: BlockInput): PlanBlock {
+  const now = nowIso();
+  return {
+    id: input.id ?? newId(),
+    day: input.day,
+    start_min: input.start_min,
+    end_min: input.end_min,
+    title: input.title.trim(),
+    color: input.color ?? "violet",
+    notes: input.notes?.trim() || null,
+    icon: input.icon ?? null,
+    todo_id: input.todo_id ?? null,
+    done: input.done ?? false,
+    created_at: now,
+    updated_at: now,
+    user_id: "",
+  };
+}
+
+function toRow(block: PlanBlock) {
+  const { id, day, start_min, end_min, title, color, notes, icon, todo_id, done } = block;
+  return { id, day, start_min, end_min, title, color, notes, icon, todo_id, done };
+}
+
+export function useAddBlocks() {
+  return useOptimisticMutation<{ blocks: PlanBlock[] }>({
+    table: "plan_blocks",
+    queryKey: queryKeys.blocks,
+    errorTitle: "Couldn't save to your plan",
+    mutationFn: async ({ blocks }) => {
+      const { error } = await createClient().from("plan_blocks").upsert(blocks.map(toRow));
+      if (error) throw error;
+    },
+    update: (data, { blocks }, key) => mergeIntoRange(data as PlanBlock[], blocks, key),
+  });
+}
+
+export type BlockPatch = Partial<
+  Pick<PlanBlock, "day" | "start_min" | "end_min" | "title" | "color" | "notes" | "icon" | "done" | "todo_id">
+>;
+
+export function useUpdateBlock() {
+  return useOptimisticMutation<{ block: PlanBlock; patch: BlockPatch }>({
+    table: "plan_blocks",
+    queryKey: queryKeys.blocks,
+    errorTitle: "Couldn't update the block",
+    mutationFn: async ({ block, patch }) => {
+      const { error } = await createClient().from("plan_blocks").update(patch).eq("id", block.id);
+      if (error) throw error;
+    },
+    update: (data, { block, patch }, key) =>
+      mergeIntoRange(data as PlanBlock[], [{ ...block, ...patch, updated_at: nowIso() }], key),
+  });
+}
+
+export function useDeleteBlocks() {
+  return useOptimisticMutation<{ ids: string[] }>({
+    table: "plan_blocks",
+    queryKey: queryKeys.blocks,
+    errorTitle: "Couldn't delete",
+    mutationFn: async ({ ids }) => {
+      if (ids.length === 0) return;
+      const { error } = await createClient().from("plan_blocks").delete().in("id", ids);
+      if (error) throw error;
+    },
+    update: (data, { ids }) => (data as PlanBlock[]).filter((b) => !ids.includes(b.id)),
+  });
+}
+
+/** Recently used blocks (last ~2 months) – powers the "recent" title suggestions. */
+export function useRecentBlocks(since: DayKey) {
+  return useQuery({
+    queryKey: ["plan_blocks", "recent", since],
+    queryFn: async () => {
+      const { data, error } = await createClient()
+        .from("plan_blocks")
+        .select("*")
+        .gte("day", since)
+        .order("updated_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Copies blocks to another day (fresh ids, not done). */
+export function copyBlocksToDay(blocks: PlanBlock[], day: DayKey): PlanBlock[] {
+  return blocks.map((b) => prepareBlock({ ...b, id: newId(), day, done: false }));
+}
+
+// --- Focus of the day ---------------------------------------------------------
+
+export function useDayNotes(from: DayKey, to: DayKey) {
+  return useQuery({
+    queryKey: queryKeys.dayNoteRange(from, to),
+    queryFn: async () => {
+      const { data, error } = await createClient().from("day_notes").select("*").gte("day", from).lte("day", to);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useSetDayNote() {
+  return useOptimisticMutation<{ day: DayKey; focus: string }>({
+    table: "day_notes",
+    queryKey: queryKeys.dayNotes,
+    errorTitle: "Couldn't save your focus",
+    mutationFn: async ({ day, focus }) => {
+      const { error } = await createClient().from("day_notes").upsert({ day, focus }, { onConflict: "user_id,day" });
+      if (error) throw error;
+    },
+    update: (data, { day, focus }, key) => {
+      const [from, to] = rangeOf(key);
+      const list = (data as DayNote[]).filter((n) => n.day !== day);
+      if (day < from || day > to) return list;
+      return [...list, { day, focus, updated_at: nowIso(), user_id: "" }];
+    },
+  });
+}
