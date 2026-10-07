@@ -21,6 +21,7 @@ export function CardHeader({
   icon,
   title,
   subtitle,
+  titleClassName,
   count,
   href,
   tone = "accent",
@@ -31,6 +32,8 @@ export function CardHeader({
   title: string;
   /** Small second line under the title (e.g. a date). */
   subtitle?: string;
+  /** Extra classes for the title block (e.g. the "today" highlight). */
+  titleClassName?: string;
   count?: number;
   href?: string;
   tone?: Tone;
@@ -49,7 +52,7 @@ export function CardHeader({
       >
         {icon}
       </span>
-      <span className="flex min-w-0 flex-col">
+      <span className={cn("flex min-w-0 flex-col", titleClassName)}>
         <span className="truncate text-[0.95rem] leading-tight font-semibold tracking-tight">{title}</span>
         {subtitle && <span className="truncate text-xs leading-tight text-muted tabular">{subtitle}</span>}
       </span>

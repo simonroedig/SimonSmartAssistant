@@ -47,7 +47,7 @@ export function layoutBlocks<T extends TimedItem>(items: T[]): Positioned<T>[] {
 
 /** First free slot of `duration` minutes at or after `from` that avoids existing blocks. */
 export function findFreeSlot(
-  items: TimedItem[],
+  items: Pick<TimedItem, "start_min" | "end_min">[],
   duration: number,
   from: number,
   until = 24 * 60,

@@ -302,3 +302,122 @@ test("backlog: due dates from the quick picks and the built-in calendar", async 
   await dialog.getByRole("button", { name: "Save" }).click();
   await expect(row.getByText(new RegExp(`^15 ${month.slice(0, 3)}$`))).toBeVisible();
 });
+
+/** The 15th, `months` months ahead. */
+function fifteenth(months: number) {
+  const target = new Date();
+  target.setDate(15);
+  target.setMonth(target.getMonth() + months);
+  const key = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-15`;
+  return { key, weekend: target.getDay() === 0 || target.getDay() === 6 };
+}
+
+/** Starts from an empty day (earlier runs leave blocks behind). */
+async function clearDay(page: import("@playwright/test").Page, key: string) {
+  await page.goto(`/planner?day=${key}`);
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Clear this day" }).click();
+}
+
+/** Picks the 15th, `months` months ahead, in the backlog editor's calendar; returns the day key. */
+async function pickDueDate(dialog: import("@playwright/test").Locator, months: number) {
+  await dialog.getByRole("button", { name: "Pick date" }).click();
+  for (let i = 0; i < months; i++) await dialog.getByRole("button", { name: "Next month" }).click();
+  const target = new Date();
+  target.setDate(15);
+  target.setMonth(target.getMonth() + months);
+  const month = target.toLocaleString("en-GB", { month: "long" });
+  await dialog.getByRole("button", { name: new RegExp(`, 15 ${month}$`) }).click();
+  const key = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}-15`;
+  return { key, weekend: target.getDay() === 0 || target.getDay() === 6 };
+}
+
+test("plan from backlog: on the due date at wake-up, only once, and jump to it later", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await clearDay(page, fifteenth(3).key);
+  await page.goto("/todos");
+  const title = `Plan me ${Date.now() % 10000}`;
+  await page.getByLabel("New todo").fill(title);
+  await page.getByRole("button", { name: "Add todo" }).click();
+  await page.getByRole("button", { name: title, exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const due = await pickDueDate(dialog, 3);
+  await dialog.getByRole("button", { name: "Important" }).click();
+
+  // "Plan it" saves and opens the planner on the due date with the editor ready.
+  await dialog.getByRole("button", { name: "Plan it" }).click();
+  await expect(page).toHaveURL(new RegExp(`/planner\\?day=${due.key}$`));
+  const editor = page.getByRole("dialog");
+  await expect(editor.getByRole("heading", { name: "New block" })).toBeVisible();
+  await expect(editor.getByLabel("What")).toHaveValue(title);
+  // Important → three hours from waking up.
+  const wake = due.weekend ? "09:00" : "07:00";
+  const end = due.weekend ? "12:00" : "10:00";
+  await expect(editor.getByRole("button", { name: `Start: ${wake}` })).toBeVisible();
+  await expect(editor.getByRole("button", { name: `End: ${end}` })).toBeVisible();
+  await editor.getByRole("button", { name: "Add to plan" }).click();
+  await expect(editor).toBeHidden();
+  const block = page.locator('[role="button"]', { hasText: title }).first();
+  await expect(block.getByRole("img", { name: "From your backlog" })).toBeVisible();
+
+  // The planner's backlog list now shows it as planned and jumps to it instead of adding it again.
+  const planned = page.getByRole("button", { name: `Show "${title}" in the plan` });
+  await expect(planned).toBeVisible();
+  await page.goto("/planner");
+  await page.getByRole("button", { name: `Show "${title}" in the plan` }).click();
+  await expect(page).toHaveURL(new RegExp(`day=${due.key}`));
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Edit block" })).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.locator('[role="button"]', { hasText: title })).toHaveCount(1);
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.waitForTimeout(300); // let the closed sheet give its history entry back
+
+  // The backlog shows where it is planned; ticking it off ticks the block off too.
+  await page.goto("/todos");
+  const row = page.locator("li", { hasText: title });
+  await expect(row.getByText(/^15 \w{3} 0\d:00$/)).toBeVisible();
+  await row.getByRole("button", { name: `Complete "${title}"` }).click();
+  await page.goto(`/planner?day=${due.key}`);
+  await expect(
+    page.locator('[role="button"]', { hasText: title }).first().getByRole("button", { name: "Mark as not done" }),
+  ).toBeVisible();
+});
+
+test("plan from backlog on the phone, and moving a block to another day", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await clearDay(page, fifteenth(4).key);
+  await page.goto("/todos");
+  const title = `Phone plan ${Date.now() % 10000}`;
+  await page.getByLabel("New todo").fill(title);
+  await page.getByRole("button", { name: "Add todo" }).click();
+  await page.getByRole("button", { name: title, exact: true }).click();
+  const due = await pickDueDate(page.getByRole("dialog"), 4);
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.waitForTimeout(300); // let the closed sheet give its history entry back
+
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "Plan from backlog" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: `Plan "${title}"` })
+    .click();
+  const editor = page.getByRole("dialog");
+  await expect(editor.getByRole("heading", { name: "New block" })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`day=${due.key}`));
+  // One hour for items that are not marked important.
+  const wake = due.weekend ? "09:00" : "07:00";
+  const end = due.weekend ? "10:00" : "08:00";
+  await expect(editor.getByRole("button", { name: `Start: ${wake}` })).toBeVisible();
+  await expect(editor.getByRole("button", { name: `End: ${end}` })).toBeVisible();
+
+  // Move it to the next day right in the editor.
+  await editor.getByRole("button", { name: "Day after" }).click();
+  await editor.getByRole("button", { name: "Add to plan" }).click();
+  await expect(editor).toBeHidden();
+  const next = new Date(`${due.key}T12:00:00`);
+  next.setDate(next.getDate() + 1);
+  const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+  await page.goto(`/planner?day=${nextKey}`);
+  await expect(page.locator('[role="button"]', { hasText: title }).first()).toBeVisible();
+});

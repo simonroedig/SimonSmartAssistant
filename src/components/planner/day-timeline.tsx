@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Moon } from "lucide-react";
+import { Check, ListTodo, Moon } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlanBlock } from "@/data/core";
 import { useNow } from "@/hooks/use-now";
@@ -403,6 +403,13 @@ export function DayTimeline({
                       block.done && "line-through decoration-2 opacity-80",
                     )}
                   >
+                    {block.todo_id && (
+                      <ListTodo
+                        className="-mt-0.5 mr-1 inline size-3.5 opacity-80"
+                        aria-label="From your backlog"
+                        role="img"
+                      />
+                    )}
                     {block.title}
                   </span>
                   <span className={cn("truncate text-[0.72rem] tabular opacity-70", tiny && "shrink-0")}>

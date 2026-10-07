@@ -20,15 +20,34 @@ export const BLOCK_COLORS = [
 ] as const;
 export type BlockColor = (typeof BLOCK_COLORS)[number];
 
+export async function fetchBlocks(from: DayKey, to: DayKey): Promise<PlanBlock[]> {
+  const { data, error } = await createClient()
+    .from("plan_blocks")
+    .select("*")
+    .gte("day", from)
+    .lte("day", to)
+    .order("day")
+    .order("start_min");
+  if (error) throw error;
+  return data;
+}
+
 export function useBlocks(from: DayKey, to: DayKey) {
   return useQuery({
     queryKey: queryKeys.blockRange(from, to),
+    queryFn: () => fetchBlocks(from, to),
+  });
+}
+
+/** Blocks planned from backlog items, to show (and jump to) where an item is planned. */
+export function useLinkedBlocks() {
+  return useQuery({
+    queryKey: ["plan_blocks", "linked"],
     queryFn: async () => {
       const { data, error } = await createClient()
         .from("plan_blocks")
         .select("*")
-        .gte("day", from)
-        .lte("day", to)
+        .not("todo_id", "is", null)
         .order("day")
         .order("start_min");
       if (error) throw error;
@@ -37,9 +56,39 @@ export function useBlocks(from: DayKey, to: DayKey) {
   });
 }
 
+/** The block a backlog item is planned in: the next one that is not done, else the latest. */
+export function plannedBlockByTodo(blocks: PlanBlock[] | undefined, today: DayKey | null): Map<string, PlanBlock> {
+  const groups = new Map<string, PlanBlock[]>();
+  for (const b of blocks ?? []) {
+    if (b.todo_id) groups.set(b.todo_id, [...(groups.get(b.todo_id) ?? []), b]);
+  }
+  const order = (a: PlanBlock, b: PlanBlock) => a.day.localeCompare(b.day) || a.start_min - b.start_min;
+  const map = new Map<string, PlanBlock>();
+  for (const [todoId, list] of groups) {
+    const upcoming = list.filter((b) => !b.done && (!today || b.day >= today)).sort(order);
+    map.set(todoId, upcoming[0] ?? [...list].sort(order).at(-1)!);
+  }
+  return map;
+}
+
+/** Marks every block of a backlog item done (or open) when the item itself is ticked off. */
+export function useSetTodoBlocksDone() {
+  return useOptimisticMutation<{ todoId: string; done: boolean }>({
+    table: "plan_blocks",
+    queryKey: queryKeys.blocks,
+    errorTitle: "Couldn't update the plan",
+    mutationFn: async ({ todoId, done }) => {
+      const { error } = await createClient().from("plan_blocks").update({ done }).eq("todo_id", todoId);
+      if (error) throw error;
+    },
+    update: (data, { todoId, done }) => (data as PlanBlock[]).map((b) => (b.todo_id === todoId ? { ...b, done } : b)),
+  });
+}
+
 function rangeOf(key: QueryKey): [DayKey, DayKey] {
-  // ["plan_blocks", from, to] or ["plan_blocks", "recent", since]
+  // ["plan_blocks", from, to], ["plan_blocks", "recent", since] or ["plan_blocks", "linked"]
   if (key[1] === "recent") return [key[2] as DayKey, "9999-12-31"];
+  if (key[1] === "linked") return ["0000-01-01", "9999-12-31"];
   return [key[1] as DayKey, key[2] as DayKey];
 }
 
@@ -48,7 +97,7 @@ function mergeIntoRange(list: PlanBlock[], blocks: PlanBlock[], key: QueryKey): 
   const [from, to] = rangeOf(key);
   const ids = new Set(blocks.map((b) => b.id));
   const kept = list.filter((b) => !ids.has(b.id));
-  const added = blocks.filter((b) => b.day >= from && b.day <= to);
+  const added = blocks.filter((b) => b.day >= from && b.day <= to && (key[1] !== "linked" || b.todo_id !== null));
   return [...kept, ...added].sort((a, b) => a.day.localeCompare(b.day) || a.start_min - b.start_min);
 }
 

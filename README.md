@@ -5,8 +5,9 @@ laptop – always in sync.
 
 - **Day planner** – rough time blocks for the day, greyed-out sleep times per weekday, tap to add,
   press-and-hold to move, drag to resize, mark done, copy days, "focus of the day", plan items straight
-  from the backlog. Swipe between days, month calendar to jump to any date; the home screen card
-  browses the next days too.
+  from the backlog (on its due date at wake-up, 3 h if important – planned items show where they are and
+  stay in sync when ticked off). Swipe between days, month calendar to jump to any date, move blocks to
+  another day; the home screen card browses the next days and shows tomorrow in the evening.
 - **Weather** – current conditions, hourly curve, 7-day forecast with temperature ranges; tap a day for
   its hours. UV, wind, sunrise/sunset, air quality and pollen. Free Open-Meteo data.
 - **Shopping list** – add, tick off, swipe to delete, undo, drag to reorder, one-tap suggestions from what

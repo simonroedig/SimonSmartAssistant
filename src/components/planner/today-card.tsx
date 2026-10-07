@@ -6,10 +6,14 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { useElementSize } from "@/hooks/use-element-size";
+import { useBlocks } from "@/data/planner";
+import { useSettings } from "@/data/settings";
 import { useNow } from "@/hooks/use-now";
 import { useSwipe } from "@/hooks/use-swipe";
 import { addDays, type DayKey, formatDayMonthShort, formatWeekday, formatWeekdayShort, fromDayKey } from "@/lib/date";
+import { showTomorrowFirst } from "@/lib/plan-todo";
 import { MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
+import { TODAY_RING } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { BlockEditor } from "./block-editor";
 import { DayTimeline } from "./day-timeline";
@@ -38,12 +42,22 @@ function dayTitle(offset: number, day: DayKey): { title: string; subtitle: strin
  * the day and, on big screens, scales so the whole day fits without scrolling.
  */
 export function TodayCard({ today, className, fit = false }: { today: DayKey; className?: string; fit?: boolean }) {
-  const [offset, setOffset] = useState(0);
+  const now = useNow("minute");
+  const { settings } = useSettings();
+  const todayBlocks = useBlocks(today, today);
+
+  // In the evening – three hours before bedtime, with nothing left today – the
+  // card starts with tomorrow. Browsing by hand overrides that for a while.
+  const autoOffset =
+    now && todayBlocks.data && showTomorrowFirst(settings.sleepSchedule, today, minutesOfDay(now), todayBlocks.data)
+      ? 1
+      : 0;
+  const [manualOffset, setManualOffset] = useState<number | null>(null);
+  const offset = manualOffset ?? autoOffset;
   const [direction, setDirection] = useState(1);
   const day = addDays(today, offset);
   const isToday = offset === 0;
   const planner = usePlanner(day);
-  const now = useNow("minute");
   const box = useRef<HTMLDivElement>(null);
   const { height } = useElementSize(box);
 
@@ -51,19 +65,20 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
     const next = Math.max(MIN_OFFSET, Math.min(MAX_OFFSET, offset + delta));
     if (next === offset) return;
     setDirection(Math.sign(next - offset));
-    setOffset(next);
+    setManualOffset(next);
   };
 
-  // Come back to today after a while, unless a block is being edited.
+  // Back to the default day (today, or tomorrow in the evening) after a while,
+  // unless a block is being edited.
   const editing = planner.editor !== null;
   useEffect(() => {
-    if (isToday || editing) return;
+    if (manualOffset === null || editing) return;
     const timer = window.setTimeout(() => {
       setDirection(-1);
-      setOffset(0);
+      setManualOffset(null);
     }, RETURN_TO_TODAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isToday, editing, day]);
+  }, [manualOffset, editing, day]);
 
   // Sideways swipe on touch screens. Blocks use press-and-hold and vertical
   // drags, so a quick sideways flick never collides with moving a block.
@@ -90,6 +105,8 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
         tone="rose"
         title={title}
         subtitle={subtitle}
+        // The same blue "today" ring as the weather's Now/Today – missing on any other day.
+        titleClassName={cn("-my-1 -ml-1.5 rounded-xl px-1.5 py-1", isToday && TODAY_RING)}
         href={isToday ? "/planner" : `/planner?day=${day}`}
         actions={
           <>

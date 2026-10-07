@@ -1,6 +1,16 @@
 "use client";
 
-import { CalendarDays, CalendarPlus, ChevronDown, Eraser, ListTodo, Plus, Star, Trash2 } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarDays,
+  CalendarPlus,
+  ChevronDown,
+  Eraser,
+  ListTodo,
+  Plus,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -13,9 +23,8 @@ import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
 import { SwipeRow } from "@/components/ui/swipe-row";
-import type { Todo } from "@/data/core";
-import { prepareBlock, useAddBlocks, useBlocks } from "@/data/planner";
-import { useSettings } from "@/data/settings";
+import type { PlanBlock, Todo } from "@/data/core";
+import { plannedBlockByTodo, useLinkedBlocks, useSetTodoBlocksDone } from "@/data/planner";
 import {
   prepareTodo,
   sortDoneTodos,
@@ -30,11 +39,20 @@ import {
 } from "@/data/todos";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToday } from "@/hooks/use-today";
-import { addDays, type DayKey, dueLabel, formatNumericDate, weekdayIndex } from "@/lib/date";
+import {
+  addDays,
+  type DayKey,
+  dueLabel,
+  formatDayMonth,
+  formatNumericDate,
+  formatWeekday,
+  fromDayKey,
+  weekdayIndex,
+} from "@/lib/date";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
-import { findFreeSlot } from "@/lib/planner-layout";
-import { awakeWindow } from "@/lib/sleep";
-import { formatMinutes, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
+import { afterSheetClosed } from "@/lib/history";
+import { plannedLabel } from "@/lib/plan-todo";
+import { formatEndMinutes, formatMinutes } from "@/lib/time";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
@@ -48,6 +66,7 @@ const DUE_TONES = {
 function TodoRow({
   todo,
   today,
+  planned,
   onToggle,
   onStar,
   onOpen,
@@ -55,6 +74,8 @@ function TodoRow({
 }: {
   todo: Todo;
   today: DayKey | null;
+  /** The plan block this item is scheduled in, if any. */
+  planned?: PlanBlock;
   onToggle: () => void;
   onStar: () => void;
   onOpen: () => void;
@@ -98,14 +119,19 @@ function TodoRow({
               {rest}
             </span>
           )}
-          {due && !todo.done && (
-            <span
-              className={cn(
-                "mt-1 w-fit shrink-0 rounded-full px-2 py-px text-[0.7rem] font-semibold",
-                DUE_TONES[due.tone],
+          {(due || planned) && !todo.done && (
+            <span className="mt-1 flex flex-wrap gap-1.5">
+              {due && (
+                <span className={cn("rounded-full px-2 py-px text-[0.7rem] font-semibold", DUE_TONES[due.tone])}>
+                  {due.text}
+                </span>
               )}
-            >
-              {due.text}
+              {planned && today && (
+                <span className="flex items-center gap-1 rounded-full border border-rose-500/35 px-2 py-px text-[0.7rem] font-semibold text-rose-600 dark:text-rose-300">
+                  <CalendarCheck className="size-3" />
+                  {plannedLabel(planned, today)}
+                </span>
+              )}
             </span>
           )}
         </button>
@@ -132,11 +158,14 @@ function TodoRow({
 
 export function TodoList({ variant = "page", className }: { variant?: "page" | "card"; className?: string }) {
   const todos = useTodos();
+  const linked = useLinkedBlocks();
+  const setBlocksDone = useSetTodoBlocksDone();
   const add = useAddTodo();
   const update = useUpdateTodo();
   const remove = useDeleteTodos();
   const restore = useRestoreTodos();
   const today = useToday();
+  const planned = useMemo(() => plannedBlockByTodo(linked.data, today), [linked.data, today]);
   const [draft, setDraft] = useState("");
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing] = useState<Todo | null>(null);
@@ -158,11 +187,17 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
     toast(label, { action: { label: "Undo", onClick: () => restore.mutate({ todos: items }) }, duration: 6000 });
   };
 
+  // Ticking an item off also ticks off its blocks in the planner (and back).
+  const setDone = (todo: Todo, done: boolean) => {
+    update.mutate({ id: todo.id, patch: { done } });
+    if (linked.data?.some((b) => b.todo_id === todo.id)) setBlocksDone.mutate({ todoId: todo.id, done });
+  };
+
   const toggle = (todo: Todo) => {
-    update.mutate({ id: todo.id, patch: { done: !todo.done } });
+    setDone(todo, !todo.done);
     if (!todo.done) {
       toast(`Done: ${todoHeadline(todo.title, 60)}`, {
-        action: { label: "Undo", onClick: () => update.mutate({ id: todo.id, patch: { done: false } }) },
+        action: { label: "Undo", onClick: () => setDone(todo, false) },
         duration: 4000,
       });
     }
@@ -228,6 +263,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
               <TodoRow
                 todo={todo}
                 today={today}
+                planned={planned.get(todo.id)}
                 onToggle={() => toggle(todo)}
                 onStar={() => update.mutate({ id: todo.id, patch: { starred: !todo.starred } })}
                 onOpen={() => setEditing(todo)}
@@ -288,6 +324,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
       <TodoEditor
         todo={editing}
         today={today}
+        planned={editing ? planned.get(editing.id) : undefined}
         onClose={() => setEditing(null)}
         onSave={(patch) => editing && update.mutate({ id: editing.id, patch })}
         onDelete={() => editing && deleteWithUndo([editing], `Deleted "${todoHeadline(editing.title, 60)}"`)}
@@ -309,12 +346,14 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
 function TodoEditor({
   todo,
   today,
+  planned,
   onClose,
   onSave,
   onDelete,
 }: {
   todo: Todo | null;
   today: DayKey | null;
+  planned?: PlanBlock;
   onClose: () => void;
   onSave: (patch: TodoPatch) => void;
   onDelete: () => void;
@@ -322,7 +361,15 @@ function TodoEditor({
   return (
     <Sheet open={!!todo} onOpenChange={(o) => !o && onClose()} title="Backlog item">
       {todo && today && (
-        <TodoForm key={todo.id} todo={todo} today={today} onClose={onClose} onSave={onSave} onDelete={onDelete} />
+        <TodoForm
+          key={todo.id}
+          todo={todo}
+          today={today}
+          planned={planned}
+          onClose={onClose}
+          onSave={onSave}
+          onDelete={onDelete}
+        />
       )}
     </Sheet>
   );
@@ -331,12 +378,14 @@ function TodoEditor({
 function TodoForm({
   todo,
   today,
+  planned,
   onClose,
   onSave,
   onDelete,
 }: {
   todo: Todo;
   today: DayKey;
+  planned?: PlanBlock;
   onClose: () => void;
   onSave: (patch: TodoPatch) => void;
   onDelete: () => void;
@@ -346,9 +395,6 @@ function TodoForm({
   const [due, setDue] = useState<string | null>(todo.due_date);
   const [starred, setStarred] = useState(todo.starred);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { settings } = useSettings();
-  const todayBlocks = useBlocks(today, today);
-  const addBlocks = useAddBlocks();
 
   const saturday = addDays(today, (5 - weekdayIndex(today) + 7) % 7 || 7);
   const nextMonday = addDays(today, 7 - weekdayIndex(today));
@@ -368,31 +414,15 @@ function TodoForm({
     onClose();
   };
 
-  const planToday = () => {
-    const [wake, bed] = awakeWindow(settings.sleepSchedule, today);
-    const duration = settings.planner.defaultDuration;
-    const now = minutesOfDay(new Date());
-    const from = Math.max(wake, Math.ceil(now / settings.planner.snap) * settings.planner.snap);
-    const blocks = todayBlocks.data ?? [];
-    const start =
-      findFreeSlot(blocks, duration, from, Math.max(bed, from + duration), settings.planner.snap) ??
-      Math.min(from, MINUTES_PER_DAY - duration);
-    addBlocks.mutate({
-      blocks: [
-        prepareBlock({
-          day: today,
-          start_min: start,
-          end_min: Math.min(MINUTES_PER_DAY, start + duration),
-          title: todoHeadline(title.trim() || todo.title),
-          color: "amber",
-          todo_id: todo.id,
-        }),
-      ],
-    });
+  /**
+   * Plan it (or show where it is planned): saves the edits, then opens the
+   * planner on the right day with the block editor ready.
+   */
+  const openInPlanner = () => {
+    if (title.trim()) onSave({ title: title.trim(), due_date: due, starred });
     onClose();
-    toast(`Planned for ${formatMinutes(start)}`, {
-      action: { label: "Open planner", onClick: () => router.push("/planner") },
-    });
+    const url = planned ? `/planner?day=${planned.day}&plan=${todo.id}` : `/planner?plan=${todo.id}`;
+    afterSheetClosed(() => router.push(url));
   };
 
   return (
@@ -469,6 +499,13 @@ function TodoForm({
         <span className="font-medium">Important</span>
         <Star className={cn("size-5", starred ? "fill-amber-400 text-amber-400" : "text-faint")} />
       </button>
+      {planned && (
+        <p className="flex items-center gap-2 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+          <CalendarCheck className="size-4 shrink-0" />
+          In your plan: {formatWeekday(fromDayKey(planned.day))}, {formatDayMonth(fromDayKey(planned.day))} ·{" "}
+          {formatMinutes(planned.start_min)}–{formatEndMinutes(planned.end_min)}
+        </p>
+      )}
       <p className="text-xs text-faint">
         Created {formatNumericDate(new Date(todo.created_at))}
         {todo.done_at ? ` · done ${formatNumericDate(new Date(todo.done_at))}` : ""}
@@ -485,11 +522,16 @@ function TodoForm({
         >
           <Trash2 />
         </Button>
-        {!todo.done && (
-          <Button variant="secondary" onClick={planToday}>
-            <CalendarPlus /> Plan for today
-          </Button>
-        )}
+        {!todo.done &&
+          (planned ? (
+            <Button variant="secondary" onClick={openInPlanner}>
+              <CalendarCheck /> Show in planner
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={openInPlanner}>
+              <CalendarPlus /> Plan it
+            </Button>
+          ))}
         <Button type="submit" variant="primary" className="ml-auto" disabled={!title.trim()}>
           Save
         </Button>

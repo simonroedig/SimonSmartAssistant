@@ -1,13 +1,16 @@
 "use client";
 
-import { CalendarDays, CalendarPlus, ClipboardCopy, Eraser, ListTodo, MoreHorizontal, Plus, Star } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, CalendarPlus, ClipboardCopy, Eraser, ListTodo, MoreHorizontal, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { DropdownMenu } from "radix-ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sheet } from "@/components/ui/sheet";
+import { queryKeys, type Todo } from "@/data/core";
+import { fetchBlocks, plannedBlockByTodo, useLinkedBlocks } from "@/data/planner";
 import { sortOpenTodos, todoHeadline, useTodos } from "@/data/todos";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useNow } from "@/hooks/use-now";
@@ -16,16 +19,18 @@ import {
   addDays,
   type DayKey,
   diffInDays,
-  dueLabel,
   formatDayMonth,
   formatWeekday,
   fromDayKey,
   isoWeek,
   relativeDayLabel,
 } from "@/lib/date";
-import { TONE_STYLES } from "@/lib/tones";
-import { formatDuration, minutesOfDay } from "@/lib/time";
+import { afterSheetClosed } from "@/lib/history";
+import { planDay, planDuration, planStart } from "@/lib/plan-todo";
+import { TODAY_RING, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
+import { formatDuration, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { BacklogPlanList } from "./backlog-plan-list";
 import { BlockEditor } from "./block-editor";
 import { DayTimeline } from "./day-timeline";
 import { FocusInput } from "./focus-input";
@@ -63,17 +68,25 @@ export function PlannerView({
   day,
   today,
   onDayChange,
+  planTodoId,
+  onPlanHandled,
 }: {
   day: DayKey;
   today: DayKey | null;
   onDayChange: (day: DayKey) => void;
+  /** A backlog item to plan (or to show, if already planned) – from the backlog page. */
+  planTodoId?: string | null;
+  onPlanHandled?: () => void;
 }) {
   const now = useNow("minute");
   const planner = usePlanner(day);
   const todos = useTodos();
+  const linked = useLinkedBlocks();
+  const queryClient = useQueryClient();
   const isWide = useMediaQuery("(min-width: 1024px)");
   const isPhone = useMediaQuery("(max-width: 767px)");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [backlogOpen, setBacklogOpen] = useState(false);
   const [direction, setDirection] = useState(1);
 
   const go = (target: DayKey) => {
@@ -81,6 +94,63 @@ export function PlannerView({
     setDirection(diffInDays(target, day) > 0 ? 1 : -1);
     onDayChange(target);
   };
+
+  const planned = useMemo(() => plannedBlockByTodo(linked.data, today), [linked.data, today]);
+
+  /**
+   * Puts a backlog item into the plan: on its due date (or the day you look
+   * at), from waking up, 3 h when important and 1 h otherwise – opened in the
+   * editor so day and time can still be changed. Already planned? Jump there.
+   */
+  const planTodo = async (todo: Todo) => {
+    const existing = planned.get(todo.id);
+    if (existing) {
+      go(existing.day);
+      planner.setEditor({ mode: "edit", block: existing });
+      return;
+    }
+    if (!today) return;
+    const target = planDay(todo, today, day);
+    const blocks = await queryClient.fetchQuery({
+      queryKey: queryKeys.blockRange(target, target),
+      queryFn: () => fetchBlocks(target, target),
+      staleTime: 30_000,
+    });
+    const duration = planDuration(todo);
+    const start = planStart({
+      schedule: planner.settings.sleepSchedule,
+      day: target,
+      today,
+      nowMinute: minutesOfDay(new Date()),
+      blocks,
+      duration,
+      snap: planner.snap,
+    });
+    go(target);
+    planner.setEditor({
+      mode: "create",
+      day: target,
+      start,
+      end: Math.min(MINUTES_PER_DAY, start + duration),
+      title: todoHeadline(todo.title),
+      todoId: todo.id,
+      color: "amber",
+    });
+  };
+
+  // Coming from the backlog page with "Plan it" / "Show in planner".
+  const handledPlan = useRef<string | null>(null);
+  useEffect(() => {
+    if (!planTodoId || handledPlan.current === planTodoId || !todos.data || !linked.data || !today) return;
+    handledPlan.current = planTodoId;
+    const todo = todos.data.find((t) => t.id === planTodoId);
+    window.setTimeout(() => {
+      onPlanHandled?.();
+      if (todo) void planTodo(todo);
+    }, 0);
+    // planTodo only reads current data; run once per requested item.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planTodoId, todos.data, linked.data, today]);
 
   // Swipe sideways (or use the arrow keys) to flip through the days.
   const editing = planner.editor !== null;
@@ -100,7 +170,7 @@ export function PlannerView({
     return () => window.removeEventListener("keydown", onKey);
   }, [day, editing, calendarOpen, onDayChange]);
 
-  const openTodos = useMemo(() => sortOpenTodos(todos.data ?? []).slice(0, 12), [todos.data]);
+  const openTodos = useMemo(() => sortOpenTodos(todos.data ?? []), [todos.data]);
   const isToday = day === today;
   const hourHeight = isPhone ? 56 : 64;
   const plannedMinutes = planner.dayBlocks.reduce((sum, b) => sum + (b.end_min - b.start_min), 0);
@@ -157,10 +227,19 @@ export function PlannerView({
         actions={
           <>
             {!isToday && today && (
-              <Button size="sm" className={cn(rose.soft, rose.text, "border-0")} onClick={() => go(today)}>
+              <Button size="sm" className={cn(TODAY_RING, TODAY_TEXT, "border-0")} onClick={() => go(today)}>
                 Today
               </Button>
             )}
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label="Plan from backlog"
+              className="lg:hidden"
+              onClick={() => setBacklogOpen(true)}
+            >
+              <ListTodo className="text-yellow-600 dark:text-yellow-300" />
+            </Button>
             <Button
               variant="secondary"
               size="icon"
@@ -251,34 +330,16 @@ export function PlannerView({
           </Card>
           <Card className="min-h-0 flex-1 overflow-hidden">
             <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-              <ListTodo className="size-4 text-amber-600 dark:text-amber-300" />
+              <ListTodo className="size-4 text-yellow-600 dark:text-yellow-300" />
               <h2 className="text-[0.95rem] font-semibold">Plan from backlog</h2>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-              {openTodos.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-muted">Your backlog is empty.</p>
-              ) : (
-                <ul className="flex flex-col">
-                  {openTodos.map((todo) => (
-                    <li key={todo.id}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          planner.createAtNextFree({ title: todoHeadline(todo.title), todoId: todo.id, color: "amber" })
-                        }
-                        className="group flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
-                      >
-                        {todo.starred && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" />}
-                        <span className="min-w-0 flex-1 truncate text-sm">{todoHeadline(todo.title)}</span>
-                        {todo.due_date && today && (
-                          <span className="shrink-0 text-xs text-muted">{dueLabel(todo.due_date, today).text}</span>
-                        )}
-                        <Plus className="size-4 shrink-0 text-faint transition-colors group-hover:text-accent" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <BacklogPlanList
+                todos={openTodos}
+                planned={planned}
+                today={today}
+                onPlan={(todo) => void planTodo(todo)}
+              />
             </div>
           </Card>
         </aside>
@@ -296,6 +357,24 @@ export function PlannerView({
       >
         <Plus className="!size-6" />
       </Button>
+
+      <Sheet
+        open={backlogOpen}
+        onOpenChange={setBacklogOpen}
+        title="Plan from backlog"
+        description="Planned items show where they are – tap one to jump there."
+      >
+        <BacklogPlanList
+          className="-mx-3"
+          todos={openTodos}
+          planned={planned}
+          today={today}
+          onPlan={(todo) => {
+            setBacklogOpen(false);
+            afterSheetClosed(() => void planTodo(todo));
+          }}
+        />
+      </Sheet>
 
       <Sheet open={calendarOpen} onOpenChange={setCalendarOpen} title="Pick a day" size="sm">
         <MonthCalendar

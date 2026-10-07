@@ -38,7 +38,7 @@ test("shopping list: add, tick off, clear and undo", async ({ page }) => {
   await expect(page.locator("li", { hasText: name })).toHaveCount(1);
 });
 
-test("backlog: add, star, edit due date and plan it for today", async ({ page }) => {
+test("backlog: add, star, edit due date and plan it", async ({ page }) => {
   await page.goto("/todos");
   const title = `E2E todo ${Date.now() % 10000}`;
   await page.getByLabel("New todo").fill(title);
@@ -55,11 +55,12 @@ test("backlog: add, star, edit due date and plan it for today", async ({ page })
   await expect(row.getByText("Tomorrow")).toBeVisible();
   await expect(row.getByRole("button", { name: "Remove star" })).toBeVisible();
 
+  // "Plan it" opens the planner on the due date (tomorrow) with the block ready to add.
   await row.getByRole("button", { name: new RegExp(`^${title}`) }).click();
-  await page.getByRole("button", { name: "Plan for today" }).click();
-  await expect(page.getByText(/Planned for \d{2}:\d{2}/)).toBeVisible();
-
-  await page.goto("/planner");
+  await page.getByRole("button", { name: "Plan it" }).click();
+  await expect(page).toHaveURL(/\/planner\?day=\d{4}-\d{2}-\d{2}$/);
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Pick the day" })).toContainText("Tomorrow");
+  await page.getByRole("dialog").getByRole("button", { name: "Add to plan" }).click();
   await expect(page.getByRole("button", { name: new RegExp(title) }).first()).toBeVisible();
 });
 

@@ -11,7 +11,7 @@ import {
   fromDayKey,
   isoWeek,
 } from "@/lib/date";
-import { TONE_STYLES } from "@/lib/tones";
+import { TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
 
@@ -55,27 +55,25 @@ export function WeekStrip({
               aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}`}
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors",
-                isSelected ? cn(TONE_STYLES.rose.solid, "shadow-sm") : "hover:bg-surface-hover",
+                // Today always in the "Now/Today" blue; another selected day in the planner's rose.
+                isToday
+                  ? cn(isSelected ? TODAY_RING_STRONG : TODAY_RING, TODAY_TEXT)
+                  : isSelected
+                    ? cn(TONE_STYLES.rose.solid, "shadow-sm")
+                    : "hover:bg-surface-hover",
               )}
             >
-              <span className={cn("text-[0.7rem] font-semibold uppercase", !isSelected && "text-faint")}>
+              <span className={cn("text-[0.7rem] font-semibold uppercase", !isSelected && !isToday && "text-faint")}>
                 {formatWeekdayShort(date)}
               </span>
-              <span
-                className={cn(
-                  "text-lg leading-tight font-semibold tabular",
-                  isToday && !isSelected && TONE_STYLES.rose.text,
-                )}
-              >
-                {date.getDate()}
-              </span>
+              <span className="text-lg leading-tight font-semibold tabular">{date.getDate()}</span>
               <span className="flex h-1.5 items-center gap-0.5">
                 {dayBlocks.slice(0, 4).map((b) => (
                   <span
                     key={b.id}
                     className={cn(
                       "size-1.5 rounded-full",
-                      isSelected ? "bg-current opacity-70" : blockStyle(b.color).swatch,
+                      isSelected && !isToday ? "bg-current opacity-70" : blockStyle(b.color).swatch,
                     )}
                   />
                 ))}

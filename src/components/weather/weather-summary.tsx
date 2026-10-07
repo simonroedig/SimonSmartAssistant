@@ -7,6 +7,7 @@ import { useSettings } from "@/data/settings";
 import { useForecast } from "@/data/weather";
 import { useNow } from "@/hooks/use-now";
 import { formatWeekdayShort, fromDayKey, toDayKey } from "@/lib/date";
+import { TODAY_RING, TODAY_TEXT } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { weatherInfo } from "@/lib/weather/codes";
 import { WeatherIcon } from "./weather-icon";
@@ -73,15 +74,10 @@ export function WeatherSummary({ className }: { className?: string }) {
               href={d.day === today ? "/weather" : `/weather?day=${d.day}`}
               className={cn(
                 "flex flex-col items-center rounded-2xl py-1.5 transition-colors active:bg-surface-hover",
-                d.day === today && "bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50",
+                d.day === today && TODAY_RING,
               )}
             >
-              <span
-                className={cn(
-                  "text-[0.7rem] font-semibold",
-                  d.day === today ? "font-bold text-sky-700 dark:text-sky-200" : "text-muted",
-                )}
-              >
+              <span className={cn("text-[0.7rem] font-semibold", d.day === today ? TODAY_TEXT : "text-muted")}>
                 {d.day === today ? "Today" : formatWeekdayShort(fromDayKey(d.day))}
               </span>
               <WeatherIcon code={d.code} isDay className="size-9" />

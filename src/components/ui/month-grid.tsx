@@ -12,7 +12,7 @@ import {
   startOfWeek,
   toDayKey,
 } from "@/lib/date";
-import { type Tone, TONE_STYLES } from "@/lib/tones";
+import { type Tone, TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -82,11 +82,7 @@ export function MonthGrid({
           <button
             type="button"
             onClick={() => setMonth(monthOf(today))}
-            className={cn(
-              "h-8 shrink-0 rounded-xl px-2.5 text-xs font-semibold whitespace-nowrap",
-              styles.soft,
-              styles.text,
-            )}
+            className={cn("h-8 shrink-0 rounded-xl px-2.5 text-xs whitespace-nowrap", TODAY_RING, TODAY_TEXT)}
           >
             Today
           </button>
@@ -129,15 +125,21 @@ export function MonthGrid({
               aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}`}
               className={cn(
                 "flex aspect-square max-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-sm tabular transition-colors",
-                isSelected ? styles.solid : "hover:bg-surface-hover",
-                !inMonth && !isSelected && "text-faint",
-                isToday && !isSelected && cn("font-bold ring-1 ring-current", styles.text),
+                isToday
+                  ? cn(isSelected ? TODAY_RING_STRONG : TODAY_RING, TODAY_TEXT)
+                  : isSelected
+                    ? styles.solid
+                    : "hover:bg-surface-hover",
+                !inMonth && !isSelected && !isToday && "text-faint",
               )}
             >
               {date.getDate()}
               <span className="flex h-1 items-center gap-0.5">
                 {colors.slice(0, 3).map((c, i) => (
-                  <span key={i} className={cn("size-1 rounded-full", isSelected ? "bg-current opacity-70" : c)} />
+                  <span
+                    key={i}
+                    className={cn("size-1 rounded-full", isSelected && !isToday ? "bg-current opacity-70" : c)}
+                  />
                 ))}
               </span>
             </button>

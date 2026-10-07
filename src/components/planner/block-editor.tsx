@@ -1,15 +1,18 @@
 "use client";
 
-import { CalendarPlus, Check, Copy, Link2, Trash2 } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, ListTodo, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { TimeField } from "@/components/ui/time-field";
 import type { PlanBlock } from "@/data/core";
 import { BLOCK_COLORS, type BlockColor } from "@/data/planner";
-import { addDays, type DayKey, formatDayMonth, formatWeekday, fromDayKey } from "@/lib/date";
+import { useToday } from "@/hooks/use-today";
+import { addDays, type DayKey, formatDayMonth, formatWeekday, fromDayKey, relativeDayLabel } from "@/lib/date";
+import { TODAY_RING, TODAY_TEXT } from "@/lib/tones";
 import { clamp, formatDuration, MINUTES_PER_DAY } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BLOCK_STYLES, blockStyle } from "./block-colors";
@@ -59,14 +62,8 @@ export function BlockEditor({
   onCopyTo: (block: PlanBlock, day: DayKey) => void;
 }) {
   const title = state?.mode === "edit" ? "Edit block" : "New block";
-  const day = state ? (state.mode === "edit" ? state.block.day : state.day) : undefined;
   return (
-    <Sheet
-      open={!!state}
-      onOpenChange={(open) => !open && onClose()}
-      title={title}
-      description={day ? `${formatWeekday(fromDayKey(day))}, ${formatDayMonth(fromDayKey(day))}` : undefined}
-    >
+    <Sheet open={!!state} onOpenChange={(open) => !open && onClose()} title={title}>
       {state && (
         <EditorForm
           key={state.mode === "edit" ? state.block.id : `${state.day}-${state.start}`}
@@ -112,7 +109,9 @@ function EditorForm({
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [done, setDone] = useState(existing?.done ?? false);
-  const day = existing?.day ?? (state.mode === "create" ? state.day : "");
+  const [day, setDay] = useState<DayKey>(existing?.day ?? (state.mode === "create" ? state.day : ""));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const today = useToday();
   const todoId = existing?.todo_id ?? (state.mode === "create" ? (state.todoId ?? null) : null);
 
   const suggestions = useMemo(() => {
@@ -163,6 +162,47 @@ function EditorForm({
         submit();
       }}
     >
+      <div>
+        <Label>Day</Label>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="icon" aria-label="Day before" onClick={() => setDay(addDays(day, -1))}>
+            <ChevronLeft />
+          </Button>
+          <button
+            type="button"
+            aria-expanded={pickerOpen}
+            aria-label="Pick the day"
+            onClick={() => setPickerOpen((o) => !o)}
+            className={cn(
+              "flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border border-line bg-surface-sunken px-3 text-[0.95rem] font-medium transition-colors hover:bg-surface-hover",
+              day === today && cn("border-transparent", TODAY_RING, TODAY_TEXT),
+            )}
+          >
+            <CalendarDays className="size-4 shrink-0" />
+            <span className="truncate">
+              {today && ["Today", "Tomorrow", "Yesterday"].includes(relativeDayLabel(day, today))
+                ? `${relativeDayLabel(day, today)} · ${formatDayMonth(fromDayKey(day))}`
+                : `${formatWeekday(fromDayKey(day))}, ${formatDayMonth(fromDayKey(day))}`}
+            </span>
+          </button>
+          <Button variant="secondary" size="icon" aria-label="Day after" onClick={() => setDay(addDays(day, 1))}>
+            <ChevronRight />
+          </Button>
+        </div>
+        {pickerOpen && (
+          <MonthGrid
+            className="mt-3 rounded-2xl border border-line p-3"
+            selected={day}
+            today={today}
+            tone="rose"
+            onSelect={(picked) => {
+              setDay(picked);
+              setPickerOpen(false);
+            }}
+          />
+        )}
+      </div>
+
       <div>
         <Label htmlFor="block-title">What</Label>
         <Input
@@ -283,8 +323,9 @@ function EditorForm({
       )}
 
       {todoId && (
-        <p className="flex items-center gap-2 text-sm text-muted">
-          <Link2 className="size-4" /> Linked to a backlog item – completing this block completes it too.
+        <p className="flex items-start gap-2 rounded-2xl bg-yellow-400/16 px-4 py-3 text-sm text-muted">
+          <ListTodo className="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-300" />
+          From your backlog – ticking it off here ticks it off there too.
         </p>
       )}
 
