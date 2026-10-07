@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { PlanBlock } from "@/data/core";
 import { useNow } from "@/hooks/use-now";
 import { layoutBlocks } from "@/lib/planner-layout";
+import { isFingerLike, setDragging } from "@/lib/pointer";
 import type { Range } from "@/lib/sleep";
 import { clamp, formatDuration, formatEndMinutes, formatMinutes, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
 import { cn, vibrate } from "@/lib/utils";
@@ -76,7 +77,7 @@ export function DayTimeline({
     clientX: number;
     contentY: number;
     timer?: number;
-    pointerType: string;
+    fingerLike: boolean;
   } | null>(null);
   const suppressClick = useRef(false);
   const autoScroll = useRef<{ raf: number; speed: number; lastClientY: number }>({ raf: 0, speed: 0, lastClientY: 0 });
@@ -164,6 +165,7 @@ export function DayTimeline({
       end: p.block.end_min,
     };
     dragRef.current = state;
+    setDragging(true);
     setDrag(state);
     suppressClick.current = true;
     vibrate(12);
@@ -191,7 +193,7 @@ export function DayTimeline({
       clientY: e.clientY,
       clientX: e.clientX,
       contentY: contentY(e.clientY),
-      pointerType: e.pointerType,
+      fingerLike: isFingerLike(e.pointerType),
     } as NonNullable<typeof pending.current>;
     pending.current = p;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -200,7 +202,7 @@ export function DayTimeline({
       beginDrag(p);
       return;
     }
-    if (e.pointerType !== "mouse") {
+    if (p.fingerLike) {
       p.timer = window.setTimeout(() => {
         if (pending.current === p) beginDrag(p);
       }, LONG_PRESS_MS);
@@ -216,7 +218,7 @@ export function DayTimeline({
       return;
     }
     const dist = Math.hypot(e.clientX - p.clientX, e.clientY - p.clientY);
-    if (p.pointerType === "mouse") {
+    if (!p.fingerLike) {
       if (dist > 4) beginDrag(p);
     } else if (dist > 10) {
       // The finger moved before the long press: it's a scroll, not a drag.
@@ -233,6 +235,7 @@ export function DayTimeline({
     const state = dragRef.current;
     pending.current = null;
     dragRef.current = null;
+    setDragging(false);
     setDrag(null);
     // The click that may follow a drag is swallowed; make sure later taps work.
     if (state) window.setTimeout(() => (suppressClick.current = false), 80);

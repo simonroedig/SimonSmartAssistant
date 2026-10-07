@@ -1,13 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import { useToday } from "@/hooks/use-today";
-import { isDayKey } from "@/lib/date";
+import { type DayKey, isDayKey } from "@/lib/date";
 import { PlannerView } from "./planner-view";
 
-/** Resolves "today" on the device (server time zones differ) before rendering. */
+/**
+ * Resolves "today" on the device (server time zones differ) and keeps the
+ * selected day on the client: switching days is instant and only updates the
+ * URL (no server round trip).
+ */
 export function PlannerClient({ requestedDay }: { requestedDay?: string }) {
   const today = useToday();
-  const day = isDayKey(requestedDay) ? requestedDay : today;
+  const [picked, setPicked] = useState<DayKey | null>(isDayKey(requestedDay) ? requestedDay : null);
+  const day = picked ?? today;
+
+  const go = (target: DayKey) => {
+    setPicked(target === today ? null : target);
+    const url = target === today ? "/planner" : `/planner?day=${target}`;
+    // Picked in a sheet: update the URL once the sheet has given up its history entry.
+    if (window.history.state?.sheet) {
+      window.addEventListener("popstate", () => window.history.replaceState(null, "", url), { once: true });
+    } else {
+      window.history.replaceState(null, "", url);
+    }
+  };
+
   if (!day) {
     return (
       <div className="flex flex-col gap-4 p-4 md:p-8" aria-busy="true">
@@ -17,5 +35,5 @@ export function PlannerClient({ requestedDay }: { requestedDay?: string }) {
       </div>
     );
   }
-  return <PlannerView day={day} />;
+  return <PlannerView day={day} today={today} onDayChange={go} />;
 }

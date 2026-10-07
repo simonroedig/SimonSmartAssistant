@@ -10,10 +10,11 @@ export type ShoppingHistoryEntry = Tables<"shopping_history">;
 export type Todo = Tables<"todos">;
 export type PlanBlock = Tables<"plan_blocks">;
 export type DayNote = Tables<"day_notes">;
+export type Note = Tables<"notes">;
 export type UserSettingsRow = Tables<"user_settings">;
 
 /** Tables whose changes are streamed through Supabase Realtime. */
-export type SyncedTable = "user_settings" | "shopping_items" | "todos" | "plan_blocks" | "day_notes";
+export type SyncedTable = "user_settings" | "shopping_items" | "todos" | "plan_blocks" | "day_notes" | "notes";
 
 export const queryKeys = {
   settings: ["user_settings"] as const,
@@ -24,6 +25,7 @@ export const queryKeys = {
   blockRange: (from: DayKey, to: DayKey) => ["plan_blocks", from, to] as const,
   dayNotes: ["day_notes"] as const,
   dayNoteRange: (from: DayKey, to: DayKey) => ["day_notes", from, to] as const,
+  notes: ["notes"] as const,
   weather: (lat: number, lon: number) => ["weather", lat.toFixed(3), lon.toFixed(3)] as const,
   air: (lat: number, lon: number) => ["air", lat.toFixed(3), lon.toFixed(3)] as const,
 };

@@ -4,6 +4,9 @@ import {
   diffInDays,
   dueLabel,
   formatDayMonth,
+  formatDayMonthShort,
+  formatMonthYear,
+  formatNumericDate,
   formatLongDate,
   formatTime,
   formatWeekdayShort,
@@ -56,11 +59,11 @@ describe("day keys", () => {
   });
 });
 
-describe("German formatting", () => {
+describe("formatting: English words, German order", () => {
   const date = new Date(2026, 9, 6, 13, 10);
 
-  it("formats the long date like 'Dienstag, 6. Oktober 2026'", () => {
-    expect(formatLongDate(date)).toBe("Dienstag, 6. Oktober 2026");
+  it("formats the long date like 'Tuesday, 6 October 2026'", () => {
+    expect(formatLongDate(date)).toBe("Tuesday, 6 October 2026");
   });
 
   it("formats times as 24h", () => {
@@ -69,15 +72,18 @@ describe("German formatting", () => {
   });
 
   it("formats short weekdays without a period", () => {
-    expect(formatWeekdayShort(date)).toBe("Di");
-    expect(formatDayMonth(date)).toBe("6. Oktober");
+    expect(formatWeekdayShort(date)).toBe("Tue");
+    expect(formatDayMonth(date)).toBe("6 October");
+    expect(formatDayMonthShort(date)).toBe("6 Oct");
+    expect(formatMonthYear(date)).toBe("October 2026");
+    expect(formatNumericDate(date)).toBe("06.10.2026");
   });
 
   it("labels relative days", () => {
     expect(relativeDayLabel("2026-10-06", "2026-10-06")).toBe("Today");
     expect(relativeDayLabel("2026-10-07", "2026-10-06")).toBe("Tomorrow");
     expect(relativeDayLabel("2026-10-05", "2026-10-06")).toBe("Yesterday");
-    expect(relativeDayLabel("2026-10-09", "2026-10-06")).toBe("Freitag, 9. Oktober");
+    expect(relativeDayLabel("2026-10-09", "2026-10-06")).toBe("Friday, 9 October");
   });
 
   it("labels due dates with a tone", () => {

@@ -1,6 +1,7 @@
 import { AutoUpdate } from "@/components/kiosk/auto-update";
 import { KeepAwake } from "@/components/kiosk/keep-awake";
 import { Screensaver } from "@/components/kiosk/screensaver";
+import { TouchScroll } from "@/components/kiosk/touch-scroll";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { AppShell } from "@/components/shell/app-shell";
@@ -16,6 +17,7 @@ export default async function SignedInLayout({ children }: LayoutProps<"/">) {
         <Screensaver />
         <AutoUpdate />
         <KeepAwake />
+        <TouchScroll />
       </RealtimeProvider>
     </SessionProvider>
   );

@@ -351,6 +351,20 @@
   }
 }
 
+/* Thin bar at the top while a tapped page is loading. */
+.nav-progress {
+  animation: nav-progress 0.9s ease-in-out infinite;
+}
+
+@keyframes nav-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
 .skeleton {
   border-radius: 12px;
   background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-hover) 50%, var(--surface-sunken) 75%);

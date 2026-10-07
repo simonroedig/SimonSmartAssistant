@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { byPosition } from "@/lib/ordering";
 import { createClient } from "@/lib/supabase/client";
 import { newId, nowIso, queryKeys, type Todo, useOptimisticMutation } from "./core";
 
@@ -8,41 +9,38 @@ export function useTodos() {
   return useQuery({
     queryKey: queryKeys.todos,
     queryFn: async () => {
-      const { data, error } = await createClient().from("todos").select("*").order("created_at", { ascending: true });
+      const { data, error } = await createClient().from("todos").select("*").order("position", { ascending: true });
       if (error) throw error;
       return data;
     },
   });
 }
 
-/** Open todos: starred first, then by due date, then oldest first. */
+/** Open todos in the user's own order (drag and drop). */
 export function sortOpenTodos(todos: Todo[]): Todo[] {
-  return todos
-    .filter((t) => !t.done)
-    .sort((a, b) => {
-      if (a.starred !== b.starred) return a.starred ? -1 : 1;
-      if (a.due_date !== b.due_date) {
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return a.due_date.localeCompare(b.due_date);
-      }
-      return a.created_at.localeCompare(b.created_at);
-    });
+  return todos.filter((t) => !t.done).sort(byPosition);
+}
+
+/** First line of a backlog item – used as its headline and for planner blocks. */
+export function todoHeadline(text: string, max = 120): string {
+  const line = text.trim().split("\n")[0].trim();
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
 export function sortDoneTodos(todos: Todo[]): Todo[] {
   return todos.filter((t) => t.done).sort((a, b) => (b.done_at ?? "").localeCompare(a.done_at ?? ""));
 }
 
-export type TodoInput = Pick<Todo, "title"> & Partial<Pick<Todo, "notes" | "starred" | "due_date">> & { id?: string };
+export type TodoInput = Pick<Todo, "title" | "position"> &
+  Partial<Pick<Todo, "starred" | "due_date">> & { id?: string };
 
 export function prepareTodo(input: TodoInput) {
   return {
     id: input.id ?? newId(),
     title: input.title.trim(),
-    notes: input.notes?.trim() || null,
     starred: input.starred ?? false,
     due_date: input.due_date ?? null,
+    position: input.position,
   };
 }
 
@@ -59,13 +57,21 @@ export function useAddTodo() {
       const now = nowIso();
       return [
         ...(data as Todo[]),
-        { ...todo, done: false, done_at: null, created_at: now, updated_at: now, user_id: "" } satisfies Todo,
-      ];
+        {
+          ...todo,
+          notes: null,
+          done: false,
+          done_at: null,
+          created_at: now,
+          updated_at: now,
+          user_id: "",
+        } satisfies Todo,
+      ].sort(byPosition);
     },
   });
 }
 
-export type TodoPatch = Partial<Pick<Todo, "title" | "notes" | "starred" | "due_date" | "done">>;
+export type TodoPatch = Partial<Pick<Todo, "title" | "starred" | "due_date" | "done" | "position">>;
 
 export function useUpdateTodo() {
   return useOptimisticMutation<{ id: string; patch: TodoPatch }>({
@@ -77,11 +83,13 @@ export function useUpdateTodo() {
       if (error) throw error;
     },
     update: (data, { id, patch }) =>
-      (data as Todo[]).map((t) =>
-        t.id === id
-          ? { ...t, ...patch, done_at: patch.done === undefined ? t.done_at : patch.done ? nowIso() : null }
-          : t,
-      ),
+      (data as Todo[])
+        .map((t) =>
+          t.id === id
+            ? { ...t, ...patch, done_at: patch.done === undefined ? t.done_at : patch.done ? nowIso() : null }
+            : t,
+        )
+        .sort(byPosition),
   });
 }
 
@@ -106,13 +114,13 @@ export function useRestoreTodos() {
     queryKey: queryKeys.todos,
     errorTitle: "Couldn't restore",
     mutationFn: async ({ todos }) => {
-      const rows = todos.map(({ id, title, notes, starred, due_date, done, created_at }) => ({
+      const rows = todos.map(({ id, title, starred, due_date, done, position, created_at }) => ({
         id,
         title,
-        notes,
         starred,
         due_date,
         done,
+        position,
         created_at,
       }));
       const { error } = await createClient().from("todos").upsert(rows);
@@ -121,7 +129,7 @@ export function useRestoreTodos() {
     update: (data, { todos }) => {
       const existing = data as Todo[];
       const ids = new Set(existing.map((t) => t.id));
-      return [...existing, ...todos.filter((t) => !ids.has(t.id))];
+      return [...existing, ...todos.filter((t) => !ids.has(t.id))].sort(byPosition);
     },
   });
 }

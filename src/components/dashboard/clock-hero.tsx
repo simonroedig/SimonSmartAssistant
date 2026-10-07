@@ -4,7 +4,7 @@ import { useNow } from "@/hooks/use-now";
 import { formatLongDate, formatTime, greeting, isoWeek, toDayKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
-/** Big wall clock with the German long date ("Dienstag, 6. Oktober 2026") and week number. */
+/** Big wall clock with the long date ("Tuesday, 6 October 2026") and week number. */
 export function ClockHero({ className, compact = false }: { className?: string; compact?: boolean }) {
   const now = useNow("minute");
 
@@ -32,7 +32,7 @@ export function ClockHero({ className, compact = false }: { className?: string; 
       <p className={cn("font-medium tracking-tight", compact ? "mt-2 text-base sm:text-lg" : "mt-1 text-[1.35rem]")}>
         {formatLongDate(now)}
       </p>
-      <p className="mt-0.5 text-sm text-muted tabular">KW {isoWeek(toDayKey(now))}</p>
+      <p className="mt-0.5 text-sm text-muted tabular">Week {isoWeek(toDayKey(now))}</p>
     </div>
   );
 }

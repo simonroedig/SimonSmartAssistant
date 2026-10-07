@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { AppLink } from "@/components/shell/app-link";
+import { type Tone, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 export function Card({
@@ -15,7 +16,7 @@ export function Card({
   );
 }
 
-/** Card header with an icon badge, title, optional count and actions. */
+/** Card header with an icon badge, title, optional subtitle/count and actions. */
 export function CardHeader({
   icon,
   title,
@@ -28,26 +29,30 @@ export function CardHeader({
 }: {
   icon: React.ReactNode;
   title: string;
+  /** Small second line under the title (e.g. a date). */
   subtitle?: string;
   count?: number;
   href?: string;
-  tone?: "accent" | "sky" | "emerald" | "amber" | "rose";
+  tone?: Tone;
   actions?: React.ReactNode;
   className?: string;
 }) {
-  const tones = {
-    accent: "bg-accent-soft text-accent",
-    sky: "bg-sky-500/14 text-sky-600 dark:text-sky-300",
-    emerald: "bg-emerald-500/14 text-emerald-600 dark:text-emerald-300",
-    amber: "bg-amber-500/16 text-amber-600 dark:text-amber-300",
-    rose: "bg-rose-500/14 text-rose-600 dark:text-rose-300",
-  } as const;
-
+  const styles = TONE_STYLES[tone];
   const label = (
     <>
-      <span className={cn("grid size-9 place-items-center rounded-xl [&_svg]:size-[18px]", tones[tone])}>{icon}</span>
-      <span className="truncate text-[0.95rem] font-semibold tracking-tight">{title}</span>
-      {subtitle && <span className="-ml-1.5 hidden shrink-0 text-sm text-muted tabular sm:inline">{subtitle}</span>}
+      <span
+        className={cn(
+          "grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]",
+          styles.soft,
+          styles.text,
+        )}
+      >
+        {icon}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-[0.95rem] leading-tight font-semibold tracking-tight">{title}</span>
+        {subtitle && <span className="truncate text-xs leading-tight text-muted tabular">{subtitle}</span>}
+      </span>
       {typeof count === "number" && count > 0 && (
         <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-semibold text-muted tabular">
           {count}
@@ -59,14 +64,14 @@ export function CardHeader({
   return (
     <div className={cn("flex items-center gap-3 px-5 pt-4 pb-3", className)}>
       {href ? (
-        <Link href={href} className="group flex min-w-0 items-center gap-3">
+        <AppLink href={href} className="group flex min-w-0 items-center gap-3">
           {label}
-          <ChevronRight className="size-4 text-faint transition-transform group-hover:translate-x-0.5" />
-        </Link>
+          <ChevronRight className="size-4 shrink-0 text-faint transition-transform group-hover:translate-x-0.5" />
+        </AppLink>
       ) : (
         <div className="flex min-w-0 items-center gap-3">{label}</div>
       )}
-      {actions && <div className="ml-auto flex items-center gap-1">{actions}</div>}
+      {actions && <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>}
     </div>
   );
 }

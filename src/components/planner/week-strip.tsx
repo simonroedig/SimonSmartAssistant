@@ -2,7 +2,16 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PlanBlock } from "@/data/core";
-import { addDays, type DayKey, formatWeekdayShort, fromDayKey, isoWeek } from "@/lib/date";
+import {
+  addDays,
+  type DayKey,
+  formatDayMonth,
+  formatWeekday,
+  formatWeekdayShort,
+  fromDayKey,
+  isoWeek,
+} from "@/lib/date";
+import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
 
@@ -43,19 +52,20 @@ export function WeekStrip({
               type="button"
               onClick={() => onSelect(day)}
               aria-pressed={isSelected}
-              aria-label={date.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}
+              aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}`}
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors",
-                isSelected
-                  ? "bg-accent text-accent-fg shadow-[0_8px_24px_-12px_var(--accent)]"
-                  : "hover:bg-surface-hover",
+                isSelected ? cn(TONE_STYLES.rose.solid, "shadow-sm") : "hover:bg-surface-hover",
               )}
             >
               <span className={cn("text-[0.7rem] font-semibold uppercase", !isSelected && "text-faint")}>
                 {formatWeekdayShort(date)}
               </span>
               <span
-                className={cn("text-lg leading-tight font-semibold tabular", isToday && !isSelected && "text-accent")}
+                className={cn(
+                  "text-lg leading-tight font-semibold tabular",
+                  isToday && !isSelected && TONE_STYLES.rose.text,
+                )}
               >
                 {date.getDate()}
               </span>
@@ -63,7 +73,10 @@ export function WeekStrip({
                 {dayBlocks.slice(0, 4).map((b) => (
                   <span
                     key={b.id}
-                    className={cn("size-1.5 rounded-full", isSelected ? "bg-accent-fg/70" : blockStyle(b.color).swatch)}
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      isSelected ? "bg-current opacity-70" : blockStyle(b.color).swatch,
+                    )}
                   />
                 ))}
               </span>

@@ -1,4 +1,6 @@
-import { forwardRef } from "react";
+"use client";
+
+import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
@@ -31,6 +33,42 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
     );
   },
 );
+
+/** Textarea that grows with its content (up to `maxRows`, then it scrolls). */
+export const AutoTextarea = forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number; maxRows?: number }
+>(function AutoTextarea({ className, minRows = 1, maxRows = 12, value, ...props }, ref) {
+  const inner = useRef<HTMLTextAreaElement>(null);
+  useImperativeHandle(ref, () => inner.current!);
+
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    const style = getComputedStyle(el);
+    const line = parseFloat(style.lineHeight) || 24;
+    const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    el.style.height = "auto";
+    const min = line * minRows + padding + border;
+    const max = line * maxRows + padding + border;
+    el.style.height = `${Math.min(max, Math.max(min, el.scrollHeight + border))}px`;
+    el.style.overflowY = el.scrollHeight + border > max ? "auto" : "hidden";
+  }, [value, minRows, maxRows]);
+
+  return (
+    <textarea
+      ref={inner}
+      rows={minRows}
+      value={value}
+      className={cn(
+        "w-full resize-none rounded-2xl border border-line bg-surface-sunken px-4 py-3 text-[0.95rem] leading-6 transition-colors outline-none placeholder:text-faint focus:border-accent/60 focus:bg-surface-hover",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (

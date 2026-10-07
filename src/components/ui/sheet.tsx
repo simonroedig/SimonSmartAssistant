@@ -3,8 +3,50 @@
 import { X } from "lucide-react";
 import { AnimatePresence, motion, type PanInfo, useDragControls } from "motion/react";
 import { Dialog } from "radix-ui";
+import { useEffect, useRef } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
+
+/**
+ * While a sheet is open it owns one history entry, so the phone's back
+ * gesture/button closes the sheet instead of leaving the page. Closing the
+ * sheet any other way removes that entry again.
+ */
+function useCloseOnBack(open: boolean, close: () => void) {
+  const closeRef = useRef(close);
+  const marker = useRef<string | null>(null);
+  const active = useRef(false);
+
+  useEffect(() => {
+    closeRef.current = close;
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    active.current = true;
+    // React strict mode re-runs effects; keep the entry we already pushed.
+    if (!marker.current || window.history.state?.sheet !== marker.current) {
+      marker.current = Math.random().toString(36).slice(2);
+      window.history.pushState({ sheet: marker.current }, "");
+    }
+    const own = marker.current;
+    const onPopState = () => {
+      if (window.history.state?.sheet === own) return;
+      marker.current = null;
+      closeRef.current();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      active.current = false;
+      window.removeEventListener("popstate", onPopState);
+      window.setTimeout(() => {
+        if (active.current || marker.current !== own) return;
+        marker.current = null;
+        if (window.history.state?.sheet === own) window.history.back();
+      }, 0);
+    };
+  }, [open]);
+}
 
 /**
  * Responsive modal: a bottom sheet (swipe down to close) on phones and a
@@ -31,6 +73,7 @@ export function Sheet({
 }) {
   const isPhone = useMediaQuery("(max-width: 767px)");
   const dragControls = useDragControls();
+  useCloseOnBack(open, () => onOpenChange(false));
 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 110 || info.velocity.y > 600) onOpenChange(false);

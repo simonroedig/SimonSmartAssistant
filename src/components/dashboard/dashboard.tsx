@@ -1,30 +1,16 @@
 "use client";
 
 import { Settings2 } from "lucide-react";
-import Link from "next/link";
+import { NotesBoard } from "@/components/notes/notes-board";
 import { TodayCard } from "@/components/planner/today-card";
+import { AppLink } from "@/components/shell/app-link";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { TodoList } from "@/components/todos/todo-list";
-import { WeatherIcon } from "@/components/weather/weather-icon";
 import { WeatherCard } from "@/components/weather/weather-card";
-import { useSettings } from "@/data/settings";
-import { useForecast } from "@/data/weather";
+import { WeatherSummary } from "@/components/weather/weather-summary";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToday } from "@/hooks/use-today";
 import { ClockHero } from "./clock-hero";
-
-function MiniWeather() {
-  const { settings } = useSettings();
-  const forecast = useForecast(settings.location);
-  const current = forecast.data?.current;
-  if (!current) return null;
-  return (
-    <Link href="/weather" className="flex shrink-0 items-center gap-1 rounded-2xl pr-2">
-      <WeatherIcon code={current.code} isDay={current.isDay} className="size-11" />
-      <span className="text-2xl font-light tabular">{Math.round(current.temperature)}°</span>
-    </Link>
-  );
-}
 
 /**
  * Home screen. On the wall display (≥1280px) everything fits on one screen in
@@ -40,35 +26,31 @@ export function Dashboard() {
       <div className="flex min-h-0 flex-col gap-4">
         <div className="flex items-start gap-3 px-2 pt-2 md:pt-1">
           <ClockHero className="flex-1" compact={!wide} />
-          <div className="flex items-center gap-1 md:hidden">
-            <MiniWeather />
-          </div>
-          <Link
+          <AppLink
             href="/settings"
             aria-label="Settings"
-            className="grid size-11 shrink-0 place-items-center rounded-2xl text-faint transition-colors hover:bg-surface-hover hover:text-fg md:hidden"
+            className="-mr-1 grid size-11 shrink-0 place-items-center rounded-2xl text-slate-500 transition-colors hover:bg-surface-hover md:hidden dark:text-slate-300"
           >
             <Settings2 className="size-5" />
-          </Link>
+          </AppLink>
         </div>
+        <WeatherSummary className="md:hidden" />
         <WeatherCard className="hidden min-h-0 flex-1 md:flex" />
       </div>
 
-      {/* Column 2: today's plan */}
+      {/* Column 2: the day plan */}
       {today ? (
-        <TodayCard today={today} fit={wide} className="min-h-[28rem] md:row-span-1 xl:h-full xl:min-h-0" />
+        <TodayCard today={today} fit={wide} className="md:row-span-1 xl:h-full xl:min-h-0" />
       ) : (
-        <div className="skeleton min-h-[28rem] rounded-[1.75rem]" />
+        <div className="skeleton min-h-[24rem] rounded-[1.75rem]" />
       )}
 
-      {/* Column 3: lists */}
+      {/* Column 3: lists and notes */}
       <div className="flex min-h-0 flex-col gap-4 md:col-span-2 md:grid md:grid-cols-2 xl:col-span-1 xl:flex">
         <ShoppingList variant="card" className="min-h-0 xl:flex-1" />
         <TodoList variant="card" className="min-h-0 xl:flex-1" />
+        <NotesBoard variant="card" className="min-h-0 md:col-span-2 xl:flex-1" />
       </div>
-
-      {/* Phones: weather at the end of the stack */}
-      <WeatherCard className="md:hidden" />
     </div>
   );
 }

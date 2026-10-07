@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { byPosition } from "@/lib/ordering";
 import { createClient } from "@/lib/supabase/client";
 import { newId, nowIso, queryKeys, type ShoppingHistoryEntry, type ShoppingItem, useOptimisticMutation } from "./core";
 
@@ -11,7 +12,7 @@ export function useShoppingItems() {
       const { data, error } = await createClient()
         .from("shopping_items")
         .select("*")
-        .order("created_at", { ascending: true });
+        .order("position", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -36,19 +37,19 @@ export function useShoppingHistory() {
   });
 }
 
-type AddInput = { name: string; note?: string | null; id?: string };
+type AddInput = { name: string; note?: string | null; id?: string; position: number };
 
 export function useAddShoppingItem() {
-  return useOptimisticMutation<Required<Pick<AddInput, "id" | "name">> & { note: string | null }>({
+  return useOptimisticMutation<ReturnType<typeof prepareShoppingItem>>({
     table: "shopping_items",
     queryKey: queryKeys.shopping,
     errorTitle: "Couldn't add the item",
     alsoInvalidate: [queryKeys.shoppingHistory],
-    mutationFn: async ({ id, name, note }) => {
-      const { error } = await createClient().from("shopping_items").insert({ id, name, note });
+    mutationFn: async ({ id, name, note, position }) => {
+      const { error } = await createClient().from("shopping_items").insert({ id, name, note, position });
       if (error) throw error;
     },
-    update: (data, { id, name, note }) => {
+    update: (data, { id, name, note, position }) => {
       const now = nowIso();
       const item: ShoppingItem = {
         id,
@@ -56,6 +57,7 @@ export function useAddShoppingItem() {
         note,
         checked: false,
         checked_at: null,
+        position,
         created_at: now,
         updated_at: now,
         user_id: "",
@@ -66,11 +68,19 @@ export function useAddShoppingItem() {
 }
 
 export function prepareShoppingItem(input: AddInput) {
-  return { id: input.id ?? newId(), name: input.name.trim(), note: input.note?.trim() || null };
+  return {
+    id: input.id ?? newId(),
+    name: input.name.trim(),
+    note: input.note?.trim() || null,
+    position: input.position,
+  };
 }
 
 export function useUpdateShoppingItem() {
-  return useOptimisticMutation<{ id: string; patch: Partial<Pick<ShoppingItem, "name" | "note" | "checked">> }>({
+  return useOptimisticMutation<{
+    id: string;
+    patch: Partial<Pick<ShoppingItem, "name" | "note" | "checked" | "position">>;
+  }>({
     table: "shopping_items",
     queryKey: queryKeys.shopping,
     errorTitle: "Couldn't update the item",
@@ -79,15 +89,17 @@ export function useUpdateShoppingItem() {
       if (error) throw error;
     },
     update: (data, { id, patch }) =>
-      (data as ShoppingItem[]).map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              ...patch,
-              checked_at: patch.checked === undefined ? item.checked_at : patch.checked ? nowIso() : null,
-            }
-          : item,
-      ),
+      (data as ShoppingItem[])
+        .map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...patch,
+                checked_at: patch.checked === undefined ? item.checked_at : patch.checked ? nowIso() : null,
+              }
+            : item,
+        )
+        .sort(byPosition),
   });
 }
 
@@ -112,16 +124,21 @@ export function useRestoreShoppingItems() {
     queryKey: queryKeys.shopping,
     errorTitle: "Couldn't restore",
     mutationFn: async ({ items }) => {
-      const rows = items.map(({ id, name, note, checked, created_at }) => ({ id, name, note, checked, created_at }));
+      const rows = items.map(({ id, name, note, checked, position, created_at }) => ({
+        id,
+        name,
+        note,
+        checked,
+        position,
+        created_at,
+      }));
       const { error } = await createClient().from("shopping_items").upsert(rows);
       if (error) throw error;
     },
     update: (data, { items }) => {
       const existing = data as ShoppingItem[];
       const ids = new Set(existing.map((i) => i.id));
-      return [...existing, ...items.filter((i) => !ids.has(i.id))].sort((a, b) =>
-        a.created_at.localeCompare(b.created_at),
-      );
+      return [...existing, ...items.filter((i) => !ids.has(i.id))].sort(byPosition);
     },
   });
 }

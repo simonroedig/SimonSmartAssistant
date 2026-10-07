@@ -35,7 +35,7 @@ const day = (offset) => {
 };
 const t = (h, m = 0) => h * 60 + m;
 
-for (const table of ["plan_blocks", "todos", "shopping_items", "shopping_history", "day_notes"]) {
+for (const table of ["plan_blocks", "todos", "shopping_items", "shopping_history", "day_notes", "notes"]) {
   await supabase.from(table).delete().not("user_id", "is", null);
 }
 
@@ -76,13 +76,17 @@ const { data: todos, error: todoError } = await supabase
   .from("todos")
   .insert(
     [
-      { title: "Steuererklärung abschicken", starred: true, due_date: day(2), notes: "Belege liegen im Ordner" },
-      { title: "Fahrrad zur Inspektion bringen", due_date: day(0) },
-      { title: "Geschenk für Mama besorgen", due_date: day(9) },
-      { title: "Kamera fürs Smart Home recherchieren", notes: "Lokal speichernd, kein Cloud-Abo" },
-      { title: "Wohnung: Lampe im Flur tauschen" },
-      { title: "Arzttermin vereinbaren", starred: true },
-      { title: "Backup der Fotos machen", done: true },
+      { title: "Steuererklärung abschicken\nBelege liegen im Ordner", starred: true, due_date: day(2), position: 1 },
+      { title: "Fahrrad zur Inspektion bringen", due_date: day(0), position: 2 },
+      { title: "Geschenk für Mama besorgen", due_date: day(9), position: 3 },
+      {
+        title:
+          "Kamera fürs Smart Home recherchieren\nLokal speichernd, kein Cloud-Abo. Am besten PoE und mit RTSP, damit sie später ins Dashboard kann.",
+        position: 4,
+      },
+      { title: "Wohnung: Lampe im Flur tauschen", position: 5 },
+      { title: "Arzttermin vereinbaren", starred: true, position: 6 },
+      { title: "Backup der Fotos machen", done: true, position: 7 },
     ],
     { defaultToNull: false },
   )
@@ -123,12 +127,29 @@ await supabase.from("plan_blocks").insert(
     { day: day(1), start_min: t(9), end_min: t(12), title: "Deep work", color: "violet" },
     { day: day(1), start_min: t(17), end_min: t(18), title: "Gym", color: "emerald" },
     { day: day(-1), start_min: t(10), end_min: t(11), title: "Dentist", color: "rose" },
-    { day: day(2), start_min: t(10), end_min: t(11), title: todos[0].title, color: "amber", todo_id: todos[0].id },
+    {
+      day: day(2),
+      start_min: t(10),
+      end_min: t(11),
+      title: todos[0].title.split("\n")[0],
+      color: "amber",
+      todo_id: todos[0].id,
+    },
   ],
   { defaultToNull: false },
 );
 await supabase
   .from("day_notes")
   .upsert({ day: day(0), focus: "Ship the dashboard planner" }, { onConflict: "user_id,day" });
+
+await supabase.from("notes").insert(
+  [
+    { title: "WLAN Gäste", body: "Netz: Wohnzimmer-Gast\nPasswort: sonnenblume-42", pinned: true, position: 1 },
+    { title: null, body: "Ideen fürs Wochenende: Flohmarkt, Therme, neuen Italiener testen", position: 2 },
+    { title: "Geschenkideen", body: "Mama – Kochbuch\nPapa – Fahrradlampe\nLena – Konzertkarten", position: 3 },
+    { title: "Pi Display", body: "Settings → This device → Text size 110 %\nNight mode: at night", position: 4 },
+  ],
+  { defaultToNull: false },
+);
 
 console.log("Seeded demo data for", EMAIL);

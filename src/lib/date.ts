@@ -1,7 +1,7 @@
 /**
  * Calendar helpers. Days are handled as local "YYYY-MM-DD" keys so the planner
- * never suffers from time-zone or DST surprises. All display formatting uses
- * German conventions (de-DE), e.g. "Dienstag, 6. Oktober 2026".
+ * never suffers from time-zone or DST surprises. Display texts are English with
+ * German ordering, e.g. "Tuesday, 6 October 2026", "13:10", "06.10.2026".
  */
 
 export type DayKey = string;
@@ -54,7 +54,7 @@ export function diffInDays(a: DayKey, b: DayKey): number {
   return Math.round(ms / 86_400_000);
 }
 
-/** ISO-8601 week number ("KW"). */
+/** ISO-8601 week number (German "KW", shown as "Week"). */
 export function isoWeek(key: DayKey): number {
   const date = fromDayKey(key);
   const thursday = new Date(date);
@@ -64,49 +64,45 @@ export function isoWeek(key: DayKey): number {
   return 1 + Math.round((thursday.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
 }
 
-const longDateFormat = new Intl.DateTimeFormat(LOCALE, {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
-const weekdayLongFormat = new Intl.DateTimeFormat(LOCALE, { weekday: "long" });
-const weekdayShortFormat = new Intl.DateTimeFormat(LOCALE, { weekday: "short" });
-const dayMonthLongFormat = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "long" });
-const dayMonthShortFormat = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short" });
-const dayMonthYearFormat = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "long", year: "numeric" });
+// Words are English, the order is German: day before month, 24-hour clock,
+// numeric dates as 06.10.2026. Composed by hand so every browser shows the
+// exact same text (ICU versions disagree on commas for en-GB).
+const WORDS = "en-GB";
+const weekdayLongFormat = new Intl.DateTimeFormat(WORDS, { weekday: "long" });
+const weekdayShortFormat = new Intl.DateTimeFormat(WORDS, { weekday: "short" });
+const monthLongFormat = new Intl.DateTimeFormat(WORDS, { month: "long" });
+const monthShortFormat = new Intl.DateTimeFormat(WORDS, { month: "short" });
 const numericDateFormat = new Intl.DateTimeFormat(LOCALE, { day: "2-digit", month: "2-digit", year: "numeric" });
-const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit" });
-const monthYearFormat = new Intl.DateTimeFormat(LOCALE, { month: "long", year: "numeric" });
+const timeFormat = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false });
 
-/** "Dienstag, 6. Oktober 2026" */
+/** "Tuesday, 6 October 2026" */
 export function formatLongDate(date: Date): string {
-  return longDateFormat.format(date);
+  return `${formatWeekday(date)}, ${formatDayMonthYear(date)}`;
 }
 
-/** "Dienstag" */
+/** "Tuesday" */
 export function formatWeekday(date: Date): string {
   return weekdayLongFormat.format(date);
 }
 
-/** "Di" (German short weekday without the trailing period) */
+/** "Tue" */
 export function formatWeekdayShort(date: Date): string {
   return weekdayShortFormat.format(date).replace(".", "");
 }
 
-/** "6. Oktober" */
+/** "6 October" */
 export function formatDayMonth(date: Date): string {
-  return dayMonthLongFormat.format(date);
+  return `${date.getDate()} ${monthLongFormat.format(date)}`;
 }
 
-/** "6. Okt." */
+/** "6 Oct" */
 export function formatDayMonthShort(date: Date): string {
-  return dayMonthShortFormat.format(date);
+  return `${date.getDate()} ${monthShortFormat.format(date).replace(".", "")}`;
 }
 
-/** "6. Oktober 2026" */
+/** "6 October 2026" */
 export function formatDayMonthYear(date: Date): string {
-  return dayMonthYearFormat.format(date);
+  return `${formatDayMonth(date)} ${date.getFullYear()}`;
 }
 
 /** "06.10.2026" */
@@ -119,12 +115,17 @@ export function formatTime(date: Date): string {
   return timeFormat.format(date);
 }
 
-/** "Oktober 2026" */
+/** "October 2026" */
 export function formatMonthYear(date: Date): string {
-  return monthYearFormat.format(date);
+  return `${monthLongFormat.format(date)} ${date.getFullYear()}`;
 }
 
-/** Relative label for a day: "Today", "Tomorrow", "Yesterday" or the German date. */
+/** "October" */
+export function formatMonth(date: Date): string {
+  return monthLongFormat.format(date);
+}
+
+/** Relative label for a day: "Today", "Tomorrow", "Yesterday" or "Friday, 9 October". */
 export function relativeDayLabel(key: DayKey, today: DayKey): string {
   const diff = diffInDays(key, today);
   if (diff === 0) return "Today";

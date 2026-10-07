@@ -9,6 +9,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
+import { DragHandle, SortableList } from "@/components/ui/sortable";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import type { ShoppingItem } from "@/data/core";
 import {
@@ -22,6 +23,7 @@ import {
   useUpdateShoppingItem,
 } from "@/data/shopping";
 import { useLongPress } from "@/hooks/use-long-press";
+import { positionAtEnd, positionForMove } from "@/lib/ordering";
 import { cn, vibrate } from "@/lib/utils";
 
 function ItemRow({
@@ -39,6 +41,7 @@ function ItemRow({
   return (
     <SwipeRow onDelete={onDelete}>
       <div className="group flex items-center">
+        {!item.checked && <DragHandle label={`Move ${item.name}`} className="-mr-2" />}
         <button
           type="button"
           {...longPress.props}
@@ -122,7 +125,7 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
     if (existing?.checked) {
       update.mutate({ id: existing.id, patch: { checked: false } });
     } else {
-      add.mutate(prepareShoppingItem({ name: trimmed }));
+      add.mutate(prepareShoppingItem({ name: trimmed, position: positionAtEnd(all) }));
     }
   };
 
@@ -208,27 +211,20 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
             <p className="text-sm">Nothing to buy. Enjoy the free fridge space.</p>
           </div>
         ) : (
-          <ul className="flex flex-col">
-            <AnimatePresence initial={false}>
-              {open.map((item) => (
-                <motion.li
-                  key={item.id}
-                  layout="position"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  <ItemRow
-                    item={item}
-                    onToggle={() => update.mutate({ id: item.id, patch: { checked: true } })}
-                    onDelete={() => deleteWithUndo([item], `Deleted "${item.name}"`)}
-                    onEdit={() => setEditing(item)}
-                  />
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </ul>
+          <SortableList
+            items={open}
+            className="flex flex-col"
+            onMove={(id, index) => update.mutate({ id, patch: { position: positionForMove(open, id, index) } })}
+          >
+            {(item) => (
+              <ItemRow
+                item={item}
+                onToggle={() => update.mutate({ id: item.id, patch: { checked: true } })}
+                onDelete={() => deleteWithUndo([item], `Deleted "${item.name}"`)}
+                onEdit={() => setEditing(item)}
+              />
+            )}
+          </SortableList>
         )}
 
         {done.length > 0 && (

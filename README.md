@@ -5,15 +5,20 @@ laptop – always in sync.
 
 - **Day planner** – rough time blocks for the day, greyed-out sleep times per weekday, tap to add,
   press-and-hold to move, drag to resize, mark done, copy days, "focus of the day", plan items straight
-  from the backlog.
+  from the backlog. Swipe between days, month calendar to jump to any date; the home screen card
+  browses the next days too.
 - **Weather** – current conditions, hourly curve, 7-day forecast with temperature ranges; tap a day for
   its hours. UV, wind, sunrise/sunset, air quality and pollen. Free Open-Meteo data.
-- **Shopping list** – add, tick off, swipe to delete, undo, one-tap suggestions from what you buy often.
-- **Backlog** – minimal todo list with stars, due dates and notes.
-- **Clock & date** in German format ("Dienstag, 6. Oktober 2026 · 13:10 · KW 41").
+- **Shopping list** – add, tick off, swipe to delete, undo, drag to reorder, one-tap suggestions from what
+  you buy often.
+- **Backlog** – longer to-dos as free text (first line is the headline), stars, due dates, drag to reorder.
+- **Notes** – Keep-style quick notes with an optional title, pin to the top, press and hold to reorder.
+- **Clock & date** in English with German order ("Tuesday, 6 October 2026 · 13:10 · Week 41").
 - **Wall display mode** – built-in German on-screen keyboard, night mode with a dim clock, auto-update
-  after deploys, screen wake lock, no cursor.
-- **Installable PWA** for the phone, light/dark/auto (sunset) theme, offline-first cache.
+  after deploys, screen wake lock, no cursor, finger scrolling even when the touch screen reports itself
+  as a mouse.
+- **Installable PWA** for the phone with app-like back navigation (sheets close on "back", sections go
+  back to home), light/dark/auto (sunset) theme, offline-first cache.
 
 ![Wall display](docs/screenshots/wall-dark.png)
 

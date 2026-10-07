@@ -53,7 +53,7 @@ test("passkeys: register on this device, then sign in with it", async ({ page, c
   await expect(page).toHaveURL(/\/login/);
   await page.getByRole("button", { name: "Sign in with passkey" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
-  await expect(page.getByText("KW ")).toBeVisible();
+  await expect(page.getByText(/^Week \d+$/)).toBeVisible();
 
   // Clean up so the next run starts fresh, and refresh the shared session file.
   await page.goto("/settings");

@@ -270,6 +270,9 @@ Umlauten) erscheint automatisch, sobald ein Textfeld angetippt wird. Die URL ent
 schaltet die App auf diesem Gerät dauerhaft in den **Wandmodus**:
 
 - kein Mauszeiger, keine versehentliche Textauswahl
+- Wischen zum Scrollen und zum Blättern zwischen Tagen funktioniert auch dann, wenn der Touchscreen beim
+  Pi als Maus ankommt (bei labwc üblich): im Wandmodus behandelt die App die Maus wie einen Finger
+  (gedrückt halten = verschieben, ziehen = scrollen)
 - **Nachtmodus:** in deinen Schlafenszeiten wird nach 2 Minuten ohne Berührung eine ruhige, dunkle Uhr
   angezeigt; Antippen weckt das Dashboard (der Weck-Tipp löst nichts darunter aus)
 - **Auto-Update:** nach einem neuen Deployment lädt die Seite sich selbst neu (wenn gerade niemand tippt),

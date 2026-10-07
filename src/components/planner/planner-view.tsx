@@ -1,42 +1,35 @@
 "use client";
 
-import {
-  CalendarPlus,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCopy,
-  Eraser,
-  ListTodo,
-  MoreHorizontal,
-  Plus,
-  Star,
-} from "lucide-react";
+import { CalendarDays, CalendarPlus, ClipboardCopy, Eraser, ListTodo, MoreHorizontal, Plus, Star } from "lucide-react";
+import { motion } from "motion/react";
 import { DropdownMenu } from "radix-ui";
-import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { sortOpenTodos, useTodos } from "@/data/todos";
+import { Sheet } from "@/components/ui/sheet";
+import { sortOpenTodos, todoHeadline, useTodos } from "@/data/todos";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useNow } from "@/hooks/use-now";
+import { useSwipe } from "@/hooks/use-swipe";
 import {
   addDays,
   type DayKey,
+  diffInDays,
   dueLabel,
-  formatDayMonthYear,
-  formatLongDate,
+  formatDayMonth,
   formatWeekday,
   fromDayKey,
   isoWeek,
   relativeDayLabel,
-  toDayKey,
 } from "@/lib/date";
+import { TONE_STYLES } from "@/lib/tones";
 import { formatDuration, minutesOfDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BlockEditor } from "./block-editor";
 import { DayTimeline } from "./day-timeline";
 import { FocusInput } from "./focus-input";
+import { MonthCalendar } from "./month-calendar";
 import { NowNext } from "./now-next";
 import { usePlanner } from "./use-planner";
 import { WeekStrip } from "./week-strip";
@@ -66,17 +59,46 @@ function MenuItem({
   );
 }
 
-export function PlannerView({ day }: { day: DayKey }) {
-  const router = useRouter();
+export function PlannerView({
+  day,
+  today,
+  onDayChange,
+}: {
+  day: DayKey;
+  today: DayKey | null;
+  onDayChange: (day: DayKey) => void;
+}) {
   const now = useNow("minute");
-  const today = now ? toDayKey(now) : null;
   const planner = usePlanner(day);
   const todos = useTodos();
   const isWide = useMediaQuery("(min-width: 1024px)");
   const isPhone = useMediaQuery("(max-width: 767px)");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [direction, setDirection] = useState(1);
 
-  const go = (target: DayKey) =>
-    router.replace(target === today ? "/planner" : `/planner?day=${target}`, { scroll: false });
+  const go = (target: DayKey) => {
+    if (target === day) return;
+    setDirection(diffInDays(target, day) > 0 ? 1 : -1);
+    onDayChange(target);
+  };
+
+  // Swipe sideways (or use the arrow keys) to flip through the days.
+  const editing = planner.editor !== null;
+  const swipe = useSwipe((dir) => go(addDays(day, dir)), !editing && !calendarOpen);
+  useEffect(() => {
+    if (editing || calendarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("input, textarea, select, [contenteditable='true'], [role='menu']")) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const step = e.key === "ArrowLeft" ? -1 : 1;
+      setDirection(step);
+      onDayChange(addDays(day, step));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [day, editing, calendarOpen, onDayChange]);
 
   const openTodos = useMemo(() => sortOpenTodos(todos.data ?? []).slice(0, 12), [todos.data]);
   const isToday = day === today;
@@ -90,7 +112,10 @@ export function PlannerView({ day }: { day: DayKey }) {
   const relative = today ? relativeDayLabel(day, today) : "";
   const isRelative = ["Today", "Tomorrow", "Yesterday"].includes(relative);
   const title = isRelative ? relative : formatWeekday(date);
-  const subtitle = `${isRelative ? formatLongDate(date) : formatDayMonthYear(date)} · KW ${isoWeek(day)}`;
+  const sameYear = !today || today.slice(0, 4) === day.slice(0, 4);
+  const datePart = isRelative ? `${formatWeekday(date)}, ${formatDayMonth(date)}` : formatDayMonth(date);
+  const subtitle = `${datePart}${sameYear ? "" : ` ${date.getFullYear()}`} · Week ${isoWeek(day)}`;
+  const rose = TONE_STYLES.rose;
 
   const menu = (
     <DropdownMenu.Root>
@@ -124,22 +149,26 @@ export function PlannerView({ day }: { day: DayKey }) {
   );
 
   return (
-    <div className="flex h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col md:h-dvh">
+    <div className="flex h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col md:h-dvh" {...swipe}>
       <PageHeader
         title={title || " "}
         subtitle={subtitle}
+        className="flex-nowrap"
         actions={
           <>
             {!isToday && today && (
-              <Button variant="soft" size="sm" onClick={() => go(today)}>
+              <Button size="sm" className={cn(rose.soft, rose.text, "border-0")} onClick={() => go(today)}>
                 Today
               </Button>
             )}
-            <Button variant="secondary" size="icon" aria-label="Previous day" onClick={() => go(addDays(day, -1))}>
-              <ChevronLeft />
-            </Button>
-            <Button variant="secondary" size="icon" aria-label="Next day" onClick={() => go(addDays(day, 1))}>
-              <ChevronRight />
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label="Pick a day"
+              className="lg:hidden"
+              onClick={() => setCalendarOpen(true)}
+            >
+              <CalendarDays />
             </Button>
             {menu}
           </>
@@ -149,7 +178,7 @@ export function PlannerView({ day }: { day: DayKey }) {
         <WeekStrip week={planner.week} selected={day} today={today} blocks={planner.weekBlocks} onSelect={go} />
       </div>
       <div className="grid min-h-0 flex-1 gap-4 px-4 pb-4 md:px-8 md:pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <Card className="min-h-0 overflow-hidden">
+        <Card className="min-h-0 [touch-action:pan-y] overflow-hidden">
           <div className="flex flex-col gap-3 px-3 pt-3 md:px-4">
             <FocusInput day={day} week={planner.week} />
             {isToday && now && planner.dayBlocks.length > 0 && !isWide && !isPhone && (
@@ -160,9 +189,15 @@ export function PlannerView({ day }: { day: DayKey }) {
               />
             )}
           </div>
-          <div className="relative min-h-0 flex-1 pt-3">
+          <motion.div
+            key={day}
+            initial={{ opacity: 0, x: direction * 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="relative min-h-0 flex-1 pt-3"
+          >
             <DayTimeline
-              className="h-full px-2 pb-24 md:pb-6"
+              className="h-full [touch-action:pan-y] px-2 pb-24 md:pb-6"
               blocks={planner.dayBlocks}
               sleepRanges={planner.sleepRanges}
               hourHeight={hourHeight}
@@ -176,11 +211,14 @@ export function PlannerView({ day }: { day: DayKey }) {
               scrollTarget={scrollTarget}
               scrollKey={`${day}-${planner.isLoading}`}
             />
-          </div>
+          </motion.div>
         </Card>
 
         <aside className="hidden min-h-0 flex-col gap-4 lg:flex">
-          <Card className="p-4">
+          <Card className="shrink-0 p-4">
+            <MonthCalendar selected={day} today={today} onSelect={go} />
+          </Card>
+          <Card className="shrink-0 p-4">
             {isToday && now ? (
               <NowNext
                 className="grid-cols-1!"
@@ -212,7 +250,7 @@ export function PlannerView({ day }: { day: DayKey }) {
           </Card>
           <Card className="min-h-0 flex-1 overflow-hidden">
             <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-              <ListTodo className="size-4 text-accent" />
+              <ListTodo className="size-4 text-amber-600 dark:text-amber-300" />
               <h2 className="text-[0.95rem] font-semibold">Plan from backlog</h2>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
@@ -224,11 +262,13 @@ export function PlannerView({ day }: { day: DayKey }) {
                     <li key={todo.id}>
                       <button
                         type="button"
-                        onClick={() => planner.createAtNextFree({ title: todo.title, todoId: todo.id, color: "amber" })}
+                        onClick={() =>
+                          planner.createAtNextFree({ title: todoHeadline(todo.title), todoId: todo.id, color: "amber" })
+                        }
                         className="group flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
                       >
                         {todo.starred && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" />}
-                        <span className="min-w-0 flex-1 truncate text-sm">{todo.title}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm">{todoHeadline(todo.title)}</span>
                         {todo.due_date && today && (
                           <span className="shrink-0 text-xs text-muted">{dueLabel(todo.due_date, today).text}</span>
                         )}
@@ -248,10 +288,24 @@ export function PlannerView({ day }: { day: DayKey }) {
         size="icon-lg"
         aria-label="Add block"
         onClick={() => planner.createAtNextFree()}
-        className="fixed right-5 bottom-[calc(6.75rem+env(safe-area-inset-bottom))] z-30 rounded-full shadow-pop md:hidden"
+        className={cn(
+          "fixed right-5 bottom-[calc(6.75rem+env(safe-area-inset-bottom))] z-30 rounded-full shadow-pop md:hidden",
+          rose.solid,
+        )}
       >
         <Plus className="!size-6" />
       </Button>
+
+      <Sheet open={calendarOpen} onOpenChange={setCalendarOpen} title="Pick a day" size="sm">
+        <MonthCalendar
+          selected={day}
+          today={today}
+          onSelect={(target) => {
+            go(target);
+            setCalendarOpen(false);
+          }}
+        />
+      </Sheet>
 
       <BlockEditor {...planner.editorProps} />
     </div>

@@ -1,0 +1,49 @@
+/**
+ * One colour per section, used for the navigation, card headers and accents.
+ * Home and the generic UI use the violet accent.
+ */
+export type Tone = "accent" | "rose" | "emerald" | "amber" | "orange" | "sky" | "slate";
+
+export const TONE_STYLES: Record<
+  Tone,
+  {
+    /** Icon colour. */
+    text: string;
+    /** Icon badge / active pill background. */
+    soft: string;
+    /** Solid fill (buttons, selected day). */
+    solid: string;
+  }
+> = {
+  accent: { text: "text-accent", soft: "bg-accent-soft", solid: "bg-accent text-accent-fg" },
+  rose: {
+    text: "text-rose-500 dark:text-rose-300",
+    soft: "bg-rose-500/12 dark:bg-rose-400/14",
+    solid: "bg-rose-500 text-white dark:bg-rose-400 dark:text-rose-950",
+  },
+  emerald: {
+    text: "text-emerald-600 dark:text-emerald-300",
+    soft: "bg-emerald-500/14",
+    solid: "bg-emerald-500 text-white dark:text-emerald-950",
+  },
+  amber: {
+    text: "text-amber-600 dark:text-amber-300",
+    soft: "bg-amber-500/16",
+    solid: "bg-amber-500 text-white dark:text-amber-950",
+  },
+  orange: {
+    text: "text-orange-600 dark:text-orange-300",
+    soft: "bg-orange-500/14",
+    solid: "bg-orange-500 text-white dark:text-orange-950",
+  },
+  sky: {
+    text: "text-sky-600 dark:text-sky-300",
+    soft: "bg-sky-500/14",
+    solid: "bg-sky-500 text-white dark:text-sky-950",
+  },
+  slate: {
+    text: "text-slate-500 dark:text-slate-300",
+    soft: "bg-slate-500/12 dark:bg-slate-400/14",
+    solid: "bg-slate-600 text-white dark:bg-slate-300 dark:text-slate-900",
+  },
+};

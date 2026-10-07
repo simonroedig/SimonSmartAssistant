@@ -23,7 +23,7 @@ test("shopping list: add, tick off, clear and undo", async ({ page }) => {
   const listed = page.locator("li", { hasText: name });
   await expect(listed).toHaveCount(1);
 
-  await listed.getByRole("button", { name }).click();
+  await listed.getByRole("button", { name, exact: true }).click();
   await expect(page.getByText(/In the cart/)).toBeVisible();
 
   await page.getByRole("button", { name: "Clear" }).click();
@@ -66,7 +66,7 @@ test("backlog: add, star, edit due date and plan it for today", async ({ page })
 test("planner: tap to create, drag to move, resize and complete", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/planner?day=2030-01-07"); // a quiet Monday far in the future
-  await expect(page.getByRole("heading", { name: "Montag" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Monday" })).toBeVisible();
 
   // Clear anything left from earlier runs.
   await page.getByRole("button", { name: "More actions" }).click();
@@ -168,9 +168,9 @@ test("weather: pick a city, then a day to see its hours", async ({ page }) => {
 
   await page.goto("/weather");
   await expect(page.getByText("Partly cloudy").first()).toBeVisible();
-  await page.getByRole("button", { name: /^Fr/ }).click();
+  await page.getByRole("button", { name: /^Fri/ }).click();
   await expect(page).toHaveURL(/\/weather\?day=/);
-  await expect(page.getByRole("heading", { name: /Freitag/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Friday/ })).toBeVisible();
 });
 
 test("settings: navigating away works after changing preferences", async ({ page }) => {
@@ -180,7 +180,7 @@ test("settings: navigating away works after changing preferences", async ({ page
   await page.getByRole("radio", { name: "15 min" }).click();
   await page.locator('nav a[href="/planner"]').first().click();
   await expect(page).toHaveURL(/\/planner$/);
-  await page.goBack();
+  await page.locator('nav a[href="/settings"]').first().click();
   await expect(page).toHaveURL(/\/settings$/);
   await page.locator('nav a[href="/"]:visible').last().click();
   await expect(page).toHaveURL(/\/$/);
@@ -208,10 +208,10 @@ test("dashboard: browse the plan of the next days with arrows and swipes", async
   await expect(card.getByText("Today", { exact: true })).toBeVisible();
 
   // A sideways finger swipe over the timeline switches the day without opening the editor.
-  // Middle of the card: the timeline itself may be scrolled to the current time.
+  // Inside the card, above the bottom tab bar.
   const box = (await card.boundingBox())!;
   const cdp = await page.context().newCDPSession(page);
-  const y = box.y + box.height * 0.6;
+  const y = Math.min(box.y + 200, 640);
   const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number) =>
     cdp.send("Input.dispatchTouchEvent", {
       type,

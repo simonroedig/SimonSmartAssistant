@@ -8,8 +8,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { AutoTextarea, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
+import { DragHandle, SortableList } from "@/components/ui/sortable";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import type { Todo } from "@/data/core";
 import { prepareBlock, useAddBlocks, useBlocks } from "@/data/planner";
@@ -18,6 +19,7 @@ import {
   prepareTodo,
   sortDoneTodos,
   sortOpenTodos,
+  todoHeadline,
   type TodoPatch,
   useAddTodo,
   useDeleteTodos,
@@ -25,8 +27,10 @@ import {
   useTodos,
   useUpdateTodo,
 } from "@/data/todos";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToday } from "@/hooks/use-today";
 import { addDays, type DayKey, dueLabel, formatNumericDate, weekdayIndex } from "@/lib/date";
+import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { findFreeSlot } from "@/lib/planner-layout";
 import { awakeWindow } from "@/lib/sleep";
 import { formatMinutes, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
@@ -55,12 +59,16 @@ function TodoRow({
   onDelete: () => void;
 }) {
   const due = todo.due_date && today ? dueLabel(todo.due_date, today) : null;
+  const headline = todoHeadline(todo.title, 60);
+  const [firstLine, ...more] = todo.title.trim().split("\n");
+  const rest = more.join("\n").trim();
   return (
     <SwipeRow onDelete={onDelete}>
-      <div className="flex items-center gap-1 rounded-2xl transition-colors hover:bg-surface-hover">
+      <div className="flex items-start gap-1 rounded-2xl transition-colors hover:bg-surface-hover">
+        {!todo.done && <DragHandle label={`Move "${headline}"`} className="-mr-2 h-12 self-start" />}
         <button
           type="button"
-          aria-label={todo.done ? `Mark "${todo.title}" as open` : `Complete "${todo.title}"`}
+          aria-label={todo.done ? `Mark "${headline}" as open` : `Complete "${headline}"`}
           onClick={() => {
             vibrate(8);
             onToggle();
@@ -72,21 +80,30 @@ function TodoRow({
         <button
           type="button"
           onClick={onOpen}
-          className="flex min-h-12 min-w-0 flex-1 flex-col justify-center py-2 text-left"
+          aria-label={headline}
+          className="flex min-h-12 min-w-0 flex-1 flex-col justify-center py-2.5 text-left"
         >
-          <span className={cn("truncate text-[0.98rem]", todo.done && "text-faint line-through decoration-faint/60")}>
-            {todo.title}
+          <span
+            className={cn(
+              "line-clamp-2 text-[0.98rem] leading-snug break-words",
+              todo.done && "line-clamp-1 text-faint line-through decoration-faint/60",
+            )}
+          >
+            {firstLine}
           </span>
-          {(todo.notes || due) && !todo.done && (
-            <span className="mt-0.5 flex min-w-0 items-center gap-2">
-              {due && (
-                <span
-                  className={cn("shrink-0 rounded-full px-2 py-px text-[0.7rem] font-semibold", DUE_TONES[due.tone])}
-                >
-                  {due.text}
-                </span>
+          {rest && !todo.done && (
+            <span className="mt-0.5 line-clamp-2 text-sm leading-snug break-words whitespace-pre-line text-muted">
+              {rest}
+            </span>
+          )}
+          {due && !todo.done && (
+            <span
+              className={cn(
+                "mt-1 w-fit shrink-0 rounded-full px-2 py-px text-[0.7rem] font-semibold",
+                DUE_TONES[due.tone],
               )}
-              {todo.notes && <span className="truncate text-xs text-muted">{todo.notes}</span>}
+            >
+              {due.text}
             </span>
           )}
         </button>
@@ -126,6 +143,13 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
   const open = useMemo(() => sortOpenTodos(all), [all]);
   const done = useMemo(() => sortDoneTodos(all), [all]);
 
+  const finePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
+  const addDraft = () => {
+    if (!draft.trim()) return;
+    add.mutate(prepareTodo({ title: draft, position: positionAtStart(open) }));
+    setDraft("");
+  };
+
   const deleteWithUndo = (items: Todo[], label: string) => {
     if (items.length === 0) return;
     remove.mutate({ ids: items.map((t) => t.id) });
@@ -135,7 +159,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
   const toggle = (todo: Todo) => {
     update.mutate({ id: todo.id, patch: { done: !todo.done } });
     if (!todo.done) {
-      toast(`Done: ${todo.title}`, {
+      toast(`Done: ${todoHeadline(todo.title, 60)}`, {
         action: { label: "Undo", onClick: () => update.mutate({ id: todo.id, patch: { done: false } }) },
         duration: 4000,
       });
@@ -145,22 +169,27 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
   const body = (
     <>
       <form
-        className="flex gap-2"
+        className="flex items-end gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!draft.trim()) return;
-          add.mutate(prepareTodo({ title: draft }));
-          setDraft("");
+          addDraft();
         }}
       >
-        <Input
+        <AutoTextarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            // Keyboard: Enter adds, Shift+Enter starts a new line. Touch keyboards keep Enter for new lines.
+            if (e.key === "Enter" && !e.shiftKey && finePointer && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              addDraft();
+            }
+          }}
           placeholder="Add to your backlog…"
           aria-label="New todo"
-          enterKeyHint="done"
           autoComplete="off"
-          maxLength={200}
+          maxLength={5000}
+          maxRows={8}
         />
         <Button type="submit" variant="primary" size="icon" aria-label="Add todo" disabled={!draft.trim()}>
           <Plus className="!size-5" />
@@ -180,29 +209,22 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
             <p className="text-sm">{done.length > 0 ? "All done. Nice!" : "Write down whatever is on your mind."}</p>
           </div>
         ) : (
-          <ul className="flex flex-col">
-            <AnimatePresence initial={false}>
-              {open.map((todo) => (
-                <motion.li
-                  key={todo.id}
-                  layout="position"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <TodoRow
-                    todo={todo}
-                    today={today}
-                    onToggle={() => toggle(todo)}
-                    onStar={() => update.mutate({ id: todo.id, patch: { starred: !todo.starred } })}
-                    onOpen={() => setEditing(todo)}
-                    onDelete={() => deleteWithUndo([todo], `Deleted "${todo.title}"`)}
-                  />
-                </motion.li>
-              ))}
-            </AnimatePresence>
-          </ul>
+          <SortableList
+            items={open}
+            className="flex flex-col"
+            onMove={(id, index) => update.mutate({ id, patch: { position: positionForMove(open, id, index) } })}
+          >
+            {(todo) => (
+              <TodoRow
+                todo={todo}
+                today={today}
+                onToggle={() => toggle(todo)}
+                onStar={() => update.mutate({ id: todo.id, patch: { starred: !todo.starred } })}
+                onOpen={() => setEditing(todo)}
+                onDelete={() => deleteWithUndo([todo], `Deleted "${todoHeadline(todo.title, 60)}"`)}
+              />
+            )}
+          </SortableList>
         )}
 
         {done.length > 0 && (
@@ -242,7 +264,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
                         onToggle={() => toggle(todo)}
                         onStar={() => undefined}
                         onOpen={() => setEditing(todo)}
-                        onDelete={() => deleteWithUndo([todo], `Deleted "${todo.title}"`)}
+                        onDelete={() => deleteWithUndo([todo], `Deleted "${todoHeadline(todo.title, 60)}"`)}
                       />
                     </li>
                   ))}
@@ -258,7 +280,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
         today={today}
         onClose={() => setEditing(null)}
         onSave={(patch) => editing && update.mutate({ id: editing.id, patch })}
-        onDelete={() => editing && deleteWithUndo([editing], `Deleted "${editing.title}"`)}
+        onDelete={() => editing && deleteWithUndo([editing], `Deleted "${todoHeadline(editing.title, 60)}"`)}
       />
     </>
   );
@@ -311,7 +333,6 @@ function TodoForm({
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(todo.title);
-  const [notes, setNotes] = useState(todo.notes ?? "");
   const [due, setDue] = useState<string | null>(todo.due_date);
   const [starred, setStarred] = useState(todo.starred);
   const { settings } = useSettings();
@@ -330,7 +351,7 @@ function TodoForm({
 
   const save = () => {
     if (!title.trim()) return;
-    onSave({ title: title.trim(), notes: notes.trim() || null, due_date: due, starred });
+    onSave({ title: title.trim(), due_date: due, starred });
     onClose();
   };
 
@@ -349,7 +370,7 @@ function TodoForm({
           day: today,
           start_min: start,
           end_min: Math.min(MINUTES_PER_DAY, start + duration),
-          title: title.trim() || todo.title,
+          title: todoHeadline(title.trim() || todo.title),
           color: "amber",
           todo_id: todo.id,
         }),
@@ -369,20 +390,16 @@ function TodoForm({
         save();
       }}
     >
-      <div>
-        <Label htmlFor="todo-title">Title</Label>
-        <Input id="todo-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
-      </div>
-      <div>
-        <Label htmlFor="todo-notes">Notes</Label>
-        <Textarea
-          id="todo-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Details, links, ideas…"
-          maxLength={4000}
-        />
-      </div>
+      <AutoTextarea
+        id="todo-text"
+        aria-label="Text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        maxLength={5000}
+        minRows={3}
+        maxRows={14}
+        className="text-[1rem]"
+      />
       <div>
         <Label>Due</Label>
         <div className="flex flex-wrap gap-1.5">

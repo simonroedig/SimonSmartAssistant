@@ -19,7 +19,15 @@ const MAILPIT_URL = process.env.SUPABASE_TEST_MAILPIT_URL ?? "http://127.0.0.1:5
 
 type Client = SupabaseClient<Database>;
 
-const TABLES = ["user_settings", "shopping_items", "shopping_history", "todos", "plan_blocks", "day_notes"] as const;
+const TABLES = [
+  "user_settings",
+  "shopping_items",
+  "shopping_history",
+  "todos",
+  "plan_blocks",
+  "day_notes",
+  "notes",
+] as const;
 
 function newClient(): Client {
   return createClient<Database>(SUPABASE_URL, PUBLISHABLE_KEY, {
@@ -247,5 +255,46 @@ describe("database security", () => {
     const { data: notes } = await alice.client.from("day_notes").select("*");
     expect(notes).toHaveLength(1);
     expect(notes![0].focus).toBe("Ship it!");
+  });
+
+  it("keeps notes private to their owner and rejects empty notes", async () => {
+    const { data: note, error } = await alice.client
+      .from("notes")
+      .insert({ body: "Door code 4711", pinned: true })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(note!.user_id).toBe(alice.userId);
+    expect(note!.title).toBeNull();
+
+    const { data: seenByBob } = await bob.client.from("notes").select("*");
+    expect(seenByBob).toEqual([]);
+    const { data: changedByBob } = await bob.client.from("notes").update({ body: "x" }).eq("id", note!.id).select();
+    expect(changedByBob).toEqual([]);
+    const { data: deletedByBob } = await bob.client.from("notes").delete().eq("id", note!.id).select();
+    expect(deletedByBob).toEqual([]);
+
+    const { error: spoofError } = await bob.client.from("notes").insert({ body: "spoof", user_id: alice.userId });
+    expect(spoofError?.code).toBe("42501");
+
+    const { error: emptyError } = await alice.client.from("notes").insert({ title: " ", body: "  " });
+    expect(emptyError?.code).toBe("23514");
+  });
+
+  it("orders lists by position and stores long backlog texts", async () => {
+    const text = `Renovate the hallway\n${"Details. ".repeat(200)}`;
+    const { data: todo, error } = await alice.client.from("todos").insert({ title: text }).select().single();
+    expect(error).toBeNull();
+    expect(todo!.title).toBe(text);
+
+    const { data: older } = await alice.client.from("todos").insert({ title: "older" }).select().single();
+    const { data: newer } = await alice.client.from("todos").insert({ title: "newer" }).select().single();
+    // New backlog items go to the top by default.
+    expect(newer!.position).toBeLessThan(older!.position);
+
+    const { data: milk } = await alice.client.from("shopping_items").insert({ name: "Milk" }).select().single();
+    const { data: bread } = await alice.client.from("shopping_items").insert({ name: "Bread" }).select().single();
+    // New shopping items go to the bottom by default.
+    expect(bread!.position).toBeGreaterThan(milk!.position);
   });
 });

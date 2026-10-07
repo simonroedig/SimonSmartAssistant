@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Private dashboard for one user: wall touch display (Raspberry Pi kiosk), phone PWA, laptop.
 
-- **UI language is English, dates/times are German** (`de-DE`, e.g. "Dienstag, 6. Oktober 2026", 24h).
+- **UI language is English, including dates, in German order** (e.g. "Tuesday, 6 October 2026", 24h, 06.10.2026).
   Use the helpers in `src/lib/date.ts` / `src/lib/time.ts`, never ad-hoc formatting.
 - **Data access** happens in the browser via `src/data/*` hooks (TanStack Query + Supabase client) with
   optimistic updates through `useOptimisticMutation`. Realtime invalidation lives in
