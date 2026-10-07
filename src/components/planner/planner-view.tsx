@@ -201,6 +201,7 @@ export function PlannerView({
               blocks={planner.dayBlocks}
               sleepRanges={planner.sleepRanges}
               hourHeight={hourHeight}
+              range={[0, planner.viewEnd]}
               snap={planner.snap}
               isToday={isToday}
               draft={planner.draftPreview}

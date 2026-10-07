@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { TemperatureBar } from "./temperature-bar";
 import { WeatherIcon } from "./weather-icon";
 
+/** Same highlight as the "Now" hour. */
+const TODAY_STYLE = "bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50";
+
 export function DailyList({
   days,
   today,
@@ -33,7 +36,12 @@ export function DailyList({
         const isSelected = selected === d.day;
         const content = (
           <>
-            <span className={cn("w-12 text-left text-[0.92rem] font-semibold", !isToday && "text-muted")}>
+            <span
+              className={cn(
+                "w-12 text-left text-[0.92rem] font-semibold",
+                isToday ? "font-bold text-sky-700 dark:text-sky-200" : "text-muted",
+              )}
+            >
               {isToday ? "Today" : formatWeekdayShort(fromDayKey(d.day))}
             </span>
             <WeatherIcon code={d.code} isDay className={dense ? "size-8" : "size-10"} />
@@ -68,13 +76,25 @@ export function DailyList({
                 className={cn(
                   "flex w-full items-center gap-2 rounded-2xl px-2 transition-colors",
                   dense ? "h-12" : "h-14",
-                  isSelected ? "bg-surface-hover ring-1 ring-line" : "hover:bg-surface-hover/60",
+                  isToday
+                    ? cn(TODAY_STYLE, isSelected && "ring-sky-500/80")
+                    : isSelected
+                      ? "bg-surface-hover ring-1 ring-line"
+                      : "hover:bg-surface-hover/60",
                 )}
               >
                 {content}
               </button>
             ) : (
-              <div className={cn("flex items-center gap-2 px-2", dense ? "h-12" : "h-14")}>{content}</div>
+              <div
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl px-2",
+                  dense ? "h-12" : "h-14",
+                  isToday && TODAY_STYLE,
+                )}
+              >
+                {content}
+              </div>
             )}
           </li>
         );

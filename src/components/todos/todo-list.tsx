@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
 import { AutoTextarea, Label } from "@/components/ui/input";
+import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
 import { SwipeRow } from "@/components/ui/swipe-row";
@@ -199,7 +200,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
           size="icon"
           aria-label="Add todo"
           disabled={!draft.trim()}
-          className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(245_158_11)]", TONE_STYLES.amber.solid)}
+          className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]", TONE_STYLES.yellow.solid)}
         >
           <Plus className="!size-5" />
         </Button>
@@ -297,7 +298,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
   if (variant === "card") {
     return (
       <Card className={cn("overflow-hidden", className)}>
-        <CardHeader icon={<ListTodo />} title="Backlog" count={open.length} tone="amber" href="/todos" />
+        <CardHeader icon={<ListTodo />} title="Backlog" count={open.length} tone="yellow" href="/todos" />
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{body}</div>
       </Card>
     );
@@ -344,6 +345,7 @@ function TodoForm({
   const [title, setTitle] = useState(todo.title);
   const [due, setDue] = useState<string | null>(todo.due_date);
   const [starred, setStarred] = useState(todo.starred);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const { settings } = useSettings();
   const todayBlocks = useBlocks(today, today);
   const addBlocks = useAddBlocks();
@@ -357,6 +359,8 @@ function TodoForm({
     { label: "Weekend", value: weekdayIndex(today) >= 5 ? today : saturday },
     { label: "Next week", value: nextMonday },
   ];
+
+  const customDue = due !== null && !presets.some((p) => p.value === due);
 
   const save = () => {
     if (!title.trim()) return;
@@ -420,25 +424,41 @@ function TodoForm({
               className={cn(
                 "h-9 rounded-full border px-3.5 text-sm font-medium transition-colors",
                 due === p.value
-                  ? "border-transparent bg-accent text-accent-fg"
+                  ? cn("border-transparent", TONE_STYLES.yellow.solid)
                   : "border-line bg-surface-sunken text-muted hover:text-fg",
               )}
             >
               {p.label}
             </button>
           ))}
-          <label className="relative flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface-sunken px-3.5 text-sm font-medium text-muted hover:text-fg">
+          <button
+            type="button"
+            aria-expanded={pickerOpen}
+            onClick={() => setPickerOpen((o) => !o)}
+            className={cn(
+              "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors",
+              customDue
+                ? cn("border-transparent", TONE_STYLES.yellow.solid)
+                : "border-line bg-surface-sunken text-muted hover:text-fg",
+            )}
+          >
             <CalendarDays className="size-4" />
-            {due && !presets.some((p) => p.value === due) ? dueLabel(due, today).text : "Pick date"}
-            <input
-              type="date"
-              value={due ?? ""}
-              onChange={(e) => setDue(e.target.value || null)}
-              className="absolute inset-0 cursor-pointer opacity-0"
-              aria-label="Pick a due date"
-            />
-          </label>
+            {customDue ? dueLabel(due!, today).text : "Pick date"}
+          </button>
         </div>
+        {pickerOpen && (
+          // Our own calendar: works the same on the phone, the laptop and the wall display.
+          <MonthGrid
+            className="mt-3 rounded-2xl border border-line p-3"
+            selected={due}
+            today={today}
+            tone="yellow"
+            onSelect={(day) => {
+              setDue(day);
+              setPickerOpen(false);
+            }}
+          />
+        )}
       </div>
       <button
         type="button"

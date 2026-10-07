@@ -16,7 +16,7 @@ import { useSettings } from "@/data/settings";
 import { useUpdateTodo } from "@/data/todos";
 import { addDays, type DayKey, formatDayMonth, fromDayKey, relativeDayLabel, toDayKey, weekDays } from "@/lib/date";
 import { findFreeSlot } from "@/lib/planner-layout";
-import { awakeWindow, sleepRangesForDay } from "@/lib/sleep";
+import { awakeWindow, planSleepRanges, planViewEnd } from "@/lib/sleep";
 import { formatEndMinutes, formatMinutes, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
 import type { BlockDraft, EditorState } from "./block-editor";
 
@@ -34,7 +34,9 @@ export function usePlanner(day: DayKey) {
 
   const weekBlocks = useMemo(() => blocksQuery.data ?? [], [blocksQuery.data]);
   const dayBlocks = useMemo(() => weekBlocks.filter((b) => b.day === day), [weekBlocks, day]);
-  const sleepRanges = useMemo(() => sleepRangesForDay(settings.sleepSchedule, day), [settings.sleepSchedule, day]);
+  const sleepRanges = useMemo(() => planSleepRanges(settings.sleepSchedule, day), [settings.sleepSchedule, day]);
+  /** The plan view runs past midnight when bedtime is after midnight. */
+  const viewEnd = planViewEnd(settings.sleepSchedule, day);
   const awake = useMemo(() => awakeWindow(settings.sleepSchedule, day), [settings.sleepSchedule, day]);
   const { snap, defaultDuration } = settings.planner;
 
@@ -125,6 +127,7 @@ export function usePlanner(day: DayKey) {
     weekBlocks,
     dayBlocks,
     sleepRanges,
+    viewEnd,
     awake,
     snap,
     editor,

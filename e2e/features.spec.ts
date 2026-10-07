@@ -168,6 +168,19 @@ test("navigation behaves like an app: back from any section leads home", async (
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText(/^Week \d+$/)).toBeVisible();
+  // The tab bar follows, and no loading bar is left behind.
+  await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  await expect(tabs.getByRole("link", { name: "Notes" })).not.toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("progressbar", { name: "Loading" })).toHaveCount(0);
+
+  // Straight from home to a section and back again.
+  await tabs.getByRole("link", { name: "Planner" }).click();
+  await expect(page).toHaveURL(/\/planner$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
+  await expect(tabs.getByRole("link", { name: "Planner" })).not.toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("progressbar", { name: "Loading" })).toHaveCount(0);
 });
 
 test("wall display: dragging with the touch screen (as a mouse) scrolls instead of tapping", async ({ page }) => {
@@ -222,4 +235,70 @@ test("wall display: the on-screen keyboard types into a sheet without closing it
   await dialog.getByRole("button", { name: "Done" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("button", { name: 'Open note "Wo"' }).first()).toBeVisible();
+});
+
+test("planner: tapping a block opens it – with a mouse and on the wall display", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/planner?day=2030-01-09");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Clear this day" }).click();
+  await page.getByRole("button", { name: "Add a block" }).click({ position: { x: 200, y: 9 * 64 + 5 } });
+  await page.getByRole("dialog").getByLabel("What").fill("Tap me");
+  await page.getByRole("dialog").getByRole("button", { name: "Add to plan" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  const block = page.locator('[role="button"]', { hasText: "Tap me" }).first();
+  await block.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  // Wall display: the touch screen arrives as a mouse and is treated like a finger.
+  await page.goto("/planner?day=2030-01-09&kiosk=1");
+  await expect(page.locator("html")).toHaveClass(/kiosk/);
+  await page.locator('[role="button"]', { hasText: "Tap me" }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await page.goto("/planner?kiosk=0");
+});
+
+test("planner: a bedtime after midnight is shown at the end of the same day", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // 4 Jan 2030 is a Friday; the default schedule goes to bed at 00:30 on Fridays.
+  await page.goto("/planner?day=2030-01-04");
+  await expect(page.getByRole("heading", { name: "Friday" })).toBeVisible();
+  await expect(page.getByText("Midnight", { exact: true })).toBeAttached();
+  await expect(page.getByText("Bedtime 00:30")).toBeAttached();
+  // A normal weekday ends at midnight with its bedtime before it.
+  await page.goto("/planner?day=2030-01-08");
+  await expect(page.getByText("Bedtime 23:30")).toBeAttached();
+  await expect(page.getByText("Midnight", { exact: true })).toHaveCount(0);
+});
+
+test("backlog: due dates from the quick picks and the built-in calendar", async ({ page }) => {
+  await page.goto("/todos");
+  const title = `Due test ${Date.now() % 10000}`;
+  await page.getByLabel("New todo").fill(title);
+  await page.getByRole("button", { name: "Add todo" }).click();
+  await page.getByRole("button", { name: title, exact: true }).click();
+  const dialog = page.getByRole("dialog");
+
+  // "Next week" keeps saying so (or "Tomorrow" when today is Sunday).
+  await dialog.getByRole("button", { name: "Next week" }).click();
+  await dialog.getByRole("button", { name: "Save" }).click();
+  const row = page.locator("li", { hasText: title });
+  await expect(row.getByText(/^(Next week|Tomorrow)$/)).toBeVisible();
+
+  // Pick the 15th of next month in our own calendar (no native date picker needed).
+  await page.getByRole("button", { name: title, exact: true }).click();
+  await dialog.getByRole("button", { name: "Pick date" }).click();
+  await dialog.getByRole("button", { name: "Next month" }).click();
+  const next = new Date();
+  next.setDate(1);
+  next.setMonth(next.getMonth() + 1);
+  const month = next.toLocaleString("en-GB", { month: "long" });
+  await dialog.getByRole("button", { name: new RegExp(`, 15 ${month}$`) }).click();
+  await expect(dialog.getByRole("button", { name: /^15 / })).toBeVisible();
+  await dialog.getByRole("button", { name: "Save" }).click();
+  await expect(row.getByText(new RegExp(`^15 ${month.slice(0, 3)}$`))).toBeVisible();
 });

@@ -254,18 +254,31 @@ export function DayTimeline({
       style={{ scrollbarGutter: "stable" }}
     >
       <div ref={content} className="relative mt-2.5" style={{ height: height + 16 }}>
-        {/* Hour grid */}
+        {/* Hour grid (past 24:00 when bedtime is after midnight) */}
         {hours.map((h) => (
           <div key={h} className="pointer-events-none absolute right-0 left-0" style={{ top: y(h * 60) }}>
             <span
               className="absolute -top-2 left-0 w-[46px] text-right text-[0.7rem] font-medium text-faint tabular"
               style={{ lineHeight: "1rem" }}
             >
-              {h < 24 ? `${String(h).padStart(2, "0")}:00` : ""}
+              {h * 60 === rangeEnd ? "" : `${String(h % 24).padStart(2, "0")}:00`}
             </span>
             <div className="absolute right-2 h-px bg-line" style={{ left: GUTTER }} />
           </div>
         ))}
+
+        {/* Midnight, when the day continues into the night */}
+        {rangeEnd > MINUTES_PER_DAY && rangeStart < MINUTES_PER_DAY && (
+          <div
+            className="pointer-events-none absolute right-2 z-[5] flex items-center"
+            style={{ top: y(MINUTES_PER_DAY) - 9, left: GUTTER }}
+          >
+            <span className="rounded-full border border-line bg-surface-strong px-2 py-px text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
+              Midnight
+            </span>
+            <span className="h-px flex-1 border-t border-dashed border-line-strong" />
+          </div>
+        )}
 
         {/* Sleep */}
         {sleepRanges.map(([s, e]) => {
@@ -281,7 +294,9 @@ export function DayTimeline({
               {bottom - top > 28 && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-faint">
                   <Moon className="size-3.5" />
-                  {s === 0 ? `Sleep until ${formatMinutes(e)}` : `Bedtime ${formatMinutes(s)}`}
+                  {e <= MINUTES_PER_DAY && s < 12 * 60
+                    ? `Sleep until ${formatMinutes(e)}`
+                    : `Bedtime ${formatMinutes(s % MINUTES_PER_DAY)}`}
                 </span>
               )}
             </div>
@@ -293,8 +308,9 @@ export function DayTimeline({
           type="button"
           aria-label="Add a block"
           tabIndex={-1}
-          className="absolute top-0 right-0 bottom-0 cursor-cell"
-          style={{ left: GUTTER }}
+          className="absolute top-0 right-0 cursor-cell"
+          // New blocks belong to this day: the part after midnight is for looking only.
+          style={{ left: GUTTER, height: y(Math.min(rangeEnd, MINUTES_PER_DAY)) }}
           onClick={(e) => {
             if (suppressClick.current) {
               suppressClick.current = false;
@@ -345,18 +361,20 @@ export function DayTimeline({
               onPointerUp={(e) => finish(e, false)}
               onPointerCancel={(e) => finish(e, true)}
               onContextMenu={(e) => e.preventDefault()}
+              // Handled here, not on the inner button: while the pointer is captured
+              // (for dragging) a mouse click lands on this element.
+              onClick={(e) => {
+                e.stopPropagation();
+                if (suppressClick.current) {
+                  suppressClick.current = false;
+                  return;
+                }
+                onOpen(block);
+              }}
             >
               <div
                 role="button"
                 tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (suppressClick.current) {
-                    suppressClick.current = false;
-                    return;
-                  }
-                  onOpen(block);
-                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();

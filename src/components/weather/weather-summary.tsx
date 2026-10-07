@@ -71,9 +71,17 @@ export function WeatherSummary({ className }: { className?: string }) {
           <li key={d.day}>
             <AppLink
               href={d.day === today ? "/weather" : `/weather?day=${d.day}`}
-              className="flex flex-col items-center rounded-2xl py-1.5 transition-colors active:bg-surface-hover"
+              className={cn(
+                "flex flex-col items-center rounded-2xl py-1.5 transition-colors active:bg-surface-hover",
+                d.day === today && "bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50",
+              )}
             >
-              <span className={cn("text-[0.7rem] font-semibold", d.day !== today && "text-muted")}>
+              <span
+                className={cn(
+                  "text-[0.7rem] font-semibold",
+                  d.day === today ? "font-bold text-sky-700 dark:text-sky-200" : "text-muted",
+                )}
+              >
                 {d.day === today ? "Today" : formatWeekdayShort(fromDayKey(d.day))}
               </span>
               <WeatherIcon code={d.code} isDay className="size-9" />

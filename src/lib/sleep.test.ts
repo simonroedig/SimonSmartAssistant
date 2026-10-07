@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SLEEP_SCHEDULE,
   hourSleep,
+  planSleepRanges,
+  planViewEnd,
   applyToDays,
   awakeWindow,
   isAsleepAt,
@@ -81,5 +83,29 @@ describe("sleep per forecast hour", () => {
     // Friday bed 00:30 → Saturday 00:00–01:00 shows the bedtime.
     expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-10", 0)).toEqual({ asleep: true, bed: 30 });
     expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-09", 23)).toEqual({ asleep: false });
+  });
+});
+
+describe("sleep in the day plan", () => {
+  it("shows a bedtime after midnight at the end of the same day", () => {
+    // Friday: up 07:00, bed 00:30 (Saturday) – the Friday view runs to 02:00 and is shaded from 00:30.
+    expect(planViewEnd(DEFAULT_SLEEP_SCHEDULE, "2026-10-09")).toBe(1560);
+    expect(planSleepRanges(DEFAULT_SLEEP_SCHEDULE, "2026-10-09")).toEqual([
+      [0, 420],
+      [1470, 2160],
+    ]);
+  });
+
+  it("ends at midnight when going to bed before", () => {
+    expect(planViewEnd(DEFAULT_SLEEP_SCHEDULE, "2026-10-07")).toBe(1440);
+    expect(planSleepRanges(DEFAULT_SLEEP_SCHEDULE, "2026-10-07")).toEqual([
+      [0, 420],
+      [1410, 2160],
+    ]);
+  });
+
+  it("starts the next morning's sleep at the late bedtime", () => {
+    // Saturday after a 00:30 bedtime: awake until 00:30, asleep until 09:00.
+    expect(planSleepRanges(DEFAULT_SLEEP_SCHEDULE, "2026-10-10")[0]).toEqual([30, 540]);
   });
 });

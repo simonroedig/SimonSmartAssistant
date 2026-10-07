@@ -87,9 +87,23 @@ describe("formatting: English words, German order", () => {
   });
 
   it("labels due dates with a tone", () => {
-    expect(dueLabel("2026-10-03", "2026-10-06").tone).toBe("overdue");
+    expect(dueLabel("2026-10-03", "2026-10-06")).toEqual({ text: "Overdue · 3 Oct", tone: "overdue" });
+    expect(dueLabel("2026-10-05", "2026-10-06")).toEqual({ text: "Since yesterday", tone: "overdue" });
     expect(dueLabel("2026-10-06", "2026-10-06")).toEqual({ text: "Today", tone: "today" });
     expect(dueLabel("2026-10-07", "2026-10-06")).toEqual({ text: "Tomorrow", tone: "soon" });
+    expect(dueLabel("2026-10-08", "2026-10-06")).toEqual({ text: "Thursday", tone: "soon" });
     expect(dueLabel("2026-10-30", "2026-10-06").tone).toBe("later");
+  });
+
+  it("keeps the words of the quick picks and moves along with the days", () => {
+    // Tuesday 6 Oct: Saturday/Sunday are "Weekend", Monday 12 Oct is "Next week".
+    expect(dueLabel("2026-10-10", "2026-10-06").text).toBe("Weekend");
+    expect(dueLabel("2026-10-11", "2026-10-06").text).toBe("Weekend");
+    expect(dueLabel("2026-10-12", "2026-10-06").text).toBe("Next week");
+    // Later that week the same dates read differently.
+    expect(dueLabel("2026-10-10", "2026-10-09").text).toBe("Tomorrow");
+    expect(dueLabel("2026-10-12", "2026-10-10").text).toBe("Next week");
+    expect(dueLabel("2026-10-12", "2026-10-11").text).toBe("Tomorrow");
+    expect(dueLabel("2026-10-12", "2026-10-12").text).toBe("Today");
   });
 });

@@ -163,6 +163,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // Highlight the tapped tab right away; the page follows a moment later.
   const [pending, setPending] = useState<{ href: string; from: string } | null>(null);
+  // Any finished navigation (including the back gesture) ends the pending state.
+  const [shownPath, setShownPath] = useState(pathname);
+  if (pathname !== shownPath) {
+    setShownPath(pathname);
+    setPending(null);
+  }
   const pendingHref = pending && pending.from === pathname ? pending.href : null;
   const isCurrent = (href: string) => (pendingHref ? pendingHref === href : isActive(pathname, href));
   const onNavigate = (href: string) => {

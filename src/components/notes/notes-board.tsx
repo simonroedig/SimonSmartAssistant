@@ -303,7 +303,7 @@ function Composer({ onCreate }: { onCreate: (draft: NoteDraft, pin: boolean) => 
         aria-label="New note"
         maxLength={20000}
         maxRows={14}
-        className="border-0 bg-transparent focus:bg-transparent"
+        className="rounded-none border-0 bg-transparent focus:bg-transparent"
       />
       {open && (
         <div className="flex items-center gap-2 px-2 pb-2">
@@ -461,7 +461,7 @@ function NoteEditorSheet({
           minRows={6}
           maxRows={20}
           maxLength={20000}
-          className="border-0 bg-transparent px-0 focus:bg-transparent"
+          className="rounded-none border-0 bg-transparent px-0 focus:bg-transparent"
         />
       </div>
     </Sheet>

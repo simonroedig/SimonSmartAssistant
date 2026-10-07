@@ -69,11 +69,13 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
   // drags, so a quick sideways flick never collides with moving a block.
   const swipe = useSwipe((direction) => go(direction), !editing);
 
-  // Visible range: the awake window plus any blocks outside it, rounded to hours.
+  // Visible range: from a bit before waking up until a bit after bedtime (past
+  // midnight if that's when you go to bed), widened for blocks outside it.
   const starts = [planner.awake[0], ...planner.dayBlocks.map((b) => b.start_min)];
-  const ends = [planner.awake[1], ...planner.dayBlocks.map((b) => b.end_min)];
+  const ends = [planner.dayBlocks.length ? Math.max(...planner.dayBlocks.map((b) => b.end_min)) + 30 : 0];
   const rangeStart = Math.max(0, Math.floor((Math.min(...starts) - 30) / 60) * 60);
-  const rangeEnd = Math.min(MINUTES_PER_DAY, Math.ceil((Math.max(...ends) + 30) / 60) * 60);
+  const bedEnd = planner.viewEnd > MINUTES_PER_DAY ? planner.viewEnd : Math.ceil((planner.awake[1] + 30) / 60) * 60;
+  const rangeEnd = Math.max(bedEnd, Math.min(MINUTES_PER_DAY, Math.ceil(Math.max(...ends) / 60) * 60));
   const hours = (rangeEnd - rangeStart) / 60;
   // Leave room for the timeline's bottom padding so the whole day fits without scrolling.
   const fitted = height > 0 ? Math.floor((height - 48) / hours) : 48;

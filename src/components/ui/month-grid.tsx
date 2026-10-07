@@ -1,0 +1,149 @@
+"use client";
+
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  addDays,
+  type DayKey,
+  formatDayMonth,
+  formatMonthYear,
+  formatWeekday,
+  fromDayKey,
+  startOfWeek,
+  toDayKey,
+} from "@/lib/date";
+import { type Tone, TONE_STYLES } from "@/lib/tones";
+import { cn } from "@/lib/utils";
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+export function monthOf(day: DayKey): DayKey {
+  return `${day.slice(0, 7)}-01`;
+}
+
+function shiftMonth(month: DayKey, amount: number): DayKey {
+  const date = fromDayKey(month);
+  date.setMonth(date.getMonth() + amount, 1);
+  return monthOf(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`);
+}
+
+/** The six weeks shown for a month (Monday first). */
+export function monthGridDays(month: DayKey): DayKey[] {
+  const start = startOfWeek(monthOf(month));
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+/**
+ * A month to pick a day from. Always six weeks, so the grid (and the arrows
+ * above it) never change height. Optional coloured dots per day.
+ */
+export function MonthGrid({
+  selected,
+  today,
+  onSelect,
+  onMonthChange,
+  dots,
+  tone = "accent",
+  className,
+}: {
+  selected: DayKey | null;
+  today: DayKey | null;
+  onSelect: (day: DayKey) => void;
+  /** Called with the first day of the month that is shown. */
+  onMonthChange?: (month: DayKey) => void;
+  /** Tailwind background classes of the dots to show under a day. */
+  dots?: (day: DayKey) => string[];
+  tone?: Tone;
+  className?: string;
+}) {
+  const initial = monthOf(selected ?? today ?? toDayKey(new Date()));
+  const [month, setMonthState] = useState(initial);
+  const setMonth = (next: DayKey) => {
+    setMonthState(next);
+    onMonthChange?.(next);
+  };
+  // Follow the selected day when it moves to another month (e.g. by swiping).
+  const [lastSelected, setLastSelected] = useState(selected);
+  if (selected !== lastSelected) {
+    setLastSelected(selected);
+    if (selected && monthOf(selected) !== month) setMonth(monthOf(selected));
+  }
+
+  const days = useMemo(() => monthGridDays(month), [month]);
+  const styles = TONE_STYLES[tone];
+
+  return (
+    <div className={className}>
+      <div className="mb-2 flex items-center gap-1">
+        <h3 className="min-w-0 flex-1 truncate pl-1 text-[0.98rem] font-semibold tracking-tight whitespace-nowrap">
+          {formatMonthYear(fromDayKey(month))}
+        </h3>
+        {today && monthOf(today) !== month && (
+          <button
+            type="button"
+            onClick={() => setMonth(monthOf(today))}
+            className={cn(
+              "h-8 shrink-0 rounded-xl px-2.5 text-xs font-semibold whitespace-nowrap",
+              styles.soft,
+              styles.text,
+            )}
+          >
+            Today
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label="Previous month"
+          onClick={() => setMonth(shiftMonth(month, -1))}
+          className="grid size-9 shrink-0 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Next month"
+          onClick={() => setMonth(shiftMonth(month, 1))}
+          className="grid size-9 shrink-0 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+        >
+          <ChevronRight className="size-5" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-0.5 text-center">
+        {WEEKDAYS.map((d) => (
+          <span key={d} className="pb-1 text-[0.68rem] font-semibold text-faint uppercase">
+            {d}
+          </span>
+        ))}
+        {days.map((day) => {
+          const inMonth = day.slice(0, 7) === month.slice(0, 7);
+          const isSelected = day === selected;
+          const isToday = day === today;
+          const colors = dots?.(day) ?? [];
+          const date = fromDayKey(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => onSelect(day)}
+              aria-pressed={isSelected}
+              aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}`}
+              className={cn(
+                "flex aspect-square max-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-sm tabular transition-colors",
+                isSelected ? styles.solid : "hover:bg-surface-hover",
+                !inMonth && !isSelected && "text-faint",
+                isToday && !isSelected && cn("font-bold ring-1 ring-current", styles.text),
+              )}
+            >
+              {date.getDate()}
+              <span className="flex h-1 items-center gap-0.5">
+                {colors.slice(0, 3).map((c, i) => (
+                  <span key={i} className={cn("size-1 rounded-full", isSelected ? "bg-current opacity-70" : c)} />
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

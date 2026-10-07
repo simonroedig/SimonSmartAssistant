@@ -2,7 +2,7 @@
  * One colour per section, used for the navigation, card headers and accents.
  * Home and the generic UI use the violet accent.
  */
-export type Tone = "accent" | "rose" | "emerald" | "amber" | "orange" | "sky" | "slate";
+export type Tone = "accent" | "rose" | "emerald" | "amber" | "yellow" | "orange" | "sky" | "slate";
 
 export const TONE_STYLES: Record<
   Tone,
@@ -30,6 +30,11 @@ export const TONE_STYLES: Record<
     text: "text-amber-600 dark:text-amber-300",
     soft: "bg-amber-500/16",
     solid: "bg-amber-500 text-white dark:text-amber-950",
+  },
+  yellow: {
+    text: "text-yellow-600 dark:text-yellow-300",
+    soft: "bg-yellow-400/22 dark:bg-yellow-300/16",
+    solid: "bg-yellow-400 text-yellow-950 dark:bg-yellow-300 dark:text-yellow-950",
   },
   orange: {
     text: "text-orange-600 dark:text-orange-300",

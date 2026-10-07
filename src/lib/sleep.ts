@@ -57,6 +57,34 @@ export function sleepRangesForDay(schedule: SleepSchedule, day: DayKey): Range[]
   return ranges;
 }
 
+/** Latest minute a plan view can reach (noon of the next day). */
+export const PLAN_VIEW_MAX = MINUTES_PER_DAY + 12 * 60;
+
+/**
+ * Sleep as shown in a day's plan: the end of the previous night (until waking
+ * up) and everything after this day's bedtime – which may be after midnight,
+ * so the plan view can run past 24:00 to show it.
+ */
+export function planSleepRanges(schedule: SleepSchedule, day: DayKey): Range[] {
+  const today = schedule[weekdayIndex(day)];
+  const yesterday = schedule[weekdayIndex(addDays(day, -1))];
+  const ranges: Range[] = [];
+  const nightTailStart = Math.max(0, yesterday.bed - MINUTES_PER_DAY);
+  if (nightTailStart < today.wake) ranges.push([nightTailStart, today.wake]);
+  ranges.push([today.bed, PLAN_VIEW_MAX]);
+  return ranges;
+}
+
+/**
+ * Where a day's plan view ends: midnight, or a little after bedtime when that
+ * is later (e.g. bed at 00:30 → the view runs until 02:00 of the next day).
+ */
+export function planViewEnd(schedule: SleepSchedule, day: DayKey): number {
+  const bed = schedule[weekdayIndex(day)].bed;
+  if (bed < MINUTES_PER_DAY) return MINUTES_PER_DAY;
+  return Math.min(PLAN_VIEW_MAX, Math.ceil((bed + 60) / 60) * 60);
+}
+
 /** The awake part of a day, e.g. [420, 1410]. */
 export function awakeWindow(schedule: SleepSchedule, day: DayKey): Range {
   const today = schedule[weekdayIndex(day)];

@@ -135,14 +135,26 @@ export function relativeDayLabel(key: DayKey, today: DayKey): string {
   return `${formatWeekday(date)}, ${formatDayMonth(date)}`;
 }
 
-/** Due-date chip text for todos. */
+/**
+ * Due-date chip text for todos, relative to today – so it moves along by
+ * itself: "Next week" becomes "Monday" and then "Today", a missed date turns
+ * into "Overdue".
+ */
 export function dueLabel(key: DayKey, today: DayKey): { text: string; tone: "overdue" | "today" | "soon" | "later" } {
   const diff = diffInDays(key, today);
   if (diff < 0) {
-    return { text: diff === -1 ? "Yesterday" : formatDayMonthShort(fromDayKey(key)), tone: "overdue" };
+    return {
+      text: diff === -1 ? "Since yesterday" : `Overdue · ${formatDayMonthShort(fromDayKey(key))}`,
+      tone: "overdue",
+    };
   }
   if (diff === 0) return { text: "Today", tone: "today" };
   if (diff === 1) return { text: "Tomorrow", tone: "soon" };
+  const thisWeek = startOfWeek(today);
+  // The weekend of this week (as picked with "Weekend").
+  if (diff < 7 && weekdayIndex(key) >= 5 && startOfWeek(key) === thisWeek) return { text: "Weekend", tone: "soon" };
+  // Monday of next week (as picked with "Next week").
+  if (key === addDays(thisWeek, 7)) return { text: "Next week", tone: "soon" };
   if (diff < 7) return { text: formatWeekday(fromDayKey(key)), tone: "soon" };
   return { text: formatDayMonthShort(fromDayKey(key)), tone: "later" };
 }
