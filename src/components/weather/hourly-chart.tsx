@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import type { HourlyPoint } from "@/lib/weather/open-meteo";
+import type { SleepSchedule } from "@/lib/sleep";
 import { cn } from "@/lib/utils";
+import type { HourlyPoint } from "@/lib/weather/open-meteo";
+import { HourLabel, sleepForHour } from "./hourly-strip";
 import { WeatherIcon } from "./weather-icon";
 
 const COL = 52; // px per hour
@@ -35,11 +37,14 @@ export function HourlyChart({
   hours,
   focusHour,
   nowTime,
+  sleepSchedule,
   className,
 }: {
   hours: HourlyPoint[];
   focusHour?: number;
   nowTime?: string;
+  /** Shades the hours you are asleep and marks wake-up and bedtime. */
+  sleepSchedule?: SleepSchedule;
   className?: string;
 }) {
   const id = useId();
@@ -65,20 +70,41 @@ export function HourlyChart({
   return (
     <div ref={scroller} className={cn("no-scrollbar overflow-x-auto", className)}>
       <div style={{ width }} className="relative">
-        <div className="flex">
+        {/* Sleep shading and the "now" column behind everything */}
+        <div className="pointer-events-none absolute inset-0 flex" aria-hidden="true">
+          {hours.map((h) => {
+            const isNow = nowTime !== undefined && h.time === nowTime;
+            const sleep = sleepForHour(sleepSchedule, h);
+            return (
+              <div
+                key={h.time}
+                style={{ width: COL }}
+                className={cn(
+                  "h-full",
+                  isNow && "rounded-xl bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50",
+                  !isNow && sleep?.asleep && "sleep-shade",
+                )}
+              />
+            );
+          })}
+        </div>
+        <div className="relative flex pt-1">
           {hours.map((h) => {
             const isNow = nowTime !== undefined && h.time === nowTime;
             return (
               <div key={h.time} style={{ width: COL }} className="flex flex-col items-center gap-1 pb-1">
-                <span className={cn("text-[0.7rem] font-medium tabular", isNow ? "text-accent" : "text-muted")}>
-                  {isNow ? "Now" : `${String(h.hour).padStart(2, "0")}:00`}
-                </span>
+                <HourLabel
+                  h={h}
+                  sleep={sleepForHour(sleepSchedule, h)}
+                  isNow={isNow}
+                  className={cn("text-[0.7rem]", isNow ? "font-bold text-sky-700 dark:text-sky-200" : "text-muted")}
+                />
                 <WeatherIcon code={h.code} isDay={h.isDay} className="size-9" />
               </div>
             );
           })}
         </div>
-        <svg width={width} height={CHART_H} className="block overflow-visible" aria-hidden="true">
+        <svg width={width} height={CHART_H} className="relative block overflow-visible" aria-hidden="true">
           <defs>
             <linearGradient id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor="var(--accent)" stopOpacity="0.32" />
@@ -102,7 +128,7 @@ export function HourlyChart({
             </g>
           ))}
         </svg>
-        <div className="flex items-end" style={{ height: BAR_H + 16 }}>
+        <div className="relative flex items-end pb-1" style={{ height: BAR_H + 20 }}>
           {hours.map((h) => (
             <div key={h.time} style={{ width: COL }} className="flex flex-col items-center justify-end gap-1">
               <div

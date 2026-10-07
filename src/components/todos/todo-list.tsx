@@ -34,6 +34,7 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { findFreeSlot } from "@/lib/planner-layout";
 import { awakeWindow } from "@/lib/sleep";
 import { formatMinutes, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
+import { TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 const DUE_TONES = {
@@ -190,8 +191,16 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
           autoComplete="off"
           maxLength={5000}
           maxRows={8}
+          className="py-[11px]"
         />
-        <Button type="submit" variant="primary" size="icon" aria-label="Add todo" disabled={!draft.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="icon"
+          aria-label="Add todo"
+          disabled={!draft.trim()}
+          className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(245_158_11)]", TONE_STYLES.amber.solid)}
+        >
           <Plus className="!size-5" />
         </Button>
       </form>

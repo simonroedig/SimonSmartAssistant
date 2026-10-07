@@ -51,6 +51,7 @@ export function MonthCalendar({
     if (monthOf(selected) !== month) setMonth(monthOf(selected));
   }
 
+  // Always six weeks, so the grid (and the arrows above it) never change height.
   const gridStart = startOfWeek(month);
   const days = useMemo(() => Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)), [gridStart]);
   const blocks = useBlocks(days[0], days[41]);
@@ -61,8 +62,6 @@ export function MonthCalendar({
   }, [blocks.data]);
 
   const rose = TONE_STYLES.rose;
-  // Drop a trailing week that belongs entirely to the next month.
-  const visible = days.slice(0, days[35].slice(0, 7) !== month.slice(0, 7) ? 35 : 42);
 
   return (
     <div className={className}>
@@ -102,7 +101,7 @@ export function MonthCalendar({
             {d}
           </span>
         ))}
-        {visible.map((day) => {
+        {days.map((day) => {
           const inMonth = day.slice(0, 7) === month.slice(0, 7);
           const isSelected = day === selected;
           const isToday = day === today;

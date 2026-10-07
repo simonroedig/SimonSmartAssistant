@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SLEEP_SCHEDULE,
+  hourSleep,
   applyToDays,
   awakeWindow,
   isAsleepAt,
@@ -64,5 +65,21 @@ describe("sleep ranges", () => {
     expect(updated[4].wake).toBe(420);
     expect(sharedDay(updated, WEEKEND)).toBeNull();
     expect(sharedDay(applyToDays(updated, WEEKEND, { bed: 1400 }), WEEKEND)).toEqual({ wake: 480, bed: 1400 });
+  });
+});
+
+describe("sleep per forecast hour", () => {
+  // Default schedule: weekdays up at 07:00, in bed at 23:30; Friday night until 00:30.
+  it("marks sleeping hours, the wake-up hour and bedtime", () => {
+    expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-07", 5)).toEqual({ asleep: true });
+    expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-07", 7)).toEqual({ asleep: false, wake: 420 });
+    expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-07", 12)).toEqual({ asleep: false });
+    expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-07", 23)).toEqual({ asleep: true, bed: 1410 });
+  });
+
+  it("puts a bedtime after midnight on the next morning", () => {
+    // Friday bed 00:30 → Saturday 00:00–01:00 shows the bedtime.
+    expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-10", 0)).toEqual({ asleep: true, bed: 30 });
+    expect(hourSleep(DEFAULT_SLEEP_SCHEDULE, "2026-10-09", 23)).toEqual({ asleep: false });
   });
 });

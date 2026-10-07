@@ -29,9 +29,9 @@ export function Dashboard() {
           <AppLink
             href="/settings"
             aria-label="Settings"
-            className="-mr-1 grid size-11 shrink-0 place-items-center rounded-2xl text-slate-500 transition-colors hover:bg-surface-hover md:hidden dark:text-slate-300"
+            className="-mt-1 -mr-1.5 grid size-12 shrink-0 place-items-center rounded-2xl text-slate-500 transition-colors hover:bg-surface-hover active:bg-surface-hover md:hidden dark:text-slate-300"
           >
-            <Settings2 className="size-5" />
+            <Settings2 className="size-[1.6rem]" strokeWidth={1.9} />
           </AppLink>
         </div>
         <WeatherSummary className="md:hidden" />

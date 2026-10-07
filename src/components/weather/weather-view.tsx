@@ -25,6 +25,7 @@ import { useAirQuality, useForecast } from "@/data/weather";
 import { useNow } from "@/hooks/use-now";
 import { formatDayMonth, formatWeekday, fromDayKey, isDayKey, toDayKey } from "@/lib/date";
 import { aqiLabel, uvLabel, weatherInfo, windDirectionLabel } from "@/lib/weather/codes";
+import { awakeWindow } from "@/lib/sleep";
 import { formatLocationLong, hoursOfDay, locationNowIso, pollenLevel } from "@/lib/weather/open-meteo";
 import { cn } from "@/lib/utils";
 import { DailyList } from "./daily-list";
@@ -138,7 +139,8 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
   const info = weatherInfo(data.current.code, data.current.isDay);
   const nowHour = `${locationNowIso(data, now.getTime()).slice(0, 13)}:00`;
   const hours = hoursOfDay(data, day);
-  const focusHour = day === today ? Number(nowHour.slice(11, 13)) : 6;
+  const wakeHour = Math.floor(awakeWindow(settings.sleepSchedule, day)[0] / 60);
+  const focusHour = day === today ? Number(nowHour.slice(11, 13)) : wakeHour;
 
   return (
     <>
@@ -244,7 +246,12 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
               {weatherInfo(dayData.code).label} · {Math.round(dayData.min)}° to {Math.round(dayData.max)}° ·{" "}
               {dayData.precipitationProbability}% rain
             </p>
-            <HourlyChart hours={hours} focusHour={focusHour} nowTime={day === today ? nowHour : undefined} />
+            <HourlyChart
+              hours={hours}
+              focusHour={focusHour}
+              nowTime={day === today ? nowHour : undefined}
+              sleepSchedule={settings.sleepSchedule}
+            />
           </Card>
           <Card className="p-3">
             <h2 className="px-2 pt-2 pb-2 text-[0.95rem] font-semibold">Next 7 days</h2>

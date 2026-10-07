@@ -20,6 +20,7 @@ import {
   useUpdateNote,
 } from "@/data/notes";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
+import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 function noteLabel(note: Pick<Note, "title" | "body">): string {
@@ -318,7 +319,13 @@ function Composer({ onCreate }: { onCreate: (draft: NoteDraft, pin: boolean) => 
           <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" size="sm" disabled={!title.trim() && !body.trim()}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            disabled={!title.trim() && !body.trim()}
+            className={cn("shadow-none", TONE_STYLES.orange.solid)}
+          >
             Add note
           </Button>
         </div>

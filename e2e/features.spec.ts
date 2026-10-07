@@ -190,3 +190,36 @@ test("wall display: dragging with the touch screen (as a mouse) scrolls instead 
   await page.goto("/planner?kiosk=0");
   await expect(page.locator("html")).not.toHaveClass(/kiosk/);
 });
+
+test("wall display: the on-screen keyboard types into a sheet without closing it", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.addInitScript(() =>
+    localStorage.setItem("ssa:device", JSON.stringify({ kiosk: true, keyboard: true, theme: "dark" })),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "New note" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  const keyboard = page.locator("[data-osk]");
+  await expect(keyboard).toBeVisible();
+  // The new note's text field keeps the focus.
+  await page.waitForTimeout(600);
+  await expect(dialog.getByLabel("Note", { exact: true })).toBeFocused();
+
+  for (const key of ["H", "a", "l", "l", "o"]) {
+    await keyboard.getByRole("button", { name: key, exact: true }).click();
+  }
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Note", { exact: true })).toHaveValue("Hallo");
+
+  // Switch to the title and keep typing.
+  await dialog.getByLabel("Title").click();
+  for (const key of ["W", "o"]) await keyboard.getByRole("button", { name: key, exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Title")).toHaveValue("Wo");
+
+  await dialog.getByRole("button", { name: "Delete note" }).count(); // new note: no delete button
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("button", { name: 'Open note "Wo"' }).first()).toBeVisible();
+});

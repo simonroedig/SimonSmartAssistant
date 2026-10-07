@@ -24,6 +24,7 @@ import {
 } from "@/data/shopping";
 import { useLongPress } from "@/hooks/use-long-press";
 import { positionAtEnd, positionForMove } from "@/lib/ordering";
+import { TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 function ItemRow({
@@ -143,7 +144,7 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
   const body = (
     <>
       <form
-        className="flex gap-2"
+        className="flex items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           addItem(draft);
@@ -162,7 +163,14 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
           autoComplete="off"
           maxLength={120}
         />
-        <Button type="submit" variant="primary" size="icon" aria-label="Add item" disabled={!draft.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="icon"
+          aria-label="Add item"
+          disabled={!draft.trim()}
+          className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]", TONE_STYLES.emerald.solid)}
+        >
           <Plus className="!size-5" />
         </Button>
       </form>

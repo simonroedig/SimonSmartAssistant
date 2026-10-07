@@ -69,6 +69,32 @@ export function isAsleepAt(schedule: SleepSchedule, now: Date): boolean {
   return sleepRangesForDay(schedule, toDayKey(now)).some(([s, e]) => minutes >= s && minutes < e);
 }
 
+export type HourSleep = {
+  /** At least half of the hour is spent asleep. */
+  asleep: boolean;
+  /** Wake-up time (minutes) if it falls into this hour. */
+  wake?: number;
+  /** Bedtime (minutes after midnight of `day`) if it falls into this hour. */
+  bed?: number;
+};
+
+/** Sleep information for the hour starting at `hour` on `day` (for hourly forecasts). */
+export function hourSleep(schedule: SleepSchedule, day: DayKey, hour: number): HourSleep {
+  const start = hour * 60;
+  const end = start + 60;
+  const asleepMinutes = sleepRangesForDay(schedule, day).reduce(
+    (sum, [s, e]) => sum + Math.max(0, Math.min(e, end) - Math.max(s, start)),
+    0,
+  );
+  const today = schedule[weekdayIndex(day)];
+  const lateBed = schedule[weekdayIndex(addDays(day, -1))].bed - MINUTES_PER_DAY;
+  const result: HourSleep = { asleep: asleepMinutes >= 30 };
+  if (today.wake >= start && today.wake < end) result.wake = today.wake;
+  if (today.bed >= start && today.bed < end) result.bed = today.bed;
+  else if (lateBed > 0 && lateBed >= start && lateBed < end) result.bed = lateBed;
+  return result;
+}
+
 /** Use the same wake/bed time for several weekdays at once. */
 export function applyToDays(schedule: SleepSchedule, days: number[], patch: Partial<SleepDay>): SleepSchedule {
   return schedule.map((entry, i) => (days.includes(i) ? { ...entry, ...patch } : entry));

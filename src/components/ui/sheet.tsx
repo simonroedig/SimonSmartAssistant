@@ -48,6 +48,10 @@ function useCloseOnBack(open: boolean, close: () => void) {
   }, [open]);
 }
 
+function keepOpenForKeyboard(e: { target: EventTarget | null; preventDefault: () => void }) {
+  if (e.target instanceof Element && e.target.closest("[data-osk]")) e.preventDefault();
+}
+
 /**
  * Responsive modal: a bottom sheet (swipe down to close) on phones and a
  * centered dialog on larger screens. Stays above on-screen keyboards.
@@ -107,6 +111,10 @@ export function Sheet({
                   // Don't pop up keyboards on touch devices just by opening a sheet.
                   if (isPhone) e.preventDefault();
                 }}
+                // Typing on the wall display's on-screen keyboard is not a click outside.
+                onPointerDownOutside={keepOpenForKeyboard}
+                onFocusOutside={keepOpenForKeyboard}
+                onInteractOutside={keepOpenForKeyboard}
               >
                 <motion.div
                   className={cn(

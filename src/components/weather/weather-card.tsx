@@ -83,7 +83,7 @@ export function WeatherCard({ className, days = 7 }: { className?: string; days?
   const today = toDayKey(now);
   const todayDaily = data.daily.find((d) => d.day === today) ?? data.daily[0];
   const info = weatherInfo(data.current.code, data.current.isDay);
-  const hours = upcomingHours(data, 12, now.getTime());
+  const hours = upcomingHours(data, 18, now.getTime());
 
   return (
     <Card className={cn("overflow-hidden", className)}>
@@ -109,7 +109,7 @@ export function WeatherCard({ className, days = 7 }: { className?: string; days?
             </div>
           )}
         </div>
-        <HourlyStrip hours={hours} className="mt-3 px-4" />
+        <HourlyStrip hours={hours} sleepSchedule={settings.sleepSchedule} className="mx-0 mt-3 px-4" />
         <div className="mx-5 my-2 h-px bg-line" />
         <DailyList
           className="px-3"
