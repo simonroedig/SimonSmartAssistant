@@ -256,6 +256,7 @@ test("planner: tapping a block opens it – with a mouse and on the wall display
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
+  await page.waitForTimeout(300); // let the closed sheet give its history entry back
 
   // Wall display: the touch screen arrives as a mouse and is treated like a finger.
   await page.goto("/planner?day=2030-01-09&kiosk=1");
@@ -263,6 +264,8 @@ test("planner: tapping a block opens it – with a mouse and on the wall display
   await page.locator('[role="button"]', { hasText: "Tap me" }).first().click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.waitForTimeout(300); // let the closed sheet give its history entry back
   await page.goto("/planner?kiosk=0");
 });
 
