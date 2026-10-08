@@ -10,6 +10,7 @@ import { WeatherCard } from "@/components/weather/weather-card";
 import { WeatherSummary } from "@/components/weather/weather-summary";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToday } from "@/hooks/use-today";
+import { LauncherUpdateBanner, WebSearchBar } from "@/components/launcher/launcher-widgets";
 import { ClockHero } from "./clock-hero";
 
 /**
@@ -34,6 +35,9 @@ export function Dashboard() {
             <Settings2 className="size-[1.6rem]" strokeWidth={1.9} />
           </AppLink>
         </div>
+        {/* Launcher app on the phone: web search and app updates right on the home screen. */}
+        <WebSearchBar />
+        <LauncherUpdateBanner />
         <WeatherSummary className="md:hidden" />
         <WeatherCard className="hidden min-h-0 flex-1 md:flex" />
       </div>

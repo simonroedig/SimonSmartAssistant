@@ -2,11 +2,14 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LayoutGrid } from "lucide-react";
+import { LauncherSync } from "@/components/launcher/launcher-sync";
 import { useSyncStatus } from "@/components/providers/realtime-provider";
+import { useIsLauncher } from "@/lib/launcher";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
-import { isActive, RAIL_ITEMS, SETTINGS_ITEM, TAB_ITEMS, type NavItem } from "./nav-items";
+import { HOME_ITEM, isActive, RAIL_ITEMS, SETTINGS_ITEM, TAB_ITEMS, type NavItem } from "./nav-items";
 
 function SyncDot() {
   const status = useSyncStatus();
@@ -30,6 +33,24 @@ const RAIL_ITEM_REM = 4.25;
 const RAIL_GAP_REM = 0.25;
 
 type LinkProps = { item: NavItem; active: boolean; onNavigate: (href: string) => void };
+
+/**
+ * In the Android launcher app, Home doubles as the switch to the phone's apps:
+ * on the home screen it opens them, on the apps page it shows "Apps" and leads
+ * back home. Everywhere else it is the plain Home link.
+ */
+function useHomeSwitch(pathname: string) {
+  const isLauncher = useIsLauncher();
+  const onApps = pathname === "/apps";
+  const item: NavItem = isLauncher && onApps ? { ...HOME_ITEM, label: "Apps", icon: LayoutGrid } : HOME_ITEM;
+  const target = isLauncher && pathname === "/" ? "/apps" : "/";
+  return { item, target };
+}
+
+/** The tab a path belongs to (the apps page belongs to Home). */
+function tabOf(path: string) {
+  return path === "/apps" ? "/" : path;
+}
 
 /**
  * Highlight behind the current tab. It slides by index with a plain CSS
@@ -59,14 +80,20 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
   );
 }
 
-function RailLink({ item, active, onNavigate, pill = false }: LinkProps & { pill?: boolean }) {
+function RailLink({
+  item,
+  active,
+  onNavigate,
+  pill = false,
+  target = item.href,
+}: LinkProps & { pill?: boolean; target?: string }) {
   const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
   return (
     <AppLink
-      href={item.href}
+      href={target}
       aria-current={active ? "page" : undefined}
-      onClick={() => onNavigate(item.href)}
+      onClick={() => onNavigate(target)}
       style={{ height: `${RAIL_ITEM_REM}rem` }}
       className={cn(
         "group relative flex w-full flex-col items-center justify-center gap-1 rounded-2xl text-[0.68rem] font-medium transition-colors",
@@ -86,9 +113,11 @@ function RailLink({ item, active, onNavigate, pill = false }: LinkProps & { pill
 function NavRail({
   isCurrent,
   onNavigate,
+  home,
 }: {
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
+  home: { item: NavItem; target: string };
 }) {
   return (
     <nav
@@ -101,9 +130,19 @@ function NavRail({
       </AppLink>
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
         <SlidingPill index={RAIL_ITEMS.findIndex((item) => isCurrent(item.href))} items={RAIL_ITEMS} axis="y" />
-        {RAIL_ITEMS.map((item) => (
-          <RailLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
-        ))}
+        {RAIL_ITEMS.map((item) =>
+          item.href === "/" ? (
+            <RailLink
+              key={item.href}
+              item={home.item}
+              target={home.target}
+              active={isCurrent(item.href)}
+              onNavigate={onNavigate}
+            />
+          ) : (
+            <RailLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
+          ),
+        )}
       </div>
       <div className="flex w-full flex-col items-center gap-3">
         <RailLink item={SETTINGS_ITEM} active={isCurrent(SETTINGS_ITEM.href)} onNavigate={onNavigate} pill />
@@ -113,14 +152,14 @@ function NavRail({
   );
 }
 
-function TabLink({ item, active, onNavigate }: LinkProps) {
+function TabLink({ item, active, onNavigate, target = item.href }: LinkProps & { target?: string }) {
   const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
   return (
     <AppLink
-      href={item.href}
+      href={target}
       aria-current={active ? "page" : undefined}
-      onClick={() => onNavigate(item.href)}
+      onClick={() => onNavigate(target)}
       className={cn(
         "relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[0.65rem] font-medium transition-colors active:scale-95",
         active ? "text-fg" : "text-muted",
@@ -138,9 +177,11 @@ function TabLink({ item, active, onNavigate }: LinkProps) {
 function BottomNav({
   isCurrent,
   onNavigate,
+  home,
 }: {
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
+  home: { item: NavItem; target: string };
 }) {
   return (
     <nav
@@ -150,9 +191,19 @@ function BottomNav({
     >
       <div className="relative flex flex-1">
         <SlidingPill index={TAB_ITEMS.findIndex((item) => isCurrent(item.href))} items={TAB_ITEMS} axis="x" />
-        {TAB_ITEMS.map((item) => (
-          <TabLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
-        ))}
+        {TAB_ITEMS.map((item) =>
+          item.href === "/" ? (
+            <TabLink
+              key={item.href}
+              item={home.item}
+              target={home.target}
+              active={isCurrent(item.href)}
+              onNavigate={onNavigate}
+            />
+          ) : (
+            <TabLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
+          ),
+        )}
       </div>
     </nav>
   );
@@ -211,10 +262,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setPending(null);
   }
   const pendingHref = pending && pending.from === pathname ? pending.href : null;
-  const isCurrent = (href: string) => (pendingHref ? pendingHref === href : isActive(pathname, href));
+  const isCurrent = (href: string) => (pendingHref ? tabOf(pendingHref) === href : isActive(tabOf(pathname), href));
   const onNavigate = (href: string) => {
-    if (!isActive(pathname, href)) setPending({ href, from: pathname });
+    if (!isActive(tabOf(pathname), tabOf(href))) setPending({ href, from: pathname });
   };
+  const home = useHomeSwitch(pathname);
 
   return (
     <div className="relative min-h-dvh">
@@ -223,13 +275,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="nav-progress h-full w-1/3 rounded-full bg-accent" />
         </div>
       )}
-      <NavRail isCurrent={isCurrent} onNavigate={onNavigate} />
+      <LauncherSync />
+      <NavRail isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
       <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-[5.75rem]">
         {children}
         {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
         <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
       </main>
-      <BottomNav isCurrent={isCurrent} onNavigate={onNavigate} />
+      <BottomNav isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
     </div>
   );
 }

@@ -1,0 +1,97 @@
+name: Android launcher
+
+# Builds the launcher app (android/) and, on main, publishes it on the dashboard's
+# server (public/launcher/), where the installed app finds and installs its update.
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths:
+      - "android/**"
+      - "!android/signing/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build launcher APK
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      VERSION_CODE: ${{ github.run_number }}
+      VERSION_NAME: 1.${{ github.run_number }}
+      PUBLISH: ${{ github.ref == 'refs/heads/main' && secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      # The signing key lives encrypted in the repo (android/signing/), opened with the
+      # ANDROID_KEYSTORE_PASSWORD secret. The first run on main creates it. Updates only
+      # install when every version is signed with this same key.
+      - name: Signing key
+        run: |
+          set -euo pipefail
+          KEYSTORE="$RUNNER_TEMP/release.jks"
+          ENCRYPTED=android/signing/release.jks.enc
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::warning::Secret ANDROID_KEYSTORE_PASSWORD is not set – building with a throwaway key and not publishing."
+            KEYSTORE_PASSWORD="throwaway-$(openssl rand -hex 16)"
+            keytool -genkeypair -keystore "$KEYSTORE" -storetype PKCS12 -alias launcher -keyalg RSA -keysize 4096 \
+              -validity 36500 -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" -dname "CN=Smart Assistant Launcher"
+          elif [ -f "$ENCRYPTED" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in "$ENCRYPTED" -out "$KEYSTORE" -pass env:KEYSTORE_PASSWORD
+          else
+            keytool -genkeypair -keystore "$KEYSTORE" -storetype PKCS12 -alias launcher -keyalg RSA -keysize 4096 \
+              -validity 36500 -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" -dname "CN=Smart Assistant Launcher"
+            if [ "$PUBLISH" = "true" ]; then
+              mkdir -p android/signing
+              openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -in "$KEYSTORE" -out "$ENCRYPTED" -pass env:KEYSTORE_PASSWORD
+              echo "Created a new signing key."
+            fi
+          fi
+          echo "SIGNING_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+          echo "SIGNING_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+
+      - name: Build
+        working-directory: android
+        run: gradle --no-daemon assembleRelease -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smart-assistant-${{ env.VERSION_NAME }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publish on the dashboard
+        if: env.PUBLISH == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p public/launcher
+          cp android/app/build/outputs/apk/release/app-release.apk public/launcher/smart-assistant.apk
+          printf '{\n  "versionCode": %s,\n  "versionName": "%s",\n  "commit": "%s"\n}\n' \
+            "$VERSION_CODE" "$VERSION_NAME" "$GITHUB_SHA" > public/launcher/version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/launcher android/signing
+          git commit -m "Launcher app $VERSION_NAME"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1

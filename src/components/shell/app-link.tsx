@@ -6,7 +6,8 @@ import { useEffect, useRef } from "react";
 
 const HOME_BELOW_KEY = "ssa:home-below";
 
-function homeIsBelow(): boolean {
+/** Whether the history entry below this page is the home screen. */
+export function homeIsBelow(): boolean {
   try {
     return sessionStorage.getItem(HOME_BELOW_KEY) === "1";
   } catch {

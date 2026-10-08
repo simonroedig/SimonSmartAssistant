@@ -1,0 +1,178 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+
+/**
+ * The Android launcher app shows this dashboard and injects `window.SmartLauncher`
+ * (only for this site). Through it the page lists and opens the phone's apps,
+ * searches the web in Firefox and updates the app. Everywhere else (browser,
+ * wall display) the object is missing and all of this stays hidden.
+ */
+
+export type LauncherApp = { id: string; label: string; package: string; icon: string };
+export type UpdateStatus = "idle" | "permission" | "downloading" | "installing" | "installed" | "failed";
+type LauncherEvent = { type: string; status?: UpdateStatus; [key: string]: unknown };
+
+type Bridge = {
+  postMessage(message: string): void;
+  addEventListener(type: "message", listener: (event: { data: unknown }) => void): void;
+};
+
+declare global {
+  interface Window {
+    SmartLauncher?: Bridge;
+  }
+}
+
+function bridge(): Bridge | null {
+  return typeof window === "undefined" ? null : (window.SmartLauncher ?? null);
+}
+
+const pending = new Map<string, (data: Record<string, unknown> | null) => void>();
+const eventListeners = new Set<(event: LauncherEvent) => void>();
+let listening = false;
+
+function listen(target: Bridge) {
+  if (listening) return;
+  listening = true;
+  target.addEventListener("message", (event) => {
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(String(event.data));
+    } catch {
+      return;
+    }
+    const id = typeof data.id === "string" ? data.id : null;
+    const resolve = id ? pending.get(id) : undefined;
+    if (id && resolve) {
+      pending.delete(id);
+      resolve(data);
+      return;
+    }
+    eventListeners.forEach((listener) => listener(data as LauncherEvent));
+  });
+}
+
+/** Asks the launcher app; resolves to null outside of it (or without an answer). */
+function request(type: string, payload: Record<string, unknown> = {}): Promise<Record<string, unknown> | null> {
+  const target = bridge();
+  if (!target) return Promise.resolve(null);
+  listen(target);
+  const id = Math.random().toString(36).slice(2);
+  return new Promise((resolve) => {
+    pending.set(id, resolve);
+    target.postMessage(JSON.stringify({ ...payload, id, type }));
+    window.setTimeout(() => {
+      if (pending.delete(id)) resolve(null);
+    }, 20_000);
+  });
+}
+
+export function onLauncherEvent(listener: (event: LauncherEvent) => void): () => void {
+  const target = bridge();
+  if (target) listen(target);
+  eventListeners.add(listener);
+  return () => eventListeners.delete(listener);
+}
+
+// --- A tiny store for what the page shows -----------------------------------
+
+type State = {
+  version: number | null;
+  versionName: string | null;
+  apps: LauncherApp[] | null;
+  update: UpdateStatus;
+};
+
+const APPS_KEY = "ssa:launcher-apps";
+let state: State = { version: null, versionName: null, apps: null, update: "idle" };
+const subscribers = new Set<() => void>();
+
+function setState(patch: Partial<State>) {
+  state = { ...state, ...patch };
+  subscribers.forEach((notify) => notify());
+}
+
+function subscribe(notify: () => void) {
+  subscribers.add(notify);
+  return () => subscribers.delete(notify);
+}
+
+const noSubscription = () => () => {};
+
+/** True inside the launcher app (false on the server and while hydrating). */
+export function useIsLauncher(): boolean {
+  return useSyncExternalStore(
+    noSubscription,
+    () => bridge() !== null,
+    () => false,
+  );
+}
+
+export function useLauncherState(): State {
+  return useSyncExternalStore(
+    subscribe,
+    () => state,
+    () => state,
+  );
+}
+
+/** Says hello (the launcher answers with its version) and loads the apps. */
+export async function connectLauncher() {
+  if (!bridge()) return;
+  if (!state.apps) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(APPS_KEY) ?? "null");
+      if (Array.isArray(cached)) setState({ apps: cached });
+    } catch {
+      // No cache yet.
+    }
+  }
+  const hello = await request("hello");
+  if (hello) setState({ version: Number(hello.version) || null, versionName: String(hello.versionName ?? "") });
+  await refreshApps();
+}
+
+export async function refreshApps() {
+  const answer = await request("apps");
+  if (!answer || !Array.isArray(answer.apps)) return;
+  const apps = (answer.apps as LauncherApp[]).sort((a, b) =>
+    a.label.localeCompare(b.label, "de", { sensitivity: "base" }),
+  );
+  setState({ apps });
+  try {
+    localStorage.setItem(APPS_KEY, JSON.stringify(apps));
+  } catch {
+    // Too big or private mode – the list simply loads again next time.
+  }
+}
+
+export function setUpdateStatus(update: UpdateStatus) {
+  setState({ update });
+}
+
+export const launcher = {
+  open: (app: LauncherApp) => request("launch", { app: app.id }),
+  showInfo: (app: LauncherApp) => request("appInfo", { app: app.id }),
+  /** Web search in Firefox (just opens Firefox without a query). */
+  search: (query: string) => request("search", { query }),
+  theme: (color: string, dark: boolean) => request("theme", { color, dark }),
+  update: () => {
+    setUpdateStatus("downloading");
+    return request("update");
+  },
+  homeSettings: () => request("homeSettings"),
+};
+
+/** The newest launcher version published on this server (by the Android workflow). */
+export async function latestLauncherVersion(): Promise<{ versionCode: number; versionName: string } | null> {
+  try {
+    const res = await fetch("/launcher/version.json", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // versionCode 0: nothing published yet.
+    return typeof data.versionCode === "number" && data.versionCode > 0 ? data : null;
+  } catch {
+    return null;
+  }
+}

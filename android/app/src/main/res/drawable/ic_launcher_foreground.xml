@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The dashboard's icon (rising sun over two lines), placed in the adaptive icon's safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.2"
+        android:scaleY="0.2"
+        android:translateX="2.8"
+        android:translateY="1.4">
+        <path
+            android:pathData="M256,152 L256,118 M369,203 L393,179 M143,203 L119,179"
+            android:strokeWidth="22"
+            android:strokeColor="#FFEEB8"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#FFD98A"
+            android:pathData="M146,318 A110,110 0 0,1 366,318 Z" />
+        <path
+            android:fillAlpha="0.95"
+            android:fillColor="#FFFFFF"
+            android:pathData="M116,338 L396,338 A12,12 0 0,1 396,362 L116,362 A12,12 0 0,1 116,338 Z" />
+        <path
+            android:fillAlpha="0.55"
+            android:fillColor="#FFFFFF"
+            android:pathData="M172,384 L340,384 A12,12 0 0,1 340,408 L172,408 A12,12 0 0,1 172,384 Z" />
+    </group>
+</vector>

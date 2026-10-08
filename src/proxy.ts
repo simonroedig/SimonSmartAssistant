@@ -101,6 +101,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except build assets and static files from /public.
-    "/((?!_next/static|_next/image|favicon.ico|icons/|weather/|kiosk/|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|weather/|kiosk/|launcher/|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)",
   ],
 };

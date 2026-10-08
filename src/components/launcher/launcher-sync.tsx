@@ -1,0 +1,95 @@
+"use client";
+
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { homeIsBelow } from "@/components/shell/app-link";
+import {
+  connectLauncher,
+  latestLauncherVersion,
+  launcher,
+  onLauncherEvent,
+  refreshApps,
+  setUpdateStatus,
+  useIsLauncher,
+  useLauncherState,
+} from "@/lib/launcher";
+
+const UPDATE_MESSAGES: Partial<Record<string, string>> = {
+  permission: 'Allow "Install unknown apps" for Smart Assistant, then tap Install again.',
+  installing: "Confirm the update to finish.",
+  failed: "The update didn't work – try again in a moment.",
+};
+
+/**
+ * Inside the Android launcher app: connects to it, keeps the status bar in the
+ * dashboard's colours, and reacts to the home button and to installed apps.
+ */
+export function LauncherSync() {
+  const isLauncher = useIsLauncher();
+  const router = useRouter();
+  const pathname = usePathname();
+  const path = useRef(pathname);
+
+  useEffect(() => {
+    path.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isLauncher) return;
+    void connectLauncher();
+
+    // The status bar follows the theme (light/dark, background colour).
+    const root = document.documentElement;
+    const postTheme = () => {
+      const color = getComputedStyle(root).getPropertyValue("--bg").trim();
+      if (color) void launcher.theme(color, root.classList.contains("dark"));
+    };
+    postTheme();
+    const observer = new MutationObserver(postTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    const stop = onLauncherEvent((event) => {
+      if (event.type === "home") {
+        // Home button: back to the home screen (from the apps or any section).
+        if (path.current === "/") window.scrollTo({ top: 0, behavior: "smooth" });
+        else if (homeIsBelow()) router.back();
+        else router.replace("/");
+      } else if (event.type === "appsChanged") {
+        void refreshApps();
+      } else if (event.type === "updateStatus" && event.status) {
+        setUpdateStatus(event.status);
+        const message = UPDATE_MESSAGES[event.status];
+        if (message) toast(message);
+      }
+    });
+    return () => {
+      observer.disconnect();
+      stop();
+    };
+  }, [isLauncher, router]);
+
+  return null;
+}
+
+/** Whether a newer launcher app has been published on this server. */
+export function useLauncherUpdate() {
+  const { version, update } = useLauncherState();
+  const [latest, setLatest] = useState<{ versionCode: number; versionName: string } | null>(null);
+  useEffect(() => {
+    if (version === null) return;
+    let cancelled = false;
+    void latestLauncherVersion().then((found) => {
+      if (!cancelled) setLatest(found);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [version]);
+  return {
+    version,
+    latest,
+    available: latest !== null && version !== null && latest.versionCode > version,
+    status: update,
+  };
+}

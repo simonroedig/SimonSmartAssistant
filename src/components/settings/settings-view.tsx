@@ -19,6 +19,7 @@ import type { SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocationLong } from "@/lib/weather/open-meteo";
 import { Passkeys } from "./passkeys";
+import { LauncherSection } from "@/components/launcher/launcher-widgets";
 import { BirthdaysSection, HolidaysSection } from "./calendar-settings";
 import { Row, Section } from "./section";
 import { SleepScheduleEditor } from "./sleep-schedule-editor";
@@ -119,6 +120,7 @@ export function SettingsView() {
 
           <HolidaysSection />
           <BirthdaysSection />
+          <LauncherSection />
         </div>
 
         <div className="flex flex-col gap-4">
