@@ -8,12 +8,16 @@ laptop – always in sync.
   from the backlog (on its due date at wake-up, 3 h if important – planned items show where they are and
   stay in sync when ticked off). Swipe between days, month calendar to jump to any date, move blocks to
   another day; the home screen card browses the next days and shows tomorrow in the evening.
+- **Holidays & birthdays** in the planner – German public holidays for your state (computed locally,
+  Bavaria by default) with whether the shops are open, plus the birthdays you keep in Settings (with the
+  age when you know the year).
 - **Weather** – current conditions, hourly curve, 7-day forecast with temperature ranges; tap a day for
   its hours. UV, wind, sunrise/sunset, air quality and pollen. Free Open-Meteo data.
 - **Shopping list** – add, tick off, swipe to delete, undo, drag to reorder, one-tap suggestions from what
   you buy often.
 - **Backlog** – longer to-dos as free text (first line is the headline), stars, due dates, drag to reorder.
-- **Notes** – Keep-style quick notes with an optional title, pin to the top, press and hold to reorder.
+- **Notes** – Keep-style quick notes with an optional title, pin to the top, press and hold to reorder;
+  deleted notes go to a trash (restore, delete for good, empty).
 - **Clock & date** in English with German order ("Tuesday, 6 October 2026 · 13:10 · Week 41").
 - **Wall display mode** – built-in German on-screen keyboard, night mode with a dim clock, auto-update
   after deploys, screen wake lock, no cursor, finger scrolling even when the touch screen reports itself

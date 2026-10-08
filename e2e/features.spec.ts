@@ -569,3 +569,94 @@ test("weather: the forecast comes first, the details of right now after it", asy
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect.poll(async () => (await daily.boundingBox())!.x < (await feels.boundingBox())!.x - 200).toBe(true);
 });
+
+test("notes: deleting moves a note to the trash – restore it or delete it for good", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/notes");
+  const stamp = Date.now() % 10000;
+  const add = async (text: string) => {
+    await page.getByLabel("New note").click();
+    await page.getByLabel("New note").fill(text);
+    await page.getByRole("button", { name: "Add note" }).click();
+    await expect(page.getByRole("button", { name: `Open note "${text}"` })).toBeVisible();
+  };
+  const remove = async (text: string) => {
+    await page.getByRole("button", { name: `Open note "${text}"` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
+    await expect(page.getByRole("button", { name: `Open note "${text}"` })).toHaveCount(0);
+  };
+  const first = `Trash me ${stamp}`;
+  const second = `Gone for good ${stamp}`;
+  await add(first);
+  await add(second);
+  await remove(first);
+  await remove(second);
+
+  // In the trash; restoring brings it back onto the board.
+  await page.getByRole("button", { name: /^Trash \(\d+\)$/ }).click();
+  const trash = page.getByRole("dialog", { name: "Trash" });
+  await expect(trash).toContainText(first);
+  await expect(trash).toContainText(second);
+  await trash.getByRole("button", { name: `Restore "${first}"` }).click();
+  await expect(trash).not.toContainText(first);
+  await trash.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("button", { name: `Open note "${first}"` })).toBeVisible();
+
+  // Delete for good: also gone from the trash (after a reload, too).
+  await page.getByRole("button", { name: /^Trash \(\d+\)$/ }).click();
+  await trash.getByRole("button", { name: `Delete "${second}" for good` }).click();
+  await expect(trash).not.toContainText(second);
+  await trash.getByRole("button", { name: "Close" }).click();
+
+  // Empty the trash.
+  await remove(first);
+  await page.getByRole("button", { name: /^Trash \(\d+\)$/ }).click();
+  await expect(trash).toContainText(first);
+  await trash.getByRole("button", { name: "Empty trash" }).click();
+  await expect(trash).toContainText("The trash is empty.");
+  await trash.getByRole("button", { name: "Close" }).click();
+  await expect(trash).toBeHidden();
+  await page.waitForTimeout(300); // let the closed sheet give its history entry back
+  await expect
+    .poll(async () => {
+      await page.reload();
+      await page.getByRole("button", { name: /^Trash \(\d+\)$/ }).waitFor();
+      return page.getByRole("button", { name: "Trash (0)" }).count();
+    })
+    .toBe(1);
+});
+
+test("phone: the add row of shopping, backlog and notes waits at the bottom, near the thumb", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const tabs = page.getByRole("navigation", { name: "Main" }).last();
+  for (const [path, label] of [
+    ["/shopping", "New shopping item"],
+    ["/todos", "New todo"],
+  ] as const) {
+    await page.goto(path);
+    const field = page.getByLabel(label);
+    await expect(field).toBeVisible();
+    const tabBar = (await tabs.boundingBox())!;
+    const check = async () => {
+      const box = (await field.boundingBox())!;
+      // Low on the screen, but above the tab bar.
+      expect(box.y).toBeGreaterThan(560);
+      expect(box.y + box.height).toBeLessThan(tabBar.y);
+    };
+    await check();
+    // It stays there while the list scrolls.
+    await page.mouse.wheel(0, 3000);
+    await page.waitForTimeout(300);
+    await check();
+  }
+
+  await page.goto("/notes");
+  const take = page.getByRole("button", { name: "Take a note…" });
+  expect((await take.boundingBox())!.y).toBeGreaterThan(560);
+  await take.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "New note" })).toBeVisible();
+  await page.waitForTimeout(400);
+  await expect(dialog.getByLabel("Note", { exact: true })).toBeFocused();
+  await dialog.getByRole("button", { name: "Close" }).click();
+});

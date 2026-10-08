@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSyncStatus } from "@/components/providers/realtime-provider";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
@@ -145,6 +145,7 @@ function BottomNav({
   return (
     <nav
       aria-label="Main"
+      data-tabbar
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-[1.6rem] border border-line bg-(--nav-bg) p-1.5 shadow-(--shadow-card) md:hidden"
     >
       <div className="relative flex flex-1">
@@ -157,9 +158,49 @@ function BottomNav({
   );
 }
 
+function isTextField(el: Element | null): boolean {
+  if (el instanceof HTMLTextAreaElement) return true;
+  if (el instanceof HTMLInputElement) return !["checkbox", "radio", "button", "submit", "range"].includes(el.type);
+  return el instanceof HTMLElement && el.isContentEditable;
+}
+
+/**
+ * Marks the page (`data-keyboard` on <html>) while a phone's on-screen keyboard
+ * is up: a text field has the focus and the viewport got clearly shorter.
+ */
+function useKeyboardFlag() {
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    let full = viewport.height;
+    const update = () => {
+      full = Math.max(full, viewport.height);
+      const open = isTextField(document.activeElement) && viewport.height < full - 120;
+      document.documentElement.toggleAttribute("data-keyboard", open);
+    };
+    const onFocusOut = () => window.setTimeout(update, 0);
+    const onRotate = () => {
+      full = 0;
+      window.setTimeout(update, 300);
+    };
+    viewport.addEventListener("resize", update);
+    document.addEventListener("focusin", update);
+    document.addEventListener("focusout", onFocusOut);
+    window.addEventListener("orientationchange", onRotate);
+    return () => {
+      viewport.removeEventListener("resize", update);
+      document.removeEventListener("focusin", update);
+      document.removeEventListener("focusout", onFocusOut);
+      window.removeEventListener("orientationchange", onRotate);
+      document.documentElement.removeAttribute("data-keyboard");
+    };
+  }, []);
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   useTrackHomeBelow();
+  useKeyboardFlag();
 
   // Highlight the tapped tab right away; the page follows a moment later.
   const [pending, setPending] = useState<{ href: string; from: string } | null>(null);

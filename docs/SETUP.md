@@ -58,7 +58,9 @@ Ab jetzt gilt: Änderungen per Pull Request nach `main` mergen → Vercel und Su
    Zeile ändern → **Commit changes** direkt auf `main`. Im Commit erscheint dann der Check
    „Supabase Preview" bzw. die Migration unter **Database → Migrations**.
 3. Kontrolle: **Table Editor** zeigt `user_settings`, `shopping_items`, `shopping_history`, `todos`,
-   `plan_blocks`, `day_notes` – alle mit Schloss-Symbol (RLS aktiv).
+   `plan_blocks`, `day_notes`, `notes`, `birthdays` – alle mit Schloss-Symbol (RLS aktiv). Spätere
+   Migrationen (neue Dateien in `supabase/migrations/`) spielt die Integration bei jedem Push nach
+   `main` automatisch ein.
 
 > Falls die Integration hakt: **SQL Editor → New query**, den kompletten Inhalt der Migrationsdatei
 > einfügen und **Run** klicken. Das Ergebnis ist identisch.

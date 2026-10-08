@@ -8,22 +8,22 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
+import { StickyAddBar } from "@/components/ui/sticky-add-bar";
 import type { Note } from "@/data/core";
 import {
   isNoteEmpty,
   type NoteDraft,
   prepareNote,
   useAddNote,
-  useDeleteNotes,
   useNotes,
-  useRestoreNotes,
+  useTrashNotes,
   useUpdateNote,
 } from "@/data/notes";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
-function noteLabel(note: Pick<Note, "title" | "body">): string {
+export function noteLabel(note: Pick<Note, "title" | "body">): string {
   const text = note.title?.trim() || note.body.trim().split("\n")[0];
   return text.length > 40 ? `${text.slice(0, 39)}…` : text;
 }
@@ -108,8 +108,7 @@ export function NotesBoard({
   const notes = useNotes();
   const add = useAddNote();
   const update = useUpdateNote();
-  const remove = useDeleteNotes();
-  const restore = useRestoreNotes();
+  const trash = useTrashNotes();
   const [editor, setEditor] = useState<EditorState>(null);
 
   const all = useMemo(() => notes.data ?? [], [notes.data]);
@@ -121,10 +120,11 @@ export function NotesBoard({
     add.mutate(prepareNote({ ...draft, pinned: pin, position: positionAtStart(pin ? pinned : others) }));
   };
 
+  // Deleting moves a note to the trash (see NotesTrashButton); undo brings it right back.
   const deleteWithUndo = (note: Note) => {
-    remove.mutate({ ids: [note.id] });
-    toast(`Deleted "${noteLabel(note)}"`, {
-      action: { label: "Undo", onClick: () => restore.mutate({ notes: [note] }) },
+    trash.mutate({ ids: [note.id], trash: true });
+    toast(`Moved "${noteLabel(note)}" to the trash`, {
+      action: { label: "Undo", onClick: () => trash.mutate({ ids: [note.id], trash: false }) },
       duration: 6000,
     });
   };
@@ -225,10 +225,10 @@ export function NotesBoard({
   );
 
   return (
-    <div className={className}>
-      <Composer onCreate={create} />
+    <div className={cn("flex flex-col", className)}>
+      <Composer onCreate={create} className="max-md:hidden" />
       {loading ? (
-        <div className={cn(grid, "mt-6")}>
+        <div className={cn(grid, "mt-2 md:mt-6")}>
           {[0, 1, 2].map((i) => (
             <div key={i} className="skeleton h-28 rounded-2xl" />
           ))}
@@ -239,7 +239,7 @@ export function NotesBoard({
           <p className="text-sm">No notes yet. Codes, ideas, gift lists – anything goes.</p>
         </div>
       ) : (
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="mt-2 flex flex-col gap-6 md:mt-6">
           {pinned.length > 0 && (
             <section>
               <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
@@ -257,13 +257,34 @@ export function NotesBoard({
           <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
         </div>
       )}
+      {/* Phones: "Take a note" waits at the bottom, where the thumb is. */}
+      <StickyAddBar className="mt-4 max-md:mx-0 md:hidden">
+        <button
+          type="button"
+          onClick={() => setEditor({ mode: "create" })}
+          className="flex w-full items-center gap-2 text-left"
+        >
+          <span className="flex h-12 flex-1 items-center rounded-2xl border border-line bg-surface-sunken px-4 text-[0.95rem] text-faint">
+            Take a note…
+          </span>
+          <span
+            aria-hidden="true"
+            className={cn(
+              "grid size-12 shrink-0 place-items-center rounded-2xl shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
+              TONE_STYLES.orange.solid,
+            )}
+          >
+            <Plus className="size-5" />
+          </span>
+        </button>
+      </StickyAddBar>
       {editorSheet}
     </div>
   );
 }
 
 /** "Take a note…" – expands to an optional title and the text, like Keep. */
-function Composer({ onCreate }: { onCreate: (draft: NoteDraft, pin: boolean) => void }) {
+function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: boolean) => void; className?: string }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -294,7 +315,10 @@ function Composer({ onCreate }: { onCreate: (draft: NoteDraft, pin: boolean) => 
   return (
     <form
       ref={box}
-      className="mx-auto max-w-xl rounded-2xl border border-line bg-surface-strong shadow-(--shadow-card)"
+      className={cn(
+        "mx-auto w-full max-w-xl rounded-2xl border border-line bg-surface-strong shadow-(--shadow-card)",
+        className,
+      )}
       onSubmit={(e) => {
         e.preventDefault();
         commit();

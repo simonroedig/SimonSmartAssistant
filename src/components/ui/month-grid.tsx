@@ -27,6 +27,8 @@ function shiftMonth(month: DayKey, amount: number): DayKey {
   return monthOf(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`);
 }
 
+export type DayDecoration = { numberClassName?: string; marker?: React.ReactNode; label?: string };
+
 /** The six weeks shown for a month (Monday first). */
 export function monthGridDays(month: DayKey): DayKey[] {
   const start = startOfWeek(monthOf(month));
@@ -45,6 +47,7 @@ export function MonthGrid({
   dots,
   tone = "accent",
   quietSelection = false,
+  decorate,
   className,
 }: {
   selected: DayKey | null;
@@ -57,6 +60,8 @@ export function MonthGrid({
   tone?: Tone;
   /** Mark the selected day in quiet grey (browsing) instead of the tone (picking a value). */
   quietSelection?: boolean;
+  /** Extra marks for a day: a colour for its number, a small marker and a label (e.g. holidays). */
+  decorate?: (day: DayKey) => DayDecoration | null;
   className?: string;
 }) {
   const initial = monthOf(selected ?? today ?? toDayKey(new Date()));
@@ -118,6 +123,7 @@ export function MonthGrid({
           const isSelected = day === selected;
           const isToday = day === today;
           const colors = dots?.(day) ?? [];
+          const extra = decorate?.(day) ?? null;
           const date = fromDayKey(day);
           return (
             <button
@@ -125,7 +131,8 @@ export function MonthGrid({
               type="button"
               onClick={() => onSelect(day)}
               aria-pressed={isSelected}
-              aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}`}
+              aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}${extra?.label ? ` · ${extra.label}` : ""}`}
+              title={extra?.label || undefined}
               className={cn(
                 "flex aspect-square max-h-12 flex-col items-center justify-center gap-0.5 rounded-xl text-sm tabular transition-colors",
                 isToday
@@ -138,9 +145,12 @@ export function MonthGrid({
                 !inMonth && !isSelected && !isToday && "text-faint",
               )}
             >
-              {date.getDate()}
+              <span className={cn(!isToday && !(isSelected && !quietSelection) && extra?.numberClassName)}>
+                {date.getDate()}
+              </span>
               <span className="flex h-1 items-center gap-0.5">
-                {colors.slice(0, 3).map((c, i) => (
+                {extra?.marker}
+                {colors.slice(0, extra?.marker ? 2 : 3).map((c, i) => (
                   <span
                     key={i}
                     className={cn(

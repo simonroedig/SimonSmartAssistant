@@ -10,6 +10,7 @@ import { CheckCircle } from "@/components/ui/check-circle";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
+import { StickyAddBar } from "@/components/ui/sticky-add-bar";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import type { ShoppingItem } from "@/data/core";
 import {
@@ -156,72 +157,82 @@ export function ShoppingList({
 
   const showSuggestions = suggestions.length > 0 && (variant === "page" || focused || draft.length > 0);
 
+  const onPage = variant === "page";
   const body = (
     <>
-      <form
-        className="flex items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          addItem(draft);
-          setDraft("");
-        }}
-      >
-        <Input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => window.setTimeout(() => setFocused(false), 150)}
-          placeholder="Add an item…"
-          aria-label="New shopping item"
-          enterKeyHint="done"
-          autoComplete="off"
-          maxLength={120}
-        />
-        <Button
-          type="submit"
-          variant="primary"
-          size="icon"
-          aria-label="Add item"
-          disabled={!draft.trim()}
-          className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]", TONE_STYLES.emerald.solid)}
+      <StickyAddBar enabled={onPage} className="max-md:flex max-md:flex-col-reverse">
+        <form
+          className="flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addItem(draft);
+            setDraft("");
+          }}
         >
-          <Plus className="!size-5" />
-        </Button>
-      </form>
-
-      <AnimatePresence initial={false}>
-        {showSuggestions && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+          <Input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => window.setTimeout(() => setFocused(false), 150)}
+            placeholder="Add an item…"
+            aria-label="New shopping item"
+            enterKeyHint="done"
+            autoComplete="off"
+            maxLength={120}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            size="icon"
+            aria-label="Add item"
+            disabled={!draft.trim()}
+            className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]", TONE_STYLES.emerald.solid)}
           >
-            <div className="flex flex-wrap gap-1.5 pt-3">
-              <span className="flex items-center gap-1 pr-1 text-xs font-medium text-faint">
-                <Sparkles className="size-3" /> Often
-              </span>
-              {suggestions.map((s) => (
-                <SuggestionChip
-                  key={s.name_key}
-                  name={s.name}
-                  onAdd={() => {
-                    addItem(s.name);
-                    setDraft("");
-                  }}
-                  onForget={() => {
-                    forget.mutate({ nameKey: s.name_key });
-                    toast(`Removed "${s.name}" from suggestions`);
-                  }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Plus className="!size-5" />
+          </Button>
+        </form>
 
-      <div className="mt-3 flex flex-col">
+        <AnimatePresence initial={false}>
+          {showSuggestions && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div
+                className={cn(
+                  "flex flex-wrap gap-1.5 pt-3",
+                  // In the phone's bottom bar: one row to swipe through, above the field.
+                  onPage &&
+                    "max-md:[scrollbar-width:none] max-md:flex-nowrap max-md:overflow-x-auto max-md:px-1 max-md:pt-1 max-md:pb-2.5",
+                )}
+              >
+                <span className="flex shrink-0 items-center gap-1 pr-1 text-xs font-medium text-faint">
+                  <Sparkles className="size-3" /> Often
+                </span>
+                {suggestions.map((s) => (
+                  <SuggestionChip
+                    key={s.name_key}
+                    name={s.name}
+                    onAdd={() => {
+                      addItem(s.name);
+                      setDraft("");
+                    }}
+                    onForget={() => {
+                      forget.mutate({ nameKey: s.name_key });
+                      toast(`Removed "${s.name}" from suggestions`);
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </StickyAddBar>
+
+      <div className={cn("mt-3 flex flex-col", onPage && "max-md:mt-0 max-md:pb-3")}>
         {items.isLoading && all.length === 0 ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2].map((i) => (
@@ -327,7 +338,7 @@ function SuggestionChip({ name, onAdd, onForget }: { name: string; onAdd: () => 
         if (longPress.wasLongPress()) return;
         onAdd();
       }}
-      className="flex h-9 items-center gap-1 rounded-full border border-line bg-surface-sunken pr-3.5 pl-2.5 text-sm font-medium transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10 active:scale-95"
+      className="flex h-9 shrink-0 items-center gap-1 rounded-full border border-line bg-surface-sunken pr-3.5 pl-2.5 text-sm font-medium transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10 active:scale-95"
     >
       <Plus className="size-3.5 text-emerald-500" />
       {name}

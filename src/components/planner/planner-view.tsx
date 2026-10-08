@@ -27,11 +27,13 @@ import {
 } from "@/lib/date";
 import { afterSheetClosed } from "@/lib/history";
 import { planDay, planDuration, planStart } from "@/lib/plan-todo";
-import { TODAY_RING, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
+import { TODAY_COLOR, TODAY_RING, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
 import { formatDuration, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { useDayExtras } from "@/data/calendar";
 import { BacklogPlanList } from "./backlog-plan-list";
 import { BlockEditor } from "./block-editor";
+import { DayExtrasChips } from "./day-extras";
 import { DayTimeline } from "./day-timeline";
 import { FocusInput } from "./focus-input";
 import { MonthCalendar } from "./month-calendar";
@@ -171,6 +173,7 @@ export function PlannerView({
   }, [day, editing, calendarOpen, onDayChange]);
 
   const openTodos = useMemo(() => sortOpenTodos(todos.data ?? []), [todos.data]);
+  const dayExtras = useDayExtras();
   const isToday = day === today;
   const hourHeight = isPhone ? 56 : 64;
   const plannedMinutes = planner.dayBlocks.reduce((sum, b) => sum + (b.end_min - b.start_min), 0);
@@ -231,7 +234,7 @@ export function PlannerView({
             <span
               className={cn(
                 "text-[0.62em] font-medium tracking-normal",
-                relative === "Today" ? "text-sky-700 dark:text-sky-300" : "text-muted",
+                relative === "Today" ? TODAY_COLOR : "text-muted",
               )}
             >
               ({relative})
@@ -283,6 +286,7 @@ export function PlannerView({
         <Card className="min-h-0 [touch-action:pan-y] overflow-hidden">
           <div className="flex flex-col gap-3 px-3 pt-3 md:px-4">
             <FocusInput day={day} week={planner.week} />
+            <DayExtrasChips extras={dayExtras(day)} className="-mt-1" />
             {isToday && now && planner.dayBlocks.length > 0 && !isWide && !isPhone && (
               <NowNext
                 blocks={planner.dayBlocks}

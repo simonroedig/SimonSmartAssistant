@@ -13,9 +13,11 @@ import { useSwipe } from "@/hooks/use-swipe";
 import { addDays, type DayKey, formatDayMonthShort, formatWeekday, formatWeekdayShort, fromDayKey } from "@/lib/date";
 import { showTomorrowFirst } from "@/lib/plan-todo";
 import { MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
-import { TODAY_RING } from "@/lib/tones";
+import { TODAY_COLOR } from "@/lib/tones";
 import { cn } from "@/lib/utils";
+import { useDayExtras } from "@/data/calendar";
 import { BlockEditor } from "./block-editor";
+import { DayExtrasChips } from "./day-extras";
 import { DayTimeline } from "./day-timeline";
 import { FocusInput } from "./focus-input";
 import { NowNext } from "./now-next";
@@ -62,6 +64,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
   const day = addDays(today, offset);
   const isToday = offset === 0;
   const planner = usePlanner(day);
+  const dayExtras = useDayExtras();
   const box = useRef<HTMLDivElement>(null);
   const { height } = useElementSize(box);
 
@@ -112,8 +115,8 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
         tone="rose"
         title={title}
         subtitle={subtitle}
-        // The icon wears the blue "today" ring of the weather's Now/Today – only on today.
-        iconClassName={cn(isToday && TODAY_RING, isToday && "text-sky-600 dark:text-sky-300")}
+        // "Today" in the same blue as everywhere else.
+        titleClassName={cn(isToday && TODAY_COLOR)}
         href={isToday ? "/planner" : `/planner?day=${day}`}
         actions={
           <>
@@ -149,6 +152,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
         className="flex flex-col gap-2.5 px-4"
       >
         <FocusInput day={day} week={planner.week} className="-mx-1" />
+        <DayExtrasChips extras={dayExtras(day)} />
         {now && isToday && !planner.isLoading && (
           <NowNext
             blocks={planner.dayBlocks}

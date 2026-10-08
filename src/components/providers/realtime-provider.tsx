@@ -18,6 +18,7 @@ const TABLE_KEYS: Record<SyncedTable, readonly unknown[][]> = {
   plan_blocks: [[...queryKeys.blocks]],
   day_notes: [[...queryKeys.dayNotes]],
   notes: [[...queryKeys.notes]],
+  birthdays: [[...queryKeys.birthdays]],
 };
 
 const TABLES = Object.keys(TABLE_KEYS) as SyncedTable[];

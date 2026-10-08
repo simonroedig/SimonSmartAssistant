@@ -3,6 +3,40 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      birthdays: {
+        Row: {
+          created_at: string;
+          day: number;
+          id: string;
+          month: number;
+          name: string;
+          updated_at: string;
+          user_id: string;
+          year: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          day: number;
+          id?: string;
+          month: number;
+          name: string;
+          updated_at?: string;
+          user_id?: string;
+          year?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          day?: number;
+          id?: string;
+          month?: number;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+          year?: number | null;
+        };
+        Relationships: [];
+      };
       day_notes: {
         Row: {
           day: string;
@@ -29,6 +63,7 @@ export type Database = {
         Row: {
           body: string;
           created_at: string;
+          deleted_at: string | null;
           id: string;
           pinned: boolean;
           position: number;
@@ -40,6 +75,7 @@ export type Database = {
         Insert: {
           body?: string;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           pinned?: boolean;
           position?: number;
@@ -50,6 +86,7 @@ export type Database = {
         Update: {
           body?: string;
           created_at?: string;
+          deleted_at?: string | null;
           id?: string;
           pinned?: boolean;
           position?: number;

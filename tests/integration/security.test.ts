@@ -27,6 +27,7 @@ const TABLES = [
   "plan_blocks",
   "day_notes",
   "notes",
+  "birthdays",
 ] as const;
 
 function newClient(): Client {
@@ -294,7 +295,68 @@ describe("database security", () => {
 
     const { data: milk } = await alice.client.from("shopping_items").insert({ name: "Milk" }).select().single();
     const { data: bread } = await alice.client.from("shopping_items").insert({ name: "Bread" }).select().single();
-    // New shopping items go to the bottom by default.
-    expect(bread!.position).toBeGreaterThan(milk!.position);
+    // New shopping items go to the top by default too.
+    expect(bread!.position).toBeLessThan(milk!.position);
+  });
+
+  it("keeps notes in the trash until they are deleted for good", async () => {
+    const { data: note } = await alice.client.from("notes").insert({ body: "Old idea" }).select().single();
+    expect(note!.deleted_at).toBeNull();
+    const deletedAt = new Date().toISOString();
+    const { data: trashed, error } = await alice.client
+      .from("notes")
+      .update({ deleted_at: deletedAt })
+      .eq("id", note!.id)
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(trashed!.deleted_at).not.toBeNull();
+    // Bob can neither see nor restore it.
+    const { data: restoredByBob } = await bob.client
+      .from("notes")
+      .update({ deleted_at: null })
+      .eq("id", note!.id)
+      .select();
+    expect(restoredByBob).toEqual([]);
+    const { error: deleteError } = await alice.client.from("notes").delete().eq("id", note!.id);
+    expect(deleteError).toBeNull();
+  });
+
+  it("keeps birthdays private and only accepts real dates", async () => {
+    const { data: anna, error } = await alice.client
+      .from("birthdays")
+      .insert({ name: "Anna", day: 14, month: 3, year: 1990 })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(anna!.user_id).toBe(alice.userId);
+    const { data: noYear } = await alice.client
+      .from("birthdays")
+      .insert({ name: "Leap", day: 29, month: 2 })
+      .select()
+      .single();
+    expect(noYear!.year).toBeNull();
+
+    const { data: seenByBob } = await bob.client.from("birthdays").select("*");
+    expect(seenByBob).toEqual([]);
+    const { data: changedByBob } = await bob.client.from("birthdays").update({ name: "x" }).eq("id", anna!.id).select();
+    expect(changedByBob).toEqual([]);
+    const { data: deletedByBob } = await bob.client.from("birthdays").delete().eq("id", anna!.id).select();
+    expect(deletedByBob).toEqual([]);
+    const { error: spoofError } = await bob.client
+      .from("birthdays")
+      .insert({ name: "spoof", day: 1, month: 1, user_id: alice.userId });
+    expect(spoofError?.code).toBe("42501");
+
+    const invalidDates: { name: string; day: number; month: number; year?: number }[] = [
+      { name: "April", day: 31, month: 4 },
+      { name: "No leap", day: 29, month: 2, year: 2001 },
+      { name: "Month", day: 1, month: 13 },
+      { name: " ", day: 1, month: 1 },
+    ];
+    for (const bad of invalidDates) {
+      const { error: invalid } = await alice.client.from("birthdays").insert(bad);
+      expect(invalid?.code, bad.name).toBe("23514");
+    }
   });
 });

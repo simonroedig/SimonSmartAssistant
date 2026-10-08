@@ -8,7 +8,6 @@ import { useSession } from "@/components/providers/session-provider";
 import { useSyncStatus } from "@/components/providers/realtime-provider";
 import { PageBody, PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import { LocationSearch } from "@/components/weather/location-search";
@@ -20,46 +19,9 @@ import type { SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocationLong } from "@/lib/weather/open-meteo";
 import { Passkeys } from "./passkeys";
+import { BirthdaysSection, HolidaysSection } from "./calendar-settings";
+import { Row, Section } from "./section";
 import { SleepScheduleEditor } from "./sleep-schedule-editor";
-
-function Section({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className="p-5 md:p-6">
-      <div className="mb-4 flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent [&_svg]:size-[18px]">
-          {icon}
-        </span>
-        <div>
-          <h2 className="text-[1.02rem] font-semibold tracking-tight">{title}</h2>
-          {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
-        </div>
-      </div>
-      {children}
-    </Card>
-  );
-}
-
-function Row({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line py-3.5 first:border-t-0 first:pt-0">
-      <div className="min-w-0">
-        <div className="font-medium">{label}</div>
-        {hint && <div className="text-sm text-muted">{hint}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 export function SettingsView() {
   const { email } = useSession();
@@ -154,6 +116,9 @@ export function SettingsView() {
               />
             </Row>
           </Section>
+
+          <HolidaysSection />
+          <BirthdaysSection />
         </div>
 
         <div className="flex flex-col gap-4">

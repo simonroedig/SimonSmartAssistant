@@ -30,3 +30,15 @@ export function PageHeader({
 export function PageBody({ className, children }: { className?: string; children: React.ReactNode }) {
   return <div className={cn("px-4 pb-8 md:px-8", className)}>{children}</div>;
 }
+
+/**
+ * Phones: the page fills the screen above the tab bar, so a list's "add" bar
+ * can sit at the bottom (near the thumb) even while the list is short.
+ */
+export function FillPage({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col md:block md:min-h-0">
+      {children}
+    </div>
+  );
+}

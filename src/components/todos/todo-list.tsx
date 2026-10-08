@@ -22,6 +22,7 @@ import { AutoTextarea, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
+import { StickyAddBar } from "@/components/ui/sticky-add-bar";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import type { PlanBlock, Todo } from "@/data/core";
 import { plannedBlockByTodo, useLinkedBlocks, useSetTodoBlocksDone } from "@/data/planner";
@@ -213,45 +214,48 @@ export function TodoList({
     }
   };
 
+  const onPage = variant === "page";
   const body = (
     <>
-      <form
-        className="flex items-end gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          addDraft();
-        }}
-      >
-        <AutoTextarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            // Keyboard: Enter adds, Shift+Enter starts a new line. Touch keyboards keep Enter for new lines.
-            if (e.key === "Enter" && !e.shiftKey && finePointer && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              addDraft();
-            }
+      <StickyAddBar enabled={onPage}>
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addDraft();
           }}
-          placeholder="Add to your backlog…"
-          aria-label="New todo"
-          autoComplete="off"
-          maxLength={5000}
-          maxRows={8}
-          className="py-[11px]"
-        />
-        <Button
-          type="submit"
-          variant="primary"
-          size="icon"
-          aria-label="Add todo"
-          disabled={!draft.trim()}
-          className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]", TONE_STYLES.yellow.solid)}
         >
-          <Plus className="!size-5" />
-        </Button>
-      </form>
+          <AutoTextarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              // Keyboard: Enter adds, Shift+Enter starts a new line. Touch keyboards keep Enter for new lines.
+              if (e.key === "Enter" && !e.shiftKey && finePointer && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                addDraft();
+              }
+            }}
+            placeholder="Add to your backlog…"
+            aria-label="New todo"
+            autoComplete="off"
+            maxLength={5000}
+            maxRows={8}
+            className="py-[11px]"
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            size="icon"
+            aria-label="Add todo"
+            disabled={!draft.trim()}
+            className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]", TONE_STYLES.yellow.solid)}
+          >
+            <Plus className="!size-5" />
+          </Button>
+        </form>
+      </StickyAddBar>
 
-      <div className="mt-3">
+      <div className={cn("mt-3", onPage && "max-md:mt-0 max-md:pb-3")}>
         {todos.isLoading && all.length === 0 ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2].map((i) => (

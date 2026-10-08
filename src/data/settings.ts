@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Json } from "@/lib/database.types";
+import { DEFAULT_HOLIDAY_REGION, type HolidayRegion, isHolidayRegion } from "@/lib/holidays";
 import { DEFAULT_SLEEP_SCHEDULE, normalizeSleepSchedule, type SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
 import type { WeatherLocation } from "@/lib/weather/open-meteo";
@@ -14,13 +15,27 @@ export type PlannerPreferences = {
   defaultDuration: number;
 };
 
+/** What the planner shows besides your own blocks. */
+export type CalendarPreferences = {
+  holidays: boolean;
+  /** German state whose public holidays apply. */
+  region: HolidayRegion;
+  birthdays: boolean;
+};
+
 export type Settings = {
   location: WeatherLocation | null;
   sleepSchedule: SleepSchedule;
   planner: PlannerPreferences;
+  calendar: CalendarPreferences;
 };
 
 export const DEFAULT_PLANNER_PREFERENCES: PlannerPreferences = { snap: 15, defaultDuration: 60 };
+export const DEFAULT_CALENDAR_PREFERENCES: CalendarPreferences = {
+  holidays: true,
+  region: DEFAULT_HOLIDAY_REGION,
+  birthdays: true,
+};
 
 function parseLocation(value: Json | null): WeatherLocation | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -49,14 +64,30 @@ function parsePlanner(value: Json): PlannerPreferences {
   return { snap, defaultDuration: duration };
 }
 
+function parseCalendar(value: Json): CalendarPreferences {
+  const prefs = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  const calendar = (prefs.calendar ?? {}) as Record<string, unknown>;
+  return {
+    holidays: typeof calendar.holidays === "boolean" ? calendar.holidays : DEFAULT_CALENDAR_PREFERENCES.holidays,
+    region: isHolidayRegion(calendar.region) ? calendar.region : DEFAULT_CALENDAR_PREFERENCES.region,
+    birthdays: typeof calendar.birthdays === "boolean" ? calendar.birthdays : DEFAULT_CALENDAR_PREFERENCES.birthdays,
+  };
+}
+
 export function parseSettings(row: UserSettingsRow | null): Settings {
   if (!row) {
-    return { location: null, sleepSchedule: DEFAULT_SLEEP_SCHEDULE, planner: DEFAULT_PLANNER_PREFERENCES };
+    return {
+      location: null,
+      sleepSchedule: DEFAULT_SLEEP_SCHEDULE,
+      planner: DEFAULT_PLANNER_PREFERENCES,
+      calendar: DEFAULT_CALENDAR_PREFERENCES,
+    };
   }
   return {
     location: parseLocation(row.location),
     sleepSchedule: normalizeSleepSchedule(row.sleep_schedule),
     planner: parsePlanner(row.preferences),
+    calendar: parseCalendar(row.preferences),
   };
 }
 
@@ -97,7 +128,21 @@ type SettingsPatch = {
   location?: WeatherLocation | null;
   sleepSchedule?: SleepSchedule;
   planner?: PlannerPreferences;
+  calendar?: CalendarPreferences;
 };
+
+/** The JSON preferences with the patched parts replaced. */
+function patchPreferences(current: Json, patch: SettingsPatch): NonNullable<Json> {
+  const prefs = (current && typeof current === "object" && !Array.isArray(current) ? current : {}) as Record<
+    string,
+    Json
+  >;
+  return {
+    ...prefs,
+    ...(patch.planner ? { planner: patch.planner } : {}),
+    ...(patch.calendar ? { calendar: patch.calendar } : {}),
+  } as unknown as NonNullable<Json>;
+}
 
 export function useUpdateSettings() {
   return useOptimisticMutation<SettingsPatch & { current: UserSettingsRow }>({
@@ -108,10 +153,7 @@ export function useUpdateSettings() {
       const update: Partial<UserSettingsRow> = {};
       if (patch.location !== undefined) update.location = patch.location as unknown as Json;
       if (patch.sleepSchedule) update.sleep_schedule = patch.sleepSchedule as unknown as NonNullable<Json>;
-      if (patch.planner) {
-        const prefs = (current.preferences ?? {}) as Record<string, Json>;
-        update.preferences = { ...prefs, planner: patch.planner } as unknown as NonNullable<Json>;
-      }
+      if (patch.planner || patch.calendar) update.preferences = patchPreferences(current.preferences, patch);
       const { error } = await createClient().from("user_settings").update(update).eq("user_id", current.user_id);
       if (error) throw error;
     },
@@ -121,14 +163,7 @@ export function useUpdateSettings() {
         ...row,
         ...(patch.location !== undefined ? { location: patch.location as unknown as Json } : {}),
         ...(patch.sleepSchedule ? { sleep_schedule: patch.sleepSchedule as unknown as NonNullable<Json> } : {}),
-        ...(patch.planner
-          ? {
-              preferences: {
-                ...((row.preferences ?? {}) as Record<string, Json>),
-                planner: patch.planner,
-              } as unknown as NonNullable<Json>,
-            }
-          : {}),
+        ...(patch.planner || patch.calendar ? { preferences: patchPreferences(row.preferences, patch) } : {}),
       };
     },
   });

@@ -21,7 +21,7 @@ export function CardHeader({
   icon,
   title,
   subtitle,
-  iconClassName,
+  titleClassName,
   count,
   href,
   tone = "accent",
@@ -32,8 +32,8 @@ export function CardHeader({
   title: string;
   /** Small second line under the title (e.g. a date). */
   subtitle?: string;
-  /** Extra classes for the icon badge (e.g. the "today" highlight). */
-  iconClassName?: string;
+  /** Extra classes for the title text (e.g. the blue "Today"). */
+  titleClassName?: string;
   count?: number;
   href?: string;
   tone?: Tone;
@@ -48,13 +48,14 @@ export function CardHeader({
           "grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]",
           styles.soft,
           styles.text,
-          iconClassName,
         )}
       >
         {icon}
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="truncate text-[0.95rem] leading-tight font-semibold tracking-tight">{title}</span>
+        <span className={cn("truncate text-[0.95rem] leading-tight font-semibold tracking-tight", titleClassName)}>
+          {title}
+        </span>
         {subtitle && <span className="truncate text-xs leading-tight text-muted tabular">{subtitle}</span>}
       </span>
       {typeof count === "number" && count > 0 && (

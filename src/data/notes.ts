@@ -9,14 +9,28 @@ export function sortNotes(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => (a.pinned === b.pinned ? byPosition(a, b) : a.pinned ? -1 : 1));
 }
 
+async function fetchNotes(): Promise<Note[]> {
+  const { data, error } = await createClient().from("notes").select("*").order("position", { ascending: true });
+  if (error) throw error;
+  return sortNotes(data);
+}
+
+/** The notes on the board (everything that is not in the trash). */
 export function useNotes() {
   return useAppQuery({
     queryKey: queryKeys.notes,
-    queryFn: async () => {
-      const { data, error } = await createClient().from("notes").select("*").order("position", { ascending: true });
-      if (error) throw error;
-      return sortNotes(data);
-    },
+    queryFn: fetchNotes,
+    select: (notes: Note[]) => notes.filter((n) => !n.deleted_at),
+  });
+}
+
+/** Notes in the trash, most recently deleted first. */
+export function useTrashedNotes() {
+  return useAppQuery({
+    queryKey: queryKeys.notes,
+    queryFn: fetchNotes,
+    select: (notes: Note[]) =>
+      notes.filter((n) => n.deleted_at).sort((a, b) => (b.deleted_at ?? "").localeCompare(a.deleted_at ?? "")),
   });
 }
 
@@ -47,7 +61,10 @@ export function useAddNote() {
     },
     update: (data, note) => {
       const now = nowIso();
-      return sortNotes([...(data as Note[]), { ...note, created_at: now, updated_at: now, user_id: "" }]);
+      return sortNotes([
+        ...(data as Note[]),
+        { ...note, created_at: now, updated_at: now, deleted_at: null, user_id: "" },
+      ]);
     },
   });
 }
@@ -68,6 +85,32 @@ export function useUpdateNote() {
   });
 }
 
+/** Moves notes to the trash (`trash: true`) or back onto the board (`trash: false`). */
+export function useTrashNotes() {
+  return useOptimisticMutation<{ ids: string[]; trash: boolean; position?: number }>({
+    table: "notes",
+    queryKey: queryKeys.notes,
+    errorTitle: "Couldn't move the note",
+    mutationFn: async ({ ids, trash, position }) => {
+      if (ids.length === 0) return;
+      const patch = trash
+        ? { deleted_at: nowIso() }
+        : { deleted_at: null, ...(position !== undefined ? { position } : {}) };
+      const { error } = await createClient().from("notes").update(patch).in("id", ids);
+      if (error) throw error;
+    },
+    update: (data, { ids, trash, position }) =>
+      sortNotes(
+        (data as Note[]).map((n) =>
+          ids.includes(n.id)
+            ? { ...n, deleted_at: trash ? nowIso() : null, ...(!trash && position !== undefined ? { position } : {}) }
+            : n,
+        ),
+      ),
+  });
+}
+
+/** Deletes notes for good (from the trash). */
 export function useDeleteNotes() {
   return useOptimisticMutation<{ ids: string[] }>({
     table: "notes",
@@ -88,13 +131,14 @@ export function useRestoreNotes() {
     queryKey: queryKeys.notes,
     errorTitle: "Couldn't restore the note",
     mutationFn: async ({ notes }) => {
-      const rows = notes.map(({ id, title, body, pinned, position, created_at }) => ({
+      const rows = notes.map(({ id, title, body, pinned, position, created_at, deleted_at }) => ({
         id,
         title,
         body,
         pinned,
         position,
         created_at,
+        deleted_at,
       }));
       const { error } = await createClient().from("notes").upsert(rows);
       if (error) throw error;

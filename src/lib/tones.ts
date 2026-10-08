@@ -55,11 +55,13 @@ export const TONE_STYLES: Record<
 
 /**
  * "Now" / "Today" everywhere: light blue with a blue ring (weather hours and
- * days, the planner's day, the home card's title).
+ * days, the planner's week strip and calendars), and the same blue for the word.
  */
 export const TODAY_RING = "bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50";
 /** Today while it is also the selected day. */
 export const TODAY_RING_STRONG = "bg-sky-500/26 ring-2 ring-sky-500 ring-inset dark:bg-sky-400/28 dark:ring-sky-300";
-export const TODAY_TEXT = "font-bold text-sky-700 dark:text-sky-200";
-/** A picked day that isn't today: quiet grey, like the weather's selected day. */
-export const SELECTED_DAY = "bg-surface-hover ring-1 ring-line ring-inset";
+/** The blue of "Today" as a word (titles, labels). */
+export const TODAY_COLOR = "text-sky-700 dark:text-sky-300";
+export const TODAY_TEXT = `font-bold ${TODAY_COLOR}`;
+/** A picked day that isn't today: grey like the weather's selected day, with a clear border. */
+export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-2 ring-slate-400/55 ring-inset dark:ring-white/40";
