@@ -195,6 +195,10 @@ test("dashboard: browse the plan of the next days with arrows and swipes", async
   });
   const page = await context.newPage();
   await mockWeather(page);
+  // Midday: in the evening the card starts with tomorrow on purpose.
+  const noon = new Date();
+  noon.setHours(12, 0, 0, 0);
+  await page.clock.setFixedTime(noon);
   await page.goto("/");
   const card = page.locator("section", { has: page.getByRole("button", { name: "Next day" }) });
   await expect(card.getByText("Today", { exact: true })).toBeVisible();

@@ -14,7 +14,11 @@ import android.os.UserHandle
 import android.provider.Settings
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.net.ConnectivityManager
+import android.net.Network
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
@@ -40,6 +44,18 @@ class LauncherActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var apps: AppRepository
     private lateinit var bridge: Bridge
+    private lateinit var offline: OfflineScreen
+    private var loadFailed = false
+    private var failedUrl: String? = null
+    private val connectivity by lazy { getSystemService(ConnectivityManager::class.java) }
+
+    // Back online: bring the dashboard back by itself.
+    private val networkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                root.post { if (offline.isShown) retry() }
+            }
+        }
     private val dashboard: Uri = Uri.parse(BuildConfig.DASHBOARD_URL)
     private val prefs by lazy { getSharedPreferences("launcher", MODE_PRIVATE) }
 
@@ -62,6 +78,9 @@ class LauncherActivity : ComponentActivity() {
         root = FrameLayout(this).apply { setBackgroundColor(background) }
         webView = WebView(this).apply { setBackgroundColor(background) }
         root.addView(webView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        apps = AppRepository(this)
+        offline = OfflineScreen(this, apps, onRetry = ::retry, onHomeSettings = ::openHomeSettings)
+        root.addView(offline.view, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         setContentView(root)
 
         // The page stays clear of the status bar, the gesture bar and the keyboard.
@@ -93,9 +112,25 @@ class LauncherActivity : ComponentActivity() {
                 openExternal(Intent(Intent.ACTION_VIEW, url))
                 return true
             }
+
+            // The dashboard didn't load: show the offline screen instead of the browser's error page.
+            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                if (request.isForMainFrame) pageFailed(request.url.toString())
+            }
+
+            override fun onReceivedHttpError(
+                view: WebView,
+                request: WebResourceRequest,
+                errorResponse: WebResourceResponse,
+            ) {
+                if (request.isForMainFrame && errorResponse.statusCode >= 500) pageFailed(request.url.toString())
+            }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                if (!loadFailed) offline.hide()
+            }
         }
 
-        apps = AppRepository(this)
         bridge = Bridge(this, apps)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             // Only the dashboard itself gets the launcher functions – no other page.
@@ -104,6 +139,7 @@ class LauncherActivity : ComponentActivity() {
         }
         UpdateStatus.listener = { status -> bridge.send(JSONObject().put("type", "updateStatus").put("status", status)) }
         apps.launcherApps.registerCallback(packageCallback, Handler(Looper.getMainLooper()))
+        connectivity.registerDefaultNetworkCallback(networkCallback)
 
         onBackPressedDispatcher.addCallback(
             this,
@@ -131,6 +167,7 @@ class LauncherActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         webView.onResume()
+        if (offline.isShown) retry()
     }
 
     override fun onPause() {
@@ -146,9 +183,22 @@ class LauncherActivity : ComponentActivity() {
 
     override fun onDestroy() {
         apps.launcherApps.unregisterCallback(packageCallback)
+        runCatching { connectivity.unregisterNetworkCallback(networkCallback) }
         UpdateStatus.listener = null
         webView.destroy()
         super.onDestroy()
+    }
+
+    private fun pageFailed(url: String) {
+        loadFailed = true
+        failedUrl = url
+        offline.show(prefs.getInt("background", Color.parseColor("#060913")), prefs.getBoolean("dark", true))
+    }
+
+    /** Loads the dashboard again (the page that failed, or home). */
+    private fun retry() {
+        loadFailed = false
+        webView.loadUrl(failedUrl ?: BuildConfig.DASHBOARD_URL)
     }
 
     private fun appsChanged() {

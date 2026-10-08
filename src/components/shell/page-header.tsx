@@ -45,4 +45,4 @@ export function FillPage({ children }: { children: React.ReactNode }) {
 }
 
 /** Body of a `FillPage`: on phones it takes the remaining height. */
-export const FILL_BODY = "max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col max-md:pb-3";
+export const FILL_BODY = "max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col max-md:pb-0";

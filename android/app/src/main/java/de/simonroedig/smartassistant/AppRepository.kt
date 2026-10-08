@@ -46,6 +46,23 @@ class AppRepository(private val context: Context) {
         return result
     }
 
+    /** An app for the native offline screen. */
+    class Entry(val id: String, val label: String, private val info: LauncherActivityInfo) {
+        private var drawable: android.graphics.drawable.Drawable? = null
+
+        fun icon() = drawable ?: info.getBadgedIcon(0).also { drawable = it }
+    }
+
+    /** The same apps as `list()`, A–Z, for native use. */
+    fun entries(): List<Entry> =
+        launcherApps.profiles
+            .filter { isShown(it) }
+            .flatMap { user ->
+                runCatching { launcherApps.getActivityList(null, user) }.getOrDefault(emptyList()).map { info -> info to user }
+            }.filter { (info, _) -> info.componentName.packageName != context.packageName }
+            .map { (info, user) -> Entry(idOf(info.componentName, user), info.label.toString(), info) }
+            .sortedBy { it.label.lowercase() }
+
     fun launch(id: String): Boolean {
         val (component, user) = find(id) ?: return false
         return runCatching { launcherApps.startMainActivity(component, user, null, null) }.isSuccess

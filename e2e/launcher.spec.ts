@@ -74,17 +74,28 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   await page.getByLabel("Search apps or the web").press("Enter");
   await expect.poll(async () => (await sent(page)).find((m) => m.type === "search")?.query).toBe("Wetter München");
 
-  // The phone's home button brings the home screen back.
+  // Home stays switched to the apps: away to another section and back lands in the apps again.
+  await tabs.getByRole("link", { name: "Shopping" }).click();
+  await expect(page).toHaveURL(/\/shopping$/);
+  await expect(tabs.getByRole("link", { name: "Apps" })).toBeVisible();
+  await tabs.getByRole("link", { name: "Apps" }).click();
+  await expect(page).toHaveURL(/\/apps$/);
+
+  // The phone's home button opens the chosen view, too.
+  await tabs.getByRole("link", { name: "Planner" }).click();
+  await expect(page).toHaveURL(/\/planner$/);
   await page.evaluate(() =>
     (window as unknown as { __launcherEmit: (e: unknown) => void }).__launcherEmit({ type: "home" }),
   );
+  await expect(page).toHaveURL(/\/apps$/);
+
+  // Tapping it on the apps flips back to the home screen – and that sticks the same way.
+  await tabs.getByRole("link", { name: "Apps" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(tabs.getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
-
-  // Apps → Home with the tab, too.
+  await tabs.getByRole("link", { name: "Notes" }).click();
+  await expect(page).toHaveURL(/\/notes$/);
   await tabs.getByRole("link", { name: "Home" }).click();
-  await expect(page).toHaveURL(/\/apps$/);
-  await tabs.getByRole("link", { name: "Apps" }).click();
   await expect(page).toHaveURL(/\/$/);
 
   // Web search right from the home screen.

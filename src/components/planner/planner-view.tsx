@@ -282,8 +282,18 @@ export function PlannerView({
       <div className="px-4 pb-3 md:px-8">
         <WeekStrip week={planner.week} selected={day} today={today} blocks={planner.weekBlocks} onSelect={go} />
       </div>
-      <div className="grid min-h-0 flex-1 gap-4 px-4 pb-4 md:px-8 md:pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-h-0 flex-1 gap-4 px-4 md:px-8 md:pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card className="min-h-0 [touch-action:pan-y] overflow-hidden">
+          {/* Phones: "add" sits in the card's corner, near the thumb. */}
+          <Button
+            variant="primary"
+            size="icon-lg"
+            aria-label="Add block"
+            onClick={() => planner.createAtNextFree()}
+            className={cn("absolute right-4 bottom-4 z-30 rounded-full shadow-pop md:hidden", rose.solid)}
+          >
+            <Plus className="!size-6" />
+          </Button>
           <div className="flex flex-col gap-3 px-3 pt-3 md:px-4">
             <FocusInput day={day} week={planner.week} />
             <DayExtrasChips extras={dayExtras(day)} className="-mt-1" />
@@ -372,19 +382,6 @@ export function PlannerView({
           </Card>
         </aside>
       </div>
-
-      <Button
-        variant="primary"
-        size="icon-lg"
-        aria-label="Add block"
-        onClick={() => planner.createAtNextFree()}
-        className={cn(
-          "fixed right-5 bottom-[calc(6.75rem+env(safe-area-inset-bottom))] z-30 rounded-full shadow-pop md:hidden",
-          rose.solid,
-        )}
-      >
-        <Plus className="!size-6" />
-      </Button>
 
       <Sheet
         open={backlogOpen}

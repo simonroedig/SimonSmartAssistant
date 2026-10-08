@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { homeIsBelow } from "@/components/shell/app-link";
 import {
   connectLauncher,
+  getHomeView,
   latestLauncherVersion,
   launcher,
   onLauncherEvent,
@@ -51,10 +52,14 @@ export function LauncherSync() {
 
     const stop = onLauncherEvent((event) => {
       if (event.type === "home") {
-        // Home button: back to the home screen (from the apps or any section).
-        if (path.current === "/") window.scrollTo({ top: 0, behavior: "smooth" });
-        else if (homeIsBelow()) router.back();
-        else router.replace("/");
+        // Home button: back to the home screen – or the apps, if that's what Home is switched to.
+        const target = getHomeView() === "apps" ? "/apps" : "/";
+        if (path.current === target) window.scrollTo({ top: 0, behavior: "smooth" });
+        else if (target === "/") {
+          if (homeIsBelow()) router.back();
+          else router.replace("/");
+        } else if (path.current === "/") router.push("/apps");
+        else router.replace("/apps");
       } else if (event.type === "appsChanged") {
         void refreshApps();
       } else if (event.type === "updateStatus" && event.status) {

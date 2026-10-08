@@ -176,3 +176,44 @@ export async function latestLauncherVersion(): Promise<{ versionCode: number; ve
     return null;
   }
 }
+
+// --- Home or apps: the tab's fixed switch ----------------------------------
+
+export type HomeView = "home" | "apps";
+const VIEW_KEY = "ssa:home-view";
+const viewSubscribers = new Set<() => void>();
+let homeView: HomeView | null = null;
+
+/** What Home in the tab bar shows (and the home button opens): the last of the two you picked. */
+export function getHomeView(): HomeView {
+  if (homeView === null) {
+    try {
+      homeView = localStorage.getItem(VIEW_KEY) === "apps" ? "apps" : "home";
+    } catch {
+      homeView = "home";
+    }
+  }
+  return homeView;
+}
+
+export function setHomeView(view: HomeView) {
+  if (getHomeView() === view) return;
+  homeView = view;
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Private mode – remembered until the app restarts.
+  }
+  viewSubscribers.forEach((notify) => notify());
+}
+
+export function useHomeView(): HomeView {
+  return useSyncExternalStore(
+    (notify) => {
+      viewSubscribers.add(notify);
+      return () => viewSubscribers.delete(notify);
+    },
+    getHomeView,
+    () => "home",
+  );
+}

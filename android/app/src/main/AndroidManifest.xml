@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Notices when the connection is back, to reload the dashboard. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Updates itself from the dashboard's server (the system asks before installing). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { LauncherSync } from "@/components/launcher/launcher-sync";
 import { useSyncStatus } from "@/components/providers/realtime-provider";
-import { useIsLauncher } from "@/lib/launcher";
+import { setHomeView, useHomeView, useIsLauncher } from "@/lib/launcher";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
@@ -35,15 +35,24 @@ const RAIL_GAP_REM = 0.25;
 type LinkProps = { item: NavItem; active: boolean; onNavigate: (href: string) => void };
 
 /**
- * In the Android launcher app, Home doubles as the switch to the phone's apps:
- * on the home screen it opens them, on the apps page it shows "Apps" and leads
- * back home. Everywhere else it is the plain Home link.
+ * In the Android launcher app, Home is a fixed switch between the home screen
+ * and the phone's apps: tapping it there flips to the other one, and the choice
+ * stays – from any other section the tab leads back to it. Everywhere else it is
+ * the plain Home link.
  */
 function useHomeSwitch(pathname: string) {
   const isLauncher = useIsLauncher();
-  const onApps = pathname === "/apps";
-  const item: NavItem = isLauncher && onApps ? { ...HOME_ITEM, label: "Apps", icon: LayoutGrid } : HOME_ITEM;
-  const target = isLauncher && pathname === "/" ? "/apps" : "/";
+  const remembered = useHomeView();
+  // Whichever of the two is open is the current choice.
+  useEffect(() => {
+    if (!isLauncher) return;
+    if (pathname === "/") setHomeView("home");
+    else if (pathname === "/apps") setHomeView("apps");
+  }, [isLauncher, pathname]);
+  if (!isLauncher) return { item: HOME_ITEM, target: "/" };
+  const view = pathname === "/" ? "home" : pathname === "/apps" ? "apps" : remembered;
+  const item: NavItem = view === "apps" ? { ...HOME_ITEM, label: "Apps", icon: LayoutGrid } : HOME_ITEM;
+  const target = pathname === "/" ? "/apps" : pathname === "/apps" ? "/" : view === "apps" ? "/apps" : "/";
   return { item, target };
 }
 

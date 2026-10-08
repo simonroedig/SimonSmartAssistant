@@ -647,6 +647,9 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
       expect(box.y + box.height).toBeLessThan(tabBar.y);
     };
     await check();
+    // The card ends the usual card gap (1rem) above the tab bar, like the cards on the home screen.
+    const card = (await field.locator("xpath=ancestor::section[1]").boundingBox())!;
+    expect(Math.round(tabBar.y - (card.y + card.height))).toBe(16);
     // Only the list scrolls – the page itself (and with it the tab bar) never moves.
     await page.mouse.move(195, 300);
     await page.mouse.wheel(0, 3000);
