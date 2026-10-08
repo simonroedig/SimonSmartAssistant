@@ -32,13 +32,17 @@ export function PageBody({ className, children }: { className?: string; children
 }
 
 /**
- * Phones: the page fills the screen above the tab bar, so a list's "add" bar
- * can sit at the bottom (near the thumb) even while the list is short.
+ * Phones: the page is exactly the screen above the tab bar and never scrolls
+ * itself – the list inside scrolls, and its "add" row stays at the bottom,
+ * near the thumb.
  */
 export function FillPage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col md:block md:min-h-0">
+    <div className="flex flex-col max-md:h-[calc(100dvh-var(--page-bottom))] max-md:overflow-hidden md:block">
       {children}
     </div>
   );
 }
+
+/** Body of a `FillPage`: on phones it takes the remaining height. */
+export const FILL_BODY = "max-md:flex max-md:min-h-0 max-md:flex-1 max-md:flex-col max-md:pb-3";

@@ -13,10 +13,10 @@ export function holidayNumberClass(holiday: CalendarDay | null): string | undefi
 
 export const BIRTHDAY_TEXT = "text-pink-600 dark:text-pink-300";
 
-/** One line for tooltips and screen readers: "German Unity Day · Shops closed · Anna turns 30". */
+/** One line for tooltips and screen readers: "German Unity Day (Tag der Deutschen Einheit) · Shops closed · Anna turns 30". */
 export function extrasLabel(extras: DayExtras): string {
   return [
-    extras.holiday && `${extras.holiday.name} · ${extras.holiday.shopsLabel}`,
+    extras.holiday && `${extras.holiday.name} (${extras.holiday.nameDe}) · ${extras.holiday.shopsLabel}`,
     ...extras.birthdays.map((b) => b.label),
   ]
     .filter(Boolean)
@@ -32,14 +32,15 @@ export function DayExtrasChips({ extras, className }: { extras: DayExtras; class
       {holiday && (
         <li
           className={cn(
-            "flex min-w-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+            "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-2xl px-2.5 py-1 text-xs font-semibold",
             holiday.shops === "closed"
               ? "bg-red-500/10 text-red-700 dark:bg-red-400/12 dark:text-red-300"
               : "bg-amber-500/12 text-amber-800 dark:bg-amber-400/12 dark:text-amber-200",
           )}
         >
           <Flag className="size-3.5 shrink-0" />
-          <span className="truncate">{holiday.name}</span>
+          <span>{holiday.name}</span>
+          <span className="font-medium opacity-75">({holiday.nameDe})</span>
           <span className="flex shrink-0 items-center gap-1 font-medium opacity-85">
             <span aria-hidden="true">·</span>
             <Store className="size-3.5" />

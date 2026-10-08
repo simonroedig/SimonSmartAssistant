@@ -1,7 +1,7 @@
 import { Droplets } from "lucide-react";
 import { formatWeekdayShort, fromDayKey } from "@/lib/date";
 import type { DailyPoint } from "@/lib/weather/open-meteo";
-import { TODAY_RING, TODAY_TEXT } from "@/lib/tones";
+import { TODAY_RING, TODAY_TEXT, SELECTED_DAY } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { TemperatureBar } from "./temperature-bar";
 import { WeatherIcon } from "./weather-icon";
@@ -72,7 +72,7 @@ export function DailyList({
                   isToday
                     ? cn(TODAY_RING, isSelected && "ring-sky-500/80")
                     : isSelected
-                      ? "bg-surface-hover ring-1 ring-line"
+                      ? SELECTED_DAY
                       : "hover:bg-surface-hover/60",
                 )}
               >

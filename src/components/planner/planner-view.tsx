@@ -224,7 +224,7 @@ export function PlannerView({
   );
 
   return (
-    <div className="flex h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col md:h-dvh" {...swipe}>
+    <div className="flex h-[calc(100dvh-var(--page-bottom))] flex-col md:h-dvh" {...swipe}>
       {/* On phones the title gets its own line, so a long weekday never wraps. */}
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 md:items-end md:px-8 md:pt-7">
         <h1 className="col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
@@ -408,6 +408,7 @@ export function PlannerView({
         <MonthCalendar
           selected={day}
           today={today}
+          listFirst
           onSelect={(target) => {
             go(target);
             setCalendarOpen(false);

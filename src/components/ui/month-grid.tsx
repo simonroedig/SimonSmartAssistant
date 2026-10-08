@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useSwipe } from "@/hooks/use-swipe";
 import {
   addDays,
   type DayKey,
@@ -79,6 +80,8 @@ export function MonthGrid({
 
   const days = useMemo(() => monthGridDays(month), [month]);
   const styles = TONE_STYLES[tone];
+  // Swipe sideways through the months (phones; the wall display has the arrows).
+  const swipe = useSwipe((direction) => setMonth(shiftMonth(month, direction)));
 
   return (
     <div className={className}>
@@ -112,7 +115,7 @@ export function MonthGrid({
           <ChevronRight className="size-5" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-0.5 text-center">
+      <div className="grid [touch-action:pan-y] grid-cols-7 gap-0.5 text-center" data-swipe {...swipe}>
         {WEEKDAYS.map((d) => (
           <span key={d} className="pb-1 text-[0.68rem] font-semibold text-faint uppercase">
             {d}

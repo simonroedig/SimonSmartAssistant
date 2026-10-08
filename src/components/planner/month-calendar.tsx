@@ -19,11 +19,17 @@ export function MonthCalendar({
   selected,
   today,
   onSelect,
+  listFirst = false,
   className,
 }: {
   selected: DayKey;
   today: DayKey | null;
   onSelect: (day: DayKey) => void;
+  /**
+   * The month's list above the calendar: in a bottom sheet it then grows
+   * upwards, and the month arrows stay where they are while browsing.
+   */
+  listFirst?: boolean;
   className?: string;
 }) {
   const [month, setMonth] = useState(monthOf(selected));
@@ -46,7 +52,7 @@ export function MonthCalendar({
     .filter(({ extras }) => extras.holiday || extras.birthdays.length > 0);
 
   return (
-    <div className={className}>
+    <div className={cn("flex flex-col", className)}>
       <MonthGrid
         selected={selected}
         today={today}
@@ -66,7 +72,13 @@ export function MonthCalendar({
         quietSelection
       />
       {events.length > 0 && (
-        <ul className="mt-3 flex flex-col border-t border-line pt-2" aria-label="Holidays and birthdays this month">
+        <ul
+          className={cn(
+            "flex flex-col border-line",
+            listFirst ? "order-first mb-3 border-b pb-2" : "mt-3 border-t pt-2",
+          )}
+          aria-label="Holidays and birthdays this month"
+        >
           {events.map(({ day, extras }) => {
             const date = fromDayKey(day);
             return (
@@ -85,6 +97,7 @@ export function MonthCalendar({
                         <span className={cn("font-medium", holidayNumberClass(extras.holiday))}>
                           {extras.holiday.name}
                         </span>
+                        <span className="text-xs text-muted">({extras.holiday.nameDe})</span>
                         <span className="flex items-center gap-1 text-xs text-muted">
                           <Store className="size-3" />
                           {extras.holiday.shopsLabel}

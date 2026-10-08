@@ -10,7 +10,8 @@ const MAX_DURATION = 1500;
  * Sideways swipe (finger, or the wall display's touch screen) on an element.
  * `onSwipe(1)` for a swipe to the left (next), `onSwipe(-1)` to the right
  * (previous). The tap that ends a swipe is swallowed. Spread the returned
- * handlers on the element; events from portals (sheets) are ignored.
+ * handlers on the element; events from portals (sheets) are ignored, and so
+ * are swipes on a nested element with its own swipe (marked `data-swipe`).
  */
 export function useSwipe(onSwipe: (direction: 1 | -1) => void, enabled = true) {
   const start = useRef<{ id: number; x: number; y: number; t: number } | null>(null);
@@ -18,7 +19,8 @@ export function useSwipe(onSwipe: (direction: 1 | -1) => void, enabled = true) {
 
   return {
     onPointerDownCapture: (e: React.PointerEvent) => {
-      const inside = e.currentTarget.contains(e.target as Node);
+      const owner = (e.target as Element).closest?.("[data-swipe]");
+      const inside = e.currentTarget.contains(e.target as Node) && (!owner || owner === e.currentTarget);
       start.current =
         enabled && inside && isFingerLike(e.pointerType)
           ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp }

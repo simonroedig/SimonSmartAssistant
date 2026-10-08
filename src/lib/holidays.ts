@@ -38,6 +38,8 @@ export function isHolidayRegion(value: unknown): value is HolidayRegion {
 
 export type CalendarDay = {
   name: string;
+  /** The German name, which is what people around you call it. */
+  nameDe: string;
   /** "holiday": a public holiday; "observance": a working day worth knowing about. */
   kind: "holiday" | "observance";
   shops: "closed" | "short" | "open";
@@ -83,15 +85,42 @@ function reformationRegions(year: number): HolidayRegion[] {
   return year >= 2018 ? [...east, "HB", "HH", "NI", "SH"] : east;
 }
 
+/** German names of the days, by their English name. */
+const GERMAN: Record<string, string> = {
+  "New Year's Day": "Neujahr",
+  Epiphany: "Heilige Drei Könige",
+  "International Women's Day": "Internationaler Frauentag",
+  "Good Friday": "Karfreitag",
+  "Easter Sunday": "Ostersonntag",
+  "Easter Monday": "Ostermontag",
+  "Labour Day": "Tag der Arbeit",
+  "Liberation Day": "Tag der Befreiung",
+  "Ascension Day": "Christi Himmelfahrt",
+  "Whit Sunday": "Pfingstsonntag",
+  "Whit Monday": "Pfingstmontag",
+  "Corpus Christi": "Fronleichnam",
+  "Assumption Day": "Mariä Himmelfahrt",
+  "World Children's Day": "Weltkindertag",
+  "German Unity Day": "Tag der Deutschen Einheit",
+  "Reformation Day": "Reformationstag",
+  "All Saints' Day": "Allerheiligen",
+  "Repentance Day": "Buß- und Bettag",
+  "Christmas Eve": "Heiligabend",
+  "Christmas Day": "1. Weihnachtsfeiertag",
+  "Boxing Day": "2. Weihnachtsfeiertag",
+  "New Year's Eve": "Silvester",
+};
+
 function holiday(name: string): CalendarDay {
-  return { name, kind: "holiday", shops: "closed", shopsLabel: "Shops closed" };
+  return { name, nameDe: GERMAN[name] ?? name, kind: "holiday", shops: "closed", shopsLabel: "Shops closed" };
 }
 
 /** Christmas Eve and New Year's Eve: shorter opening hours, closed on a Sunday. */
 function shortDay(name: string, day: DayKey, label: string): CalendarDay {
+  const nameDe = GERMAN[name] ?? name;
   return weekdayIndex(day) === 6
-    ? { name, kind: "observance", shops: "closed", shopsLabel: "Shops closed" }
-    : { name, kind: "observance", shops: "short", shopsLabel: label };
+    ? { name, nameDe, kind: "observance", shops: "closed", shopsLabel: "Shops closed" }
+    : { name, nameDe, kind: "observance", shops: "short", shopsLabel: label };
 }
 
 function buildYear(year: number, region: HolidayRegion): Map<DayKey, CalendarDay> {
@@ -126,7 +155,13 @@ function buildYear(year: number, region: HolidayRegion): Map<DayKey, CalendarDay
   add(repentanceDay(year), holiday("Repentance Day"), ["SN"]);
   add(
     repentanceDay(year),
-    { name: "Repentance Day", kind: "observance", shops: "open", shopsLabel: "No school · shops open" },
+    {
+      name: "Repentance Day",
+      nameDe: GERMAN["Repentance Day"],
+      kind: "observance",
+      shops: "open",
+      shopsLabel: "No school · shops open",
+    },
     ["BY"],
   );
   add(fixed(year, 12, 24), shortDay("Christmas Eve", fixed(year, 12, 24), "Shops close at 14:00"));

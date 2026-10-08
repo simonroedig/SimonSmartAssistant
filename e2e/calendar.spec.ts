@@ -55,6 +55,8 @@ test("holidays: shown in the planner with what they mean for the shops, per stat
 
   await expectChip(page, "2030-10-03", "German Unity Day");
   await expect(dayChips(page)).toContainText("Shops closed");
+  // The German name, too.
+  await expect(dayChips(page)).toContainText("(Tag der Deutschen Einheit)");
   // The month calendar lists the month's holidays and colours the day.
   await expect(page.getByRole("list", { name: "Holidays and birthdays this month" })).toContainText("German Unity Day");
   await expect(page.getByRole("button", { name: /^Thursday, 3 October · German Unity Day/ }).first()).toBeVisible();
@@ -124,4 +126,40 @@ test("birthdays: a simple list in Settings, shown in the planner with the age", 
   await page.getByRole("button", { name: `Edit ${name}` }).click();
   await saved(page, "birthdays", () => dialog.getByRole("button", { name: "Delete birthday" }).click());
   await expect(page.getByRole("button", { name: `Edit ${name}` })).toHaveCount(0);
+});
+
+test("phone: pick a day – the month's holidays above the calendar, swipe through the months", async ({ browser }) => {
+  const context = await browser.newContext({
+    storageState: "e2e/.auth/user.json",
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  await mockWeather(page);
+  await openFresh(page, "/planner?day=2030-10-03");
+  await page.getByRole("button", { name: "Pick a day" }).click();
+  const dialog = page.getByRole("dialog");
+  const list = dialog.getByRole("list", { name: "Holidays and birthdays this month" });
+  await expect(list).toContainText("German Unity Day");
+  await page.waitForTimeout(700); // the sheet slides in
+  const title = dialog.getByText("October 2030");
+  // The list sits above the month, so browsing never moves the arrows away.
+  expect((await list.boundingBox())!.y).toBeLessThan((await title.boundingBox())!.y);
+  const arrowsBefore = (await dialog.getByRole("button", { name: "Next month" }).boundingBox())!;
+
+  // Swipe left on the days: next month (the day in the planner stays).
+  const grid = (await dialog.getByRole("button", { name: /^Tuesday, 15 October/ }).boundingBox())!;
+  const cdp = await context.newCDPSession(page);
+  const y = grid.y + grid.height / 2;
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number) =>
+    cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  await touch("touchStart", 330);
+  for (let i = 1; i <= 4; i++) await touch("touchMove", 330 - i * 60);
+  await touch("touchEnd", 0);
+  await expect(dialog.getByText("November 2030")).toBeVisible();
+  await expect(list).toContainText("Repentance Day");
+  const arrowsAfter = (await dialog.getByRole("button", { name: "Next month" }).boundingBox())!;
+  expect(Math.abs(arrowsAfter.y - arrowsBefore.y)).toBeLessThan(2);
+  await expect(page).toHaveURL(/day=2030-10-03/);
+  await context.close();
 });

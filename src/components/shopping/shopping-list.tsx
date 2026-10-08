@@ -10,7 +10,7 @@ import { CheckCircle } from "@/components/ui/check-circle";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
-import { StickyAddBar } from "@/components/ui/sticky-add-bar";
+import { PHONE_ADD_ROW, PHONE_SCROLL_AREA } from "@/components/ui/phone-add-row";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import type { ShoppingItem } from "@/data/core";
 import {
@@ -160,7 +160,7 @@ export function ShoppingList({
   const onPage = variant === "page";
   const body = (
     <>
-      <StickyAddBar enabled={onPage} className="max-md:flex max-md:flex-col-reverse">
+      <div className={cn(onPage && PHONE_ADD_ROW, onPage && "max-md:flex max-md:flex-col-reverse")}>
         <form
           className="flex items-center gap-2"
           onSubmit={(e) => {
@@ -187,6 +187,8 @@ export function ShoppingList({
             size="icon"
             aria-label="Add item"
             disabled={!draft.trim()}
+            // Keep the focus (and the phone's keyboard) in the field: adding needs one tap, and the next item can follow.
+            onMouseDown={(e) => e.preventDefault()}
             className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]", TONE_STYLES.emerald.solid)}
           >
             <Plus className="!size-5" />
@@ -230,9 +232,9 @@ export function ShoppingList({
             </motion.div>
           )}
         </AnimatePresence>
-      </StickyAddBar>
+      </div>
 
-      <div className={cn("mt-3 flex flex-col", onPage && "max-md:mt-0 max-md:pb-3")}>
+      <div className={cn("mt-3 flex flex-col", onPage && PHONE_SCROLL_AREA)}>
         {items.isLoading && all.length === 0 ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2].map((i) => (

@@ -8,7 +8,6 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
-import { StickyAddBar } from "@/components/ui/sticky-add-bar";
 import type { Note } from "@/data/core";
 import {
   isNoteEmpty,
@@ -227,38 +226,41 @@ export function NotesBoard({
   return (
     <div className={cn("flex flex-col", className)}>
       <Composer onCreate={create} className="max-md:hidden" />
-      {loading ? (
-        <div className={cn(grid, "mt-2 md:mt-6")}>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="skeleton h-28 rounded-2xl" />
-          ))}
-        </div>
-      ) : all.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
-          <StickyNote className="size-10 text-faint" />
-          <p className="text-sm">No notes yet. Codes, ideas, gift lists – anything goes.</p>
-        </div>
-      ) : (
-        <div className="mt-2 flex flex-col gap-6 md:mt-6">
-          {pinned.length > 0 && (
-            <section>
-              <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
-              {sortable(pinned)}
-            </section>
-          )}
-          {others.length > 0 && (
-            <section>
-              {pinned.length > 0 && (
-                <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Others</h2>
-              )}
-              {sortable(others)}
-            </section>
-          )}
-          <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
-        </div>
-      )}
+      {/* Phones: only this part scrolls; "Take a note" stays below it. */}
+      <div className="max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-3">
+        {loading ? (
+          <div className={cn(grid, "mt-2 md:mt-6")}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skeleton h-28 rounded-2xl" />
+            ))}
+          </div>
+        ) : all.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
+            <StickyNote className="size-10 text-faint" />
+            <p className="text-sm">No notes yet. Codes, ideas, gift lists – anything goes.</p>
+          </div>
+        ) : (
+          <div className="mt-2 flex flex-col gap-6 md:mt-6">
+            {pinned.length > 0 && (
+              <section>
+                <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
+                {sortable(pinned)}
+              </section>
+            )}
+            {others.length > 0 && (
+              <section>
+                {pinned.length > 0 && (
+                  <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Others</h2>
+                )}
+                {sortable(others)}
+              </section>
+            )}
+            <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
+          </div>
+        )}
+      </div>
       {/* Phones: "Take a note" waits at the bottom, where the thumb is. */}
-      <StickyAddBar className="mt-4 max-md:mx-0 md:hidden">
+      <div className="rounded-[1.4rem] border border-line bg-(--nav-bg) p-2 shadow-(--shadow-card) md:hidden">
         <button
           type="button"
           onClick={() => setEditor({ mode: "create" })}
@@ -277,7 +279,7 @@ export function NotesBoard({
             <Plus className="size-5" />
           </span>
         </button>
-      </StickyAddBar>
+      </div>
       {editorSheet}
     </div>
   );

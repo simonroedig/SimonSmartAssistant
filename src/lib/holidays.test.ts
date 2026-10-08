@@ -37,7 +37,13 @@ describe("holidays", () => {
   });
 
   it("says when shops are closed, open or close early", () => {
-    expect(calendarDayOf("2026-10-03", "BY")).toMatchObject({ shops: "closed", shopsLabel: "Shops closed" });
+    expect(calendarDayOf("2026-10-03", "BY")).toMatchObject({
+      nameDe: "Tag der Deutschen Einheit",
+      shops: "closed",
+      shopsLabel: "Shops closed",
+    });
+    expect(calendarDayOf("2026-12-24", "BY")?.nameDe).toBe("Heiligabend");
+    expect(calendarDayOf("2026-11-18", "BY")?.nameDe).toBe("Buß- und Bettag");
     // Repentance Day: a holiday in Saxony only; in Bavaria schools are closed but shops open.
     expect(calendarDayOf("2026-11-18", "BY")).toMatchObject({ kind: "observance", shops: "open" });
     expect(calendarDayOf("2026-11-18", "SN")).toMatchObject({ kind: "holiday", shops: "closed" });

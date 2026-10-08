@@ -224,7 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <NavRail isCurrent={isCurrent} onNavigate={onNavigate} />
-      <main className="min-h-dvh pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-[5.75rem]">
+      <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-[5.75rem]">
         {children}
         {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
         <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />

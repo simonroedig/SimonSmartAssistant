@@ -22,7 +22,7 @@ import { AutoTextarea, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
-import { StickyAddBar } from "@/components/ui/sticky-add-bar";
+import { PHONE_ADD_ROW, PHONE_SCROLL_AREA } from "@/components/ui/phone-add-row";
 import { SwipeRow } from "@/components/ui/swipe-row";
 import type { PlanBlock, Todo } from "@/data/core";
 import { plannedBlockByTodo, useLinkedBlocks, useSetTodoBlocksDone } from "@/data/planner";
@@ -217,7 +217,7 @@ export function TodoList({
   const onPage = variant === "page";
   const body = (
     <>
-      <StickyAddBar enabled={onPage}>
+      <div className={cn(onPage && PHONE_ADD_ROW)}>
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -248,14 +248,16 @@ export function TodoList({
             size="icon"
             aria-label="Add todo"
             disabled={!draft.trim()}
+            // Keep the focus (and the phone's keyboard) in the field: adding needs one tap.
+            onMouseDown={(e) => e.preventDefault()}
             className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]", TONE_STYLES.yellow.solid)}
           >
             <Plus className="!size-5" />
           </Button>
         </form>
-      </StickyAddBar>
+      </div>
 
-      <div className={cn("mt-3", onPage && "max-md:mt-0 max-md:pb-3")}>
+      <div className={cn("mt-3", onPage && PHONE_SCROLL_AREA)}>
         {todos.isLoading && all.length === 0 ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2].map((i) => (

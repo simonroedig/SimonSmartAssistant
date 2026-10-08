@@ -35,8 +35,8 @@
   --blob-2: #fbcfe8;
   --blob-3: #bae6fd;
   --osk-height: 0px;
-  /* Phones: the space the tab bar takes at the bottom – sticky "add" bars sit above it. */
-  --tabbar-space: calc(max(0.75rem, env(safe-area-inset-bottom)) + 4.85rem);
+  /* Phones: room kept free at the bottom of every page for the floating tab bar. */
+  --page-bottom: calc(6.5rem + env(safe-area-inset-bottom));
   color-scheme: light;
 }
 
@@ -72,7 +72,7 @@
 /* Phones: while the on-screen keyboard is up, the tab bar steps aside for the typing. */
 @media (max-width: 767px) {
   :root[data-keyboard] {
-    --tabbar-space: 0.5rem;
+    --page-bottom: 0.5rem;
   }
   :root[data-keyboard] [data-tabbar] {
     display: none;

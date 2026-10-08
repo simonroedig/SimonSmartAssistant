@@ -644,11 +644,24 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
       expect(box.y + box.height).toBeLessThan(tabBar.y);
     };
     await check();
-    // It stays there while the list scrolls.
+    // Only the list scrolls – the page itself (and with it the tab bar) never moves.
+    await page.mouse.move(195, 300);
     await page.mouse.wheel(0, 3000);
     await page.waitForTimeout(300);
     await check();
+    expect(await page.evaluate(() => document.scrollingElement!.scrollTop)).toBe(0);
+    expect(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight + 1)).toBe(true);
   }
+
+  // One tap on "+" adds the item, and the field keeps the focus for the next one.
+  await page.goto("/shopping");
+  const item = `One tap ${Date.now() % 10000}`;
+  const field = page.getByLabel("New shopping item");
+  await field.fill(item);
+  await page.getByRole("button", { name: "Add item" }).click();
+  await expect(page.getByRole("button", { name: item, exact: true })).toBeVisible();
+  await expect(field).toHaveValue("");
+  await expect(field).toBeFocused();
 
   await page.goto("/notes");
   const take = page.getByRole("button", { name: "Take a note…" });
