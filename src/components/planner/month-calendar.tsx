@@ -40,6 +40,7 @@ export function MonthCalendar({
       onMonthChange={setMonth}
       dots={(day) => byDay.get(day) ?? []}
       tone="rose"
+      quietSelection
       className={className}
     />
   );

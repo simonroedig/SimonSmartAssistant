@@ -83,15 +83,6 @@ test("shopping: drag an item to a new place (keyboard) and it stays there", asyn
   await page.reload();
   await expect.poll(names).toBe(2);
 
-  // Move "Birne" up by one with the keyboard sensor.
-  const handle = page.getByRole("button", { name: `Move Birne ${stamp}` });
-  await handle.focus();
-  // Give the sensor a moment between steps, like a person would.
-  for (const key of ["Space", "ArrowUp", "Space"]) {
-    await page.keyboard.press(key);
-    await page.waitForTimeout(250);
-  }
-
   const order = async () => {
     const labels = await page
       .locator("main")
@@ -99,7 +90,20 @@ test("shopping: drag an item to a new place (keyboard) and it stays there", asyn
       .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
     return labels;
   };
+  // New items go to the top: the later "Birne" comes first.
   await expect.poll(order).toEqual([`Move Birne ${stamp}`, `Move Apfel ${stamp}`]);
+  await expect(page.getByRole("button", { name: /^Move / }).first()).toHaveAccessibleName(`Move Birne ${stamp}`);
+
+  // Move "Apfel" up by one with the keyboard sensor.
+  const handle = page.getByRole("button", { name: `Move Apfel ${stamp}` });
+  await handle.focus();
+  // Give the sensor a moment between steps, like a person would.
+  for (const key of ["Space", "ArrowUp", "Space"]) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(250);
+  }
+
+  await expect.poll(order).toEqual([`Move Apfel ${stamp}`, `Move Birne ${stamp}`]);
   // Saved: the order survives a reload (once the write has gone through).
   await expect
     .poll(async () => {
@@ -107,7 +111,7 @@ test("shopping: drag an item to a new place (keyboard) and it stays there", asyn
       await handle.waitFor();
       return order();
     })
-    .toEqual([`Move Birne ${stamp}`, `Move Apfel ${stamp}`]);
+    .toEqual([`Move Apfel ${stamp}`, `Move Birne ${stamp}`]);
 });
 
 test("planner: back gesture closes the editor; swipe and month calendar change the day", async ({ browser }) => {
@@ -420,4 +424,148 @@ test("plan from backlog on the phone, and moving a block to another day", async 
   const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
   await page.goto(`/planner?day=${nextKey}`);
   await expect(page.locator('[role="button"]', { hasText: title }).first()).toBeVisible();
+});
+
+function dayKeyOf(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+test("wall display: a drag in a long note scrolls its text instead of selecting it", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/notes");
+  const title = `Long note ${Date.now() % 10000}`;
+  const body = Array.from({ length: 60 }, (_, i) => `Line ${i + 1} of a long note`).join("\n");
+  await page.getByLabel("New note").click();
+  await page.getByLabel("Note title").fill(title);
+  await page.getByLabel("New note").fill(body);
+  await page.getByRole("button", { name: "Add note" }).click();
+  const card = page.getByRole("button", { name: `Open note "${title}"` }).first();
+  await expect(card).toBeVisible();
+
+  await expect
+    .poll(async () => {
+      await page.goto("/notes?kiosk=1");
+      await card.waitFor({ timeout: 3000 }).catch(() => undefined);
+      return card.count();
+    })
+    .toBe(1);
+  await expect(page.locator("html")).toHaveClass(/kiosk/);
+  await card.click();
+  const dialog = page.getByRole("dialog");
+  const text = dialog.getByLabel("Note", { exact: true });
+  await expect(text).toHaveValue(body);
+  const box = (await text.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const start = box.y + 280;
+  await page.mouse.move(x, start);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(x, start - i * 25);
+  await page.mouse.up();
+  await expect.poll(() => text.evaluate((el: HTMLTextAreaElement) => el.scrollTop)).toBeGreaterThan(150);
+  // Nothing got selected (or moved), and the note is still open.
+  expect(await text.evaluate((el: HTMLTextAreaElement) => el.selectionEnd - el.selectionStart)).toBe(0);
+  await expect(text).toHaveValue(body);
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Delete note" }).click();
+  await expect(dialog).toBeHidden();
+  await page.goto("/notes?kiosk=0");
+  await expect(page.locator("html")).not.toHaveClass(/kiosk/);
+});
+
+test("phone home: lists show their first items with a link to the rest; the plan is an overview", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/shopping");
+  const stamp = Date.now() % 10000;
+  for (let i = 1; i <= 6; i++) {
+    await page.getByLabel("New shopping item").fill(`Thing ${i} ${stamp}`);
+    await page.getByRole("button", { name: "Add item" }).click();
+    await expect(page.getByRole("button", { name: `Thing ${i} ${stamp}`, exact: true })).toBeVisible();
+  }
+  await expect
+    .poll(async () => {
+      await page.goto("/");
+      const shopping = page.locator("section").filter({ has: page.locator('a[href="/shopping"]') });
+      await shopping
+        .getByRole("button", { name: /^Move / })
+        .first()
+        .waitFor({ timeout: 3000 })
+        .catch(() => undefined);
+      return shopping.getByRole("button", { name: `Move Thing 6 ${stamp}` }).count();
+    })
+    .toBe(1);
+  const shopping = page.locator("section").filter({ has: page.locator('a[href="/shopping"]') });
+  // Newest first, five at most, and no scrolling inside the card.
+  await expect(shopping.getByRole("button", { name: /^Move / })).toHaveCount(5);
+  await expect(shopping.getByRole("button", { name: /^Move / }).first()).toHaveAccessibleName(`Move Thing 6 ${stamp}`);
+  const more = shopping.getByRole("link", { name: /\d+ more/ });
+  await expect(more).toBeVisible();
+
+  // The day plan shows the whole waking day at once and has nothing to drag.
+  const timeline = page.getByRole("button", { name: "Add a block" }).locator("xpath=../..");
+  expect(await timeline.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+  expect(await timeline.evaluate((el) => getComputedStyle(el).overflowY)).toBe("visible");
+  await expect(timeline.getByText("10:00", { exact: true })).toBeVisible();
+  await expect(timeline.getByText("22:00", { exact: true })).toBeVisible();
+  await expect(timeline.locator(".cursor-ns-resize")).toHaveCount(0);
+
+  await more.click();
+  await expect(page).toHaveURL(/\/shopping$/);
+});
+
+test("planner header: the weekday leads, the relative day follows in brackets on one line", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const weekday = tomorrow.toLocaleDateString("en-GB", { weekday: "long" });
+  const month = tomorrow.toLocaleDateString("en-GB", { month: "long" });
+  await page.goto(`/planner?day=${dayKeyOf(tomorrow)}`);
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toHaveText(`${weekday} (Tomorrow)`);
+  // The date below it, with the short month on a phone.
+  const date = heading.locator("xpath=following-sibling::p[1]");
+  await expect(date).toHaveText(new RegExp(`^${tomorrow.getDate()} ${month.slice(0, 3)}\\w* · Week \\d+$`), {
+    useInnerText: true,
+  });
+  expect(await date.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  // One line for the title and one for the date – nothing wraps.
+  expect((await heading.boundingBox())!.height).toBeLessThan(48);
+  // The picked day is quietly grey in the week strip, not in the planner's rose.
+  const picked = page.getByRole("button", { pressed: true, name: new RegExp(`^${weekday}, `) });
+  await expect(picked).toBeVisible();
+  expect(await picked.getAttribute("class")).not.toMatch(/bg-rose/);
+
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(heading).toContainText("(Today)");
+});
+
+test("planner: a day opens with just its last hour of sleep at the top", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // 10 Jan 2030 is a Thursday: up at 07:00, so the view starts at 06:00 (64 px per hour).
+  await clearDay(page, "2030-01-10");
+  await page.reload();
+  const timeline = page.getByRole("button", { name: "Add a block" }).locator("xpath=../..");
+  await expect.poll(() => timeline.evaluate((el) => Math.round(el.scrollTop))).toBe(6 * 64);
+});
+
+test("weather: the forecast comes first, the details of right now after it", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/settings");
+  await page.waitForLoadState("networkidle");
+  const change = page.getByRole("button", { name: "Change" });
+  const search = page.getByLabel("Search location");
+  await expect(change.or(search)).toBeVisible();
+  if (await change.isVisible()) await change.click();
+  await search.fill("Münch");
+  await page.getByRole("button", { name: /^München München, Bayern/ }).click();
+  await expect(page.getByText("München, Bayern, Deutschland")).toBeVisible();
+
+  await page.goto("/weather");
+  const daily = page.getByRole("heading", { name: "Next 7 days" });
+  const feels = page.getByText("Feels like", { exact: true });
+  await expect(daily).toBeVisible();
+  expect((await daily.boundingBox())!.y).toBeLessThan((await feels.boundingBox())!.y);
+  // Side by side on big screens: forecast on the left.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(async () => (await daily.boundingBox())!.x < (await feels.boundingBox())!.x - 200).toBe(true);
 });

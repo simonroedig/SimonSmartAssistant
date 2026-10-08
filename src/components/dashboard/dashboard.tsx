@@ -47,9 +47,11 @@ export function Dashboard() {
 
       {/* Column 3: lists and notes */}
       <div className="flex min-h-0 flex-col gap-4 md:col-span-2 md:grid md:grid-cols-2 xl:col-span-1 xl:flex">
-        <ShoppingList variant="card" className="min-h-0 xl:flex-1" />
-        <TodoList variant="card" className="min-h-0 xl:flex-1" />
-        <NotesBoard variant="card" className="min-h-0 md:col-span-2 xl:flex-1" />
+        {/* Stacked (phone, tablet): the first few entries and a link to the rest. On the
+            wall display every card has a fixed height and scrolls inside. */}
+        <ShoppingList variant="card" limit={wide ? undefined : 5} className="min-h-0 xl:flex-1" />
+        <TodoList variant="card" limit={wide ? undefined : 5} className="min-h-0 xl:flex-1" />
+        <NotesBoard variant="card" limit={wide ? undefined : 4} className="min-h-0 md:col-span-2 xl:flex-1" />
       </div>
     </div>
   );

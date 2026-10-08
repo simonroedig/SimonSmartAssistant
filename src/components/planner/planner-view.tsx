@@ -5,7 +5,6 @@ import { CalendarDays, CalendarPlus, ClipboardCopy, Eraser, ListTodo, MoreHorizo
 import { motion } from "motion/react";
 import { DropdownMenu } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Sheet } from "@/components/ui/sheet";
@@ -20,6 +19,7 @@ import {
   type DayKey,
   diffInDays,
   formatDayMonth,
+  formatDayMonthShort,
   formatWeekday,
   fromDayKey,
   isoWeek,
@@ -176,21 +176,23 @@ export function PlannerView({
   const plannedMinutes = planner.dayBlocks.reduce((sum, b) => sum + (b.end_min - b.start_min), 0);
   const doneCount = planner.dayBlocks.filter((b) => b.done).length;
   const awakeMinutes = planner.awake[1] - planner.awake[0];
-  const scrollTarget = isToday && now ? Math.max(minutesOfDay(now) - 60, 0) : planner.awake[0] - 30;
+  // Open the day with just its last hour of sleep at the top (or earlier for an early block).
+  const scrollTarget = Math.max(0, Math.min(planner.awake[0] - 60, ...planner.dayBlocks.map((b) => b.start_min - 30)));
 
   const date = fromDayKey(day);
-  const relative = today ? relativeDayLabel(day, today) : "";
-  const isRelative = ["Today", "Tomorrow", "Yesterday"].includes(relative);
-  const title = isRelative ? relative : formatWeekday(date);
+  // "Friday (Tomorrow)": the weekday leads, the relative day follows quietly.
+  const label = today ? relativeDayLabel(day, today) : "";
+  const relative = ["Today", "Tomorrow", "Yesterday"].includes(label) ? label : null;
+  const title = formatWeekday(date);
   const sameYear = !today || today.slice(0, 4) === day.slice(0, 4);
-  const datePart = isRelative ? `${formatWeekday(date)}, ${formatDayMonth(date)}` : formatDayMonth(date);
-  const subtitle = `${datePart}${sameYear ? "" : ` ${date.getFullYear()}`} · Week ${isoWeek(day)}`;
+  const year = sameYear ? "" : ` ${date.getFullYear()}`;
+  const week = ` · Week ${isoWeek(day)}`;
   const rose = TONE_STYLES.rose;
 
   const menu = (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <Button variant="secondary" size="icon" aria-label="More actions">
+        <Button variant="secondary" size="icon" aria-label="More actions" className="max-md:size-10">
           <MoreHorizontal />
         </Button>
       </DropdownMenu.Trigger>
@@ -220,39 +222,60 @@ export function PlannerView({
 
   return (
     <div className="flex h-[calc(100dvh-6.5rem-env(safe-area-inset-bottom))] flex-col md:h-dvh" {...swipe}>
-      <PageHeader
-        title={title || " "}
-        subtitle={subtitle}
-        className="flex-nowrap"
-        actions={
-          <>
-            {!isToday && today && (
-              <Button size="sm" className={cn(TODAY_RING, TODAY_TEXT, "border-0")} onClick={() => go(today)}>
-                Today
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="icon"
-              aria-label="Plan from backlog"
-              className="lg:hidden"
-              onClick={() => setBacklogOpen(true)}
+      {/* On phones the title gets its own line, so a long weekday never wraps. */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 md:items-end md:px-8 md:pt-7">
+        <h1 className="col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
+          {title}
+          {relative && " "}
+          {relative && (
+            <span
+              className={cn(
+                "text-[0.62em] font-medium tracking-normal",
+                relative === "Today" ? "text-sky-700 dark:text-sky-300" : "text-muted",
+              )}
             >
-              <ListTodo className="text-yellow-600 dark:text-yellow-300" />
-            </Button>
+              ({relative})
+            </span>
+          )}
+        </h1>
+        <p className="truncate text-sm text-muted md:col-start-1 md:row-start-2 md:text-[0.95rem]">
+          {/* Phones: the short month, so it fits next to the buttons. */}
+          <span className="md:hidden">{formatDayMonthShort(date)}</span>
+          <span className="max-md:hidden">{formatDayMonth(date)}</span>
+          {year}
+          {week}
+        </p>
+        <div className="flex items-center gap-1.5 md:col-start-2 md:row-span-2 md:row-start-1 md:gap-2">
+          {!isToday && today && (
             <Button
-              variant="secondary"
-              size="icon"
-              aria-label="Pick a day"
-              className="lg:hidden"
-              onClick={() => setCalendarOpen(true)}
+              size="sm"
+              className={cn(TODAY_RING, TODAY_TEXT, "border-0 px-3 max-md:h-10")}
+              onClick={() => go(today)}
             >
-              <CalendarDays />
+              Today
             </Button>
-            {menu}
-          </>
-        }
-      />
+          )}
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label="Plan from backlog"
+            className="max-md:size-10 lg:hidden"
+            onClick={() => setBacklogOpen(true)}
+          >
+            <ListTodo className="text-yellow-600 dark:text-yellow-300" />
+          </Button>
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label="Pick a day"
+            className="max-md:size-10 lg:hidden"
+            onClick={() => setCalendarOpen(true)}
+          >
+            <CalendarDays />
+          </Button>
+          {menu}
+        </div>
+      </header>
       <div className="px-4 pb-3 md:px-8">
         <WeekStrip week={planner.week} selected={day} today={today} blocks={planner.weekBlocks} onSelect={go} />
       </div>
@@ -289,6 +312,7 @@ export function PlannerView({
               onChangeTime={planner.changeTime}
               onToggleDone={planner.toggleDone}
               scrollTarget={scrollTarget}
+              keepVisible={isToday && now ? minutesOfDay(now) : undefined}
               scrollKey={`${day}-${planner.isLoading}`}
             />
           </motion.div>

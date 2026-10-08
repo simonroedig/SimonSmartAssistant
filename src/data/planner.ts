@@ -1,9 +1,9 @@
 "use client";
 
-import { type QueryKey, useQuery } from "@tanstack/react-query";
+import { type QueryKey } from "@tanstack/react-query";
 import { type DayKey } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
-import { type DayNote, newId, nowIso, type PlanBlock, queryKeys, useOptimisticMutation } from "./core";
+import { type DayNote, newId, nowIso, type PlanBlock, queryKeys, useOptimisticMutation, useAppQuery } from "./core";
 
 export const BLOCK_COLORS = [
   "violet",
@@ -33,7 +33,7 @@ export async function fetchBlocks(from: DayKey, to: DayKey): Promise<PlanBlock[]
 }
 
 export function useBlocks(from: DayKey, to: DayKey) {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.blockRange(from, to),
     queryFn: () => fetchBlocks(from, to),
   });
@@ -41,7 +41,7 @@ export function useBlocks(from: DayKey, to: DayKey) {
 
 /** Blocks planned from backlog items, to show (and jump to) where an item is planned. */
 export function useLinkedBlocks() {
-  return useQuery({
+  return useAppQuery({
     queryKey: ["plan_blocks", "linked"],
     queryFn: async () => {
       const { data, error } = await createClient()
@@ -175,7 +175,7 @@ export function useDeleteBlocks() {
 
 /** Recently used blocks (last ~2 months) – powers the "recent" title suggestions. */
 export function useRecentBlocks(since: DayKey) {
-  return useQuery({
+  return useAppQuery({
     queryKey: ["plan_blocks", "recent", since],
     queryFn: async () => {
       const { data, error } = await createClient()
@@ -199,7 +199,7 @@ export function copyBlocksToDay(blocks: PlanBlock[], day: DayKey): PlanBlock[] {
 // --- Focus of the day ---------------------------------------------------------
 
 export function useDayNotes(from: DayKey, to: DayKey) {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.dayNoteRange(from, to),
     queryFn: async () => {
       const { data, error } = await createClient().from("day_notes").select("*").gte("day", from).lte("day", to);

@@ -61,3 +61,5 @@ export const TODAY_RING = "bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:
 /** Today while it is also the selected day. */
 export const TODAY_RING_STRONG = "bg-sky-500/26 ring-2 ring-sky-500 ring-inset dark:bg-sky-400/28 dark:ring-sky-300";
 export const TODAY_TEXT = "font-bold text-sky-700 dark:text-sky-200";
+/** A picked day that isn't today: quiet grey, like the weather's selected day. */
+export const SELECTED_DAY = "bg-surface-hover ring-1 ring-line ring-inset";

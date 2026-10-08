@@ -1,12 +1,19 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { byPosition } from "@/lib/ordering";
 import { createClient } from "@/lib/supabase/client";
-import { newId, nowIso, queryKeys, type ShoppingHistoryEntry, type ShoppingItem, useOptimisticMutation } from "./core";
+import {
+  newId,
+  nowIso,
+  queryKeys,
+  type ShoppingHistoryEntry,
+  type ShoppingItem,
+  useOptimisticMutation,
+  useAppQuery,
+} from "./core";
 
 export function useShoppingItems() {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.shopping,
     queryFn: async () => {
       const { data, error } = await createClient()
@@ -21,7 +28,7 @@ export function useShoppingItems() {
 
 /** Most used items first – powers the one-tap suggestions. */
 export function useShoppingHistory() {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.shoppingHistory,
     queryFn: async () => {
       const { data, error } = await createClient()
@@ -62,7 +69,7 @@ export function useAddShoppingItem() {
         updated_at: now,
         user_id: "",
       };
-      return [...(data as ShoppingItem[]), item];
+      return [...(data as ShoppingItem[]), item].sort(byPosition);
     },
   });
 }

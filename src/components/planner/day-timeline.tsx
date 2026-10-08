@@ -38,9 +38,16 @@ export type DayTimelineProps = {
   onOpen: (block: PlanBlock) => void;
   onChangeTime: (block: PlanBlock, start: number, end: number) => void;
   onToggleDone: (block: PlanBlock) => void;
-  /** Where to scroll on mount / day change. */
+  /** The minute to show at the top on mount / day change. */
   scrollTarget?: number;
+  /** A minute (e.g. now) that must be in view after that scroll. */
+  keepVisible?: number;
   scrollKey?: string;
+  /**
+   * A fixed overview (phone home screen): the whole range is visible without
+   * scrolling, and blocks can only be opened – never moved or resized by accident.
+   */
+  overview?: boolean;
   className?: string;
 };
 
@@ -62,7 +69,9 @@ export function DayTimeline({
   onChangeTime,
   onToggleDone,
   scrollTarget,
+  keepVisible,
   scrollKey,
+  overview = false,
   className,
 }: DayTimelineProps) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -89,11 +98,16 @@ export function DayTimeline({
   const height = (rangeEnd - rangeStart) * pxPerMin;
   const y = useCallback((minute: number) => (minute - rangeStart) * pxPerMin, [rangeStart, pxPerMin]);
 
-  // Scroll to the interesting part of the day when the day changes.
+  // Scroll to the interesting part of the day when the day changes: the target
+  // at the top edge, unless that would leave "now" out of sight.
   useLayoutEffect(() => {
     const el = scroller.current;
     if (!el || scrollTarget === undefined) return;
-    el.scrollTop = Math.max(0, y(scrollTarget) + 10 - el.clientHeight * 0.3);
+    let top = y(scrollTarget);
+    if (keepVisible !== undefined && y(keepVisible) > top + el.clientHeight * 0.75) {
+      top = y(keepVisible) - el.clientHeight * 0.4;
+    }
+    el.scrollTop = Math.max(0, top);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollKey]);
 
@@ -183,7 +197,7 @@ export function DayTimeline({
   }, []);
 
   const onBlockPointerDown = (e: React.PointerEvent, block: PlanBlock, mode: "move" | "resize") => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || overview) return;
     e.stopPropagation();
     suppressClick.current = false;
     const p = {
@@ -246,12 +260,14 @@ export function DayTimeline({
 
   const hours = [];
   for (let h = Math.ceil(rangeStart / 60); h * 60 <= rangeEnd; h++) hours.push(h);
+  // Squeezed hours only get a label every other hour.
+  const labelEvery = hourHeight < 22 ? 2 : 1;
 
   return (
     <div
       ref={scroller}
-      className={cn("relative min-h-0 overflow-y-auto overscroll-contain", className)}
-      style={{ scrollbarGutter: "stable" }}
+      className={cn("relative min-h-0", !overview && "overflow-y-auto overscroll-contain", className)}
+      style={overview ? undefined : { scrollbarGutter: "stable" }}
     >
       <div ref={content} className="relative mt-2.5" style={{ height: height + 16 }}>
         {/* Hour grid (past 24:00 when bedtime is after midnight) */}
@@ -261,7 +277,7 @@ export function DayTimeline({
               className="absolute -top-2 left-0 w-[46px] text-right text-[0.7rem] font-medium text-faint tabular"
               style={{ lineHeight: "1rem" }}
             >
-              {h * 60 === rangeEnd ? "" : `${String(h % 24).padStart(2, "0")}:00`}
+              {h * 60 === rangeEnd || h % labelEvery !== 0 ? "" : `${String(h % 24).padStart(2, "0")}:00`}
             </span>
             <div className="absolute right-2 h-px bg-line" style={{ left: GUTTER }} />
           </div>
@@ -339,9 +355,10 @@ export function DayTimeline({
           const start = active ? active.start : block.start_min;
           const end = active ? active.end : block.end_min;
           const top = y(start);
-          const h = Math.max(20, (end - start) * pxPerMin - 3);
+          const h = Math.max(overview ? 15 : 20, (end - start) * pxPerMin - (overview ? 2 : 3));
           const style = blockStyle(block.color);
           const tiny = h < 38;
+          const small = overview && h < 22;
           const widthPct = 100 / block.columns;
           return (
             <div
@@ -351,7 +368,7 @@ export function DayTimeline({
                 active && "z-30",
               )}
               style={{
-                top: top + 1.5,
+                top: top + (overview ? 1 : 1.5),
                 height: h,
                 left: `calc(${GUTTER + 4}px + (100% - ${GUTTER + 12}px) * ${(block.column * widthPct) / 100})`,
                 width: `calc((100% - ${GUTTER + 12}px) * ${widthPct / 100} - 4px)`,
@@ -399,7 +416,8 @@ export function DayTimeline({
                 >
                   <span
                     className={cn(
-                      "truncate text-[0.88rem] leading-tight font-semibold",
+                      "truncate leading-tight font-semibold",
+                      small ? "text-[0.74rem] leading-none" : "text-[0.88rem]",
                       block.done && "line-through decoration-2 opacity-80",
                     )}
                   >
@@ -412,7 +430,13 @@ export function DayTimeline({
                     )}
                     {block.title}
                   </span>
-                  <span className={cn("truncate text-[0.72rem] tabular opacity-70", tiny && "shrink-0")}>
+                  <span
+                    className={cn(
+                      "truncate text-[0.72rem] tabular opacity-70",
+                      tiny && "shrink-0",
+                      small && "text-[0.66rem] leading-none",
+                    )}
+                  >
                     {formatMinutes(start)}
                     {!tiny && ` – ${formatEndMinutes(end)}`}
                     {!tiny && h > 70 && ` · ${formatDuration(end - start)}`}
@@ -445,20 +469,22 @@ export function DayTimeline({
                 )}
               </div>
               {/* Resize handle */}
-              <div
-                aria-hidden="true"
-                className="absolute inset-x-0 -bottom-1 flex h-4 cursor-ns-resize touch-none items-center justify-center"
-                onPointerDown={(e) => onBlockPointerDown(e, block, "resize")}
-              >
-                <span
-                  className={cn(
-                    "h-1 w-8 rounded-full opacity-0 transition-opacity",
-                    style.bar,
-                    "group-hover:opacity-60",
-                    active && "opacity-80",
-                  )}
-                />
-              </div>
+              {!overview && (
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-0 -bottom-1 flex h-4 cursor-ns-resize touch-none items-center justify-center"
+                  onPointerDown={(e) => onBlockPointerDown(e, block, "resize")}
+                >
+                  <span
+                    className={cn(
+                      "h-1 w-8 rounded-full opacity-0 transition-opacity",
+                      style.bar,
+                      "group-hover:opacity-60",
+                      active && "opacity-80",
+                    )}
+                  />
+                </div>
+              )}
               {active && (
                 <div className="pointer-events-none absolute -top-7 left-2 rounded-lg bg-fg px-2 py-0.5 text-xs font-semibold text-[var(--bg)] tabular shadow-lg">
                   {formatMinutes(active.start)} – {formatEndMinutes(active.end)}

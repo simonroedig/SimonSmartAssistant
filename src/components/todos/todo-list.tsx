@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
 import { AutoTextarea, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
@@ -156,7 +156,16 @@ function TodoRow({
   );
 }
 
-export function TodoList({ variant = "page", className }: { variant?: "page" | "card"; className?: string }) {
+export function TodoList({
+  variant = "page",
+  limit,
+  className,
+}: {
+  variant?: "page" | "card";
+  /** Home card on phones: only the first items, no inner scrolling – the rest is on the page. */
+  limit?: number;
+  className?: string;
+}) {
   const todos = useTodos();
   const linked = useLinkedBlocks();
   const setBlocksDone = useSetTodoBlocksDone();
@@ -173,6 +182,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
   const all = useMemo(() => todos.data ?? [], [todos.data]);
   const open = useMemo(() => sortOpenTodos(all), [all]);
   const done = useMemo(() => sortDoneTodos(all), [all]);
+  const shown = limit ? open.slice(0, limit) : open;
 
   const finePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
   const addDraft = () => {
@@ -255,7 +265,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
           </div>
         ) : (
           <SortableList
-            items={open}
+            items={shown}
             className="flex flex-col"
             onMove={(id, index) => update.mutate({ id, patch: { position: positionForMove(open, id, index) } })}
           >
@@ -273,7 +283,13 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
           </SortableList>
         )}
 
-        {done.length > 0 && (
+        {open.length > shown.length && (
+          <CardMoreLink href="/todos" tone="yellow">
+            {open.length - shown.length} more
+          </CardMoreLink>
+        )}
+
+        {!limit && done.length > 0 && (
           <div className="mt-2">
             <div className="flex items-center justify-between px-1">
               <button
@@ -336,7 +352,7 @@ export function TodoList({ variant = "page", className }: { variant?: "page" | "
     return (
       <Card className={cn("overflow-hidden", className)}>
         <CardHeader icon={<ListTodo />} title="Backlog" count={open.length} tone="yellow" href="/todos" />
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{body}</div>
+        <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>{body}</div>
       </Card>
     );
   }

@@ -11,7 +11,7 @@ import {
   fromDayKey,
   isoWeek,
 } from "@/lib/date";
-import { TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
+import { SELECTED_DAY, TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
 
@@ -55,11 +55,11 @@ export function WeekStrip({
               aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}`}
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors",
-                // Today always in the "Now/Today" blue; another selected day in the planner's rose.
+                // Today always in the "Now/Today" blue; another selected day quietly grey.
                 isToday
                   ? cn(isSelected ? TODAY_RING_STRONG : TODAY_RING, TODAY_TEXT)
                   : isSelected
-                    ? cn(TONE_STYLES.rose.solid, "shadow-sm")
+                    ? SELECTED_DAY
                     : "hover:bg-surface-hover",
               )}
             >
@@ -69,13 +69,7 @@ export function WeekStrip({
               <span className="text-lg leading-tight font-semibold tabular">{date.getDate()}</span>
               <span className="flex h-1.5 items-center gap-0.5">
                 {dayBlocks.slice(0, 4).map((b) => (
-                  <span
-                    key={b.id}
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      isSelected && !isToday ? "bg-current opacity-70" : blockStyle(b.color).swatch,
-                    )}
-                  />
+                  <span key={b.id} className={cn("size-1.5 rounded-full", blockStyle(b.color).swatch)} />
                 ))}
               </span>
             </button>

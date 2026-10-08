@@ -1,7 +1,17 @@
 "use client";
 
-import { type QueryClient, type QueryKey, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type DefaultError,
+  type QueryClient,
+  type QueryKey,
+  type UseQueryOptions,
+  type UseQueryResult,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useHydrated } from "@/hooks/use-hydrated";
 import type { Tables } from "@/lib/database.types";
 import type { DayKey } from "@/lib/date";
 
@@ -29,6 +39,32 @@ export const queryKeys = {
   weather: (lat: number, lon: number) => ["weather", lat.toFixed(3), lon.toFixed(3)] as const,
   air: (lat: number, lon: number) => ["air", lat.toFixed(3), lon.toFixed(3)] as const,
 };
+
+/**
+ * `useQuery` that has no data until the page is hydrated. The server never has
+ * data, but the browser may already have restored its cache by the time a page
+ * hydrates – rendering that would not match the server's HTML.
+ */
+export function useAppQuery<
+  TQueryFnData = unknown,
+  TError = DefaultError,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+>(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>): UseQueryResult<TData, TError> {
+  const result = useQuery(options);
+  const hydrated = useHydrated();
+  if (hydrated) return result;
+  return {
+    ...result,
+    data: undefined,
+    status: "pending",
+    isPending: true,
+    isLoading: true,
+    isSuccess: false,
+    isError: false,
+    error: null,
+  } as UseQueryResult<TData, TError>;
+}
 
 export function describeError(error: unknown): string {
   if (typeof navigator !== "undefined" && !navigator.onLine)

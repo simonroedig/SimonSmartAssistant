@@ -1,10 +1,10 @@
 "use client";
 
-import { Pin, PinOff, Plus, StickyNote, Trash2 } from "lucide-react";
+import { Pin, Plus, StickyNote, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
@@ -95,7 +95,16 @@ function NoteCard({
 type EditorState = { mode: "create"; pinned?: boolean } | { mode: "edit"; note: Note } | null;
 
 /** Notes in a Google Keep-like board (page) or as a scrollable list (home card). */
-export function NotesBoard({ variant = "page", className }: { variant?: "page" | "card"; className?: string }) {
+export function NotesBoard({
+  variant = "page",
+  limit,
+  className,
+}: {
+  variant?: "page" | "card";
+  /** Home card on phones: only the first notes, no inner scrolling – the rest is on the page. */
+  limit?: number;
+  className?: string;
+}) {
   const notes = useNotes();
   const add = useAddNote();
   const update = useUpdateNote();
@@ -163,7 +172,7 @@ export function NotesBoard({ variant = "page", className }: { variant?: "page" |
             </Button>
           }
         />
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+        <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>
           {loading ? (
             <div className="flex flex-col gap-2">
               <div className="skeleton h-16" />
@@ -179,13 +188,20 @@ export function NotesBoard({ variant = "page", className }: { variant?: "page" |
               <span className="text-sm">Jot something down – codes, ideas, lists.</span>
             </button>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {all.map((note) => (
-                <li key={note.id}>
-                  <NoteCard note={note} lines={3} onOpen={() => setEditor({ mode: "edit", note })} />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="flex flex-col gap-2">
+                {(limit ? all.slice(0, limit) : all).map((note) => (
+                  <li key={note.id}>
+                    <NoteCard note={note} lines={3} onOpen={() => setEditor({ mode: "edit", note })} />
+                  </li>
+                ))}
+              </ul>
+              {limit && all.length > limit && (
+                <CardMoreLink href="/notes" tone="orange">
+                  {all.length - limit} more
+                </CardMoreLink>
+              )}
+            </>
           )}
         </div>
         {editorSheet}
@@ -421,7 +437,7 @@ function NoteEditorSheet({
             aria-pressed={pinned}
             onClick={() => setPinned((p) => !p)}
           >
-            {pinned ? <PinOff /> : <Pin />}
+            <Pin className={cn(pinned && "fill-current text-orange-500 dark:text-orange-300")} />
           </Button>
           {note && (
             <Button

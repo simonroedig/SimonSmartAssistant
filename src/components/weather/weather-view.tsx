@@ -149,7 +149,38 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
         subtitle={settings.location ? formatLocationLong(settings.location) : undefined}
         actions={changeLocation}
       />
-      <PageBody className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+      <PageBody className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        {/* Forecast first (on phones too), then the details of right now. */}
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card className="p-5">
+            <h2 className="mb-1 text-[0.95rem] font-semibold">
+              {day === today ? "Today" : formatWeekday(fromDayKey(day))}, {formatDayMonth(fromDayKey(day))}
+            </h2>
+            <p className="mb-4 text-sm text-muted">
+              {weatherInfo(dayData.code).label} · {Math.round(dayData.min)}° to {Math.round(dayData.max)}° ·{" "}
+              {dayData.precipitationProbability}% rain
+            </p>
+            <HourlyChart
+              hours={hours}
+              focusHour={focusHour}
+              nowTime={day === today ? nowHour : undefined}
+              sleepSchedule={settings.sleepSchedule}
+            />
+          </Card>
+          <Card className="p-3">
+            <h2 className="px-2 pt-2 pb-2 text-[0.95rem] font-semibold">Next 7 days</h2>
+            <DailyList
+              days={data.daily.slice(0, 7)}
+              today={today}
+              selected={day}
+              currentTemp={data.current.temperature}
+              onSelect={(d) => {
+                setSelected(d);
+                router.replace(d === today ? "/weather" : `/weather?day=${d}`, { scroll: false });
+              }}
+            />
+          </Card>
+        </div>
         <div className="flex flex-col gap-4">
           <Card className="overflow-hidden p-6">
             <div className="flex items-center gap-4">
@@ -236,36 +267,6 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
               />
             )}
           </div>
-        </div>
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card className="p-5">
-            <h2 className="mb-1 text-[0.95rem] font-semibold">
-              {day === today ? "Today" : formatWeekday(fromDayKey(day))}, {formatDayMonth(fromDayKey(day))}
-            </h2>
-            <p className="mb-4 text-sm text-muted">
-              {weatherInfo(dayData.code).label} · {Math.round(dayData.min)}° to {Math.round(dayData.max)}° ·{" "}
-              {dayData.precipitationProbability}% rain
-            </p>
-            <HourlyChart
-              hours={hours}
-              focusHour={focusHour}
-              nowTime={day === today ? nowHour : undefined}
-              sleepSchedule={settings.sleepSchedule}
-            />
-          </Card>
-          <Card className="p-3">
-            <h2 className="px-2 pt-2 pb-2 text-[0.95rem] font-semibold">Next 7 days</h2>
-            <DailyList
-              days={data.daily.slice(0, 7)}
-              today={today}
-              selected={day}
-              currentTemp={data.current.temperature}
-              onSelect={(d) => {
-                setSelected(d);
-                router.replace(d === today ? "/weather" : `/weather?day=${d}`, { scroll: false });
-              }}
-            />
-          </Card>
         </div>
       </PageBody>
       {picker}

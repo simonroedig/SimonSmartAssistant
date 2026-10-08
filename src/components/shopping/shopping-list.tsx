@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
@@ -23,7 +23,7 @@ import {
   useUpdateShoppingItem,
 } from "@/data/shopping";
 import { useLongPress } from "@/hooks/use-long-press";
-import { positionAtEnd, positionForMove } from "@/lib/ordering";
+import { byPosition, positionAtStart, positionForMove } from "@/lib/ordering";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
@@ -88,7 +88,16 @@ function ItemRow({
   );
 }
 
-export function ShoppingList({ variant = "page", className }: { variant?: "page" | "card"; className?: string }) {
+export function ShoppingList({
+  variant = "page",
+  limit,
+  className,
+}: {
+  variant?: "page" | "card";
+  /** Home card on phones: only the first items, no inner scrolling – the rest is on the page. */
+  limit?: number;
+  className?: string;
+}) {
   const items = useShoppingItems();
   const history = useShoppingHistory();
   const add = useAddShoppingItem();
@@ -103,8 +112,13 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
   const inputRef = useRef<HTMLInputElement>(null);
 
   const all = useMemo(() => items.data ?? [], [items.data]);
-  const open = all.filter((i) => !i.checked);
+  const open = all.filter((i) => !i.checked).sort(byPosition);
   const done = all.filter((i) => i.checked).sort((a, b) => (b.checked_at ?? "").localeCompare(a.checked_at ?? ""));
+  const shown = limit ? open.slice(0, limit) : open;
+  const more = [
+    open.length > shown.length && `${open.length - shown.length} more`,
+    limit && done.length > 0 && `${done.length} in the cart`,
+  ].filter(Boolean);
 
   const suggestions = useMemo(() => {
     const onList = new Set(open.map((i) => i.name.trim().toLowerCase()));
@@ -123,10 +137,11 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
       toast(`"${existing.name}" is already on the list`);
       return;
     }
+    // New (and re-added) items go to the top of the list.
     if (existing?.checked) {
-      update.mutate({ id: existing.id, patch: { checked: false } });
+      update.mutate({ id: existing.id, patch: { checked: false, position: positionAtStart(open) } });
     } else {
-      add.mutate(prepareShoppingItem({ name: trimmed, position: positionAtEnd(all) }));
+      add.mutate(prepareShoppingItem({ name: trimmed, position: positionAtStart(open) }));
     }
   };
 
@@ -220,7 +235,7 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
           </div>
         ) : (
           <SortableList
-            items={open}
+            items={shown}
             className="flex flex-col"
             onMove={(id, index) => update.mutate({ id, patch: { position: positionForMove(open, id, index) } })}
           >
@@ -235,7 +250,13 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
           </SortableList>
         )}
 
-        {done.length > 0 && (
+        {more.length > 0 && (
+          <CardMoreLink href="/shopping" tone="emerald">
+            {more.join(" · ")}
+          </CardMoreLink>
+        )}
+
+        {!limit && done.length > 0 && (
           <div className="mt-3">
             <div className="flex items-center justify-between px-3 pb-1">
               <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-faint uppercase">
@@ -287,7 +308,7 @@ export function ShoppingList({ variant = "page", className }: { variant?: "page"
     return (
       <Card className={cn("overflow-hidden", className)}>
         <CardHeader icon={<ShoppingBasket />} title="Shopping" count={open.length} tone="emerald" href="/shopping" />
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{body}</div>
+        <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>{body}</div>
       </Card>
     );
   }

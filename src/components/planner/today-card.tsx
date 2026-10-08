@@ -26,6 +26,10 @@ const MIN_OFFSET = -1;
 const MAX_OFFSET = 6;
 /** The wall display drifts back to today when nobody looks at another day. */
 const RETURN_TO_TODAY_MS = 2 * 60_000;
+/** Phone overview: the awake day squeezed into about this many pixels. */
+const OVERVIEW_HEIGHT = 400;
+const OVERVIEW_MIN_HOUR = 18;
+const OVERVIEW_MAX_HOUR = 34;
 
 function dayTitle(offset: number, day: DayKey): { title: string; subtitle: string } {
   const date = fromDayKey(day);
@@ -92,9 +96,12 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
   const bedEnd = planner.viewEnd > MINUTES_PER_DAY ? planner.viewEnd : Math.ceil((planner.awake[1] + 30) / 60) * 60;
   const rangeEnd = Math.max(bedEnd, Math.min(MINUTES_PER_DAY, Math.ceil(Math.max(...ends) / 60) * 60));
   const hours = (rangeEnd - rangeStart) / 60;
-  // Leave room for the timeline's bottom padding so the whole day fits without scrolling.
+  // Wall display: the timeline fills the card (minus its bottom padding). Phones
+  // get a squeezed overview of the whole day that never scrolls by itself.
   const fitted = height > 0 ? Math.floor((height - 48) / hours) : 48;
-  const hourHeight = fit ? Math.max(34, Math.min(72, fitted)) : 48;
+  const hourHeight = fit
+    ? Math.max(34, Math.min(72, fitted))
+    : Math.max(OVERVIEW_MIN_HOUR, Math.min(OVERVIEW_MAX_HOUR, Math.floor(OVERVIEW_HEIGHT / hours)));
   const minute = now ? minutesOfDay(now) : 0;
   const { title, subtitle } = dayTitle(offset, day);
 
@@ -105,8 +112,8 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
         tone="rose"
         title={title}
         subtitle={subtitle}
-        // The same blue "today" ring as the weather's Now/Today – missing on any other day.
-        titleClassName={cn("-my-1 -ml-1.5 rounded-xl px-1.5 py-1", isToday && TODAY_RING)}
+        // The icon wears the blue "today" ring of the weather's Now/Today – only on today.
+        iconClassName={cn(isToday && TODAY_RING, isToday && "text-sky-600 dark:text-sky-300")}
         href={isToday ? "/planner" : `/planner?day=${day}`}
         actions={
           <>
@@ -159,8 +166,8 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
           className={cn(fit && "absolute inset-0 top-3")}
         >
           <DayTimeline
-            // On phones the page keeps scrolling once the timeline reaches its end.
-            className={cn("[touch-action:pan-y] px-2 pb-3", fit ? "h-full" : "max-h-[22rem] overscroll-auto")}
+            className={cn("[touch-action:pan-y] px-2 pb-3", fit && "h-full")}
+            overview={!fit}
             blocks={planner.dayBlocks}
             sleepRanges={planner.sleepRanges}
             hourHeight={hourHeight}
@@ -172,7 +179,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
             onOpen={(block) => planner.setEditor({ mode: "edit", block })}
             onChangeTime={planner.changeTime}
             onToggleDone={planner.toggleDone}
-            scrollTarget={fit || !isToday ? rangeStart : Math.max(rangeStart, minute - 90)}
+            scrollTarget={rangeStart}
             scrollKey={`${day}-${planner.isLoading}`}
           />
         </motion.div>

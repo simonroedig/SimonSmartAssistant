@@ -12,7 +12,7 @@ import {
   startOfWeek,
   toDayKey,
 } from "@/lib/date";
-import { type Tone, TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
+import { SELECTED_DAY, type Tone, TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -44,6 +44,7 @@ export function MonthGrid({
   onMonthChange,
   dots,
   tone = "accent",
+  quietSelection = false,
   className,
 }: {
   selected: DayKey | null;
@@ -54,6 +55,8 @@ export function MonthGrid({
   /** Tailwind background classes of the dots to show under a day. */
   dots?: (day: DayKey) => string[];
   tone?: Tone;
+  /** Mark the selected day in quiet grey (browsing) instead of the tone (picking a value). */
+  quietSelection?: boolean;
   className?: string;
 }) {
   const initial = monthOf(selected ?? today ?? toDayKey(new Date()));
@@ -128,7 +131,9 @@ export function MonthGrid({
                 isToday
                   ? cn(isSelected ? TODAY_RING_STRONG : TODAY_RING, TODAY_TEXT)
                   : isSelected
-                    ? styles.solid
+                    ? quietSelection
+                      ? SELECTED_DAY
+                      : styles.solid
                     : "hover:bg-surface-hover",
                 !inMonth && !isSelected && !isToday && "text-faint",
               )}
@@ -138,7 +143,10 @@ export function MonthGrid({
                 {colors.slice(0, 3).map((c, i) => (
                   <span
                     key={i}
-                    className={cn("size-1 rounded-full", isSelected && !isToday ? "bg-current opacity-70" : c)}
+                    className={cn(
+                      "size-1 rounded-full",
+                      isSelected && !isToday && !quietSelection ? "bg-current opacity-70" : c,
+                    )}
                   />
                 ))}
               </span>

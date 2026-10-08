@@ -1,9 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { byPosition } from "@/lib/ordering";
 import { createClient } from "@/lib/supabase/client";
-import { newId, type Note, nowIso, queryKeys, useOptimisticMutation } from "./core";
+import { newId, type Note, nowIso, queryKeys, useOptimisticMutation, useAppQuery } from "./core";
 
 /** Pinned notes first, then the user's own order. */
 export function sortNotes(notes: Note[]): Note[] {
@@ -11,7 +10,7 @@ export function sortNotes(notes: Note[]): Note[] {
 }
 
 export function useNotes() {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.notes,
     queryFn: async () => {
       const { data, error } = await createClient().from("notes").select("*").order("position", { ascending: true });

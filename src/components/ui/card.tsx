@@ -21,7 +21,7 @@ export function CardHeader({
   icon,
   title,
   subtitle,
-  titleClassName,
+  iconClassName,
   count,
   href,
   tone = "accent",
@@ -32,8 +32,8 @@ export function CardHeader({
   title: string;
   /** Small second line under the title (e.g. a date). */
   subtitle?: string;
-  /** Extra classes for the title block (e.g. the "today" highlight). */
-  titleClassName?: string;
+  /** Extra classes for the icon badge (e.g. the "today" highlight). */
+  iconClassName?: string;
   count?: number;
   href?: string;
   tone?: Tone;
@@ -48,11 +48,12 @@ export function CardHeader({
           "grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]",
           styles.soft,
           styles.text,
+          iconClassName,
         )}
       >
         {icon}
       </span>
-      <span className={cn("flex min-w-0 flex-col", titleClassName)}>
+      <span className="flex min-w-0 flex-col">
         <span className="truncate text-[0.95rem] leading-tight font-semibold tracking-tight">{title}</span>
         {subtitle && <span className="truncate text-xs leading-tight text-muted tabular">{subtitle}</span>}
       </span>
@@ -76,5 +77,21 @@ export function CardHeader({
       )}
       {actions && <div className="ml-auto flex shrink-0 items-center gap-1">{actions}</div>}
     </div>
+  );
+}
+
+/** Bottom link of a home card that only shows its first items ("4 more"). */
+export function CardMoreLink({ href, tone, children }: { href: string; tone: Tone; children: React.ReactNode }) {
+  return (
+    <AppLink
+      href={href}
+      className={cn(
+        "mt-2 flex h-11 items-center justify-center gap-1 rounded-2xl bg-surface-sunken text-sm font-semibold transition-colors hover:bg-surface-hover active:bg-surface-hover",
+        TONE_STYLES[tone].text,
+      )}
+    >
+      {children}
+      <ChevronRight className="size-4" />
+    </AppLink>
   );
 }

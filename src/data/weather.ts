@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { writeSunTimes } from "@/lib/device";
 import { toDayKey } from "@/lib/date";
@@ -11,12 +10,12 @@ import {
   searchLocations,
   type WeatherLocation,
 } from "@/lib/weather/open-meteo";
-import { queryKeys } from "./core";
+import { queryKeys, useAppQuery } from "./core";
 
 const QUARTER_HOUR = 15 * 60_000;
 
 export function useForecast(location: WeatherLocation | null) {
-  const query = useQuery({
+  const query = useAppQuery({
     queryKey: location ? queryKeys.weather(location.latitude, location.longitude) : ["weather", "none"],
     queryFn: ({ signal }) => fetchForecast(location!, signal),
     enabled: !!location,
@@ -38,7 +37,7 @@ export function useForecast(location: WeatherLocation | null) {
 }
 
 export function useAirQuality(location: WeatherLocation | null) {
-  return useQuery({
+  return useAppQuery({
     queryKey: location ? queryKeys.air(location.latitude, location.longitude) : ["air", "none"],
     queryFn: ({ signal }) => fetchAirQuality(location!, signal),
     enabled: !!location,
@@ -50,7 +49,7 @@ export function useAirQuality(location: WeatherLocation | null) {
 
 export function useLocationSearch(term: string) {
   const query = term.trim();
-  return useQuery({
+  return useAppQuery({
     queryKey: ["geocoding", query.toLowerCase()],
     queryFn: ({ signal }) => searchLocations(query, signal),
     enabled: query.length >= 2,

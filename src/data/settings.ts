@@ -1,12 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { Json } from "@/lib/database.types";
 import { DEFAULT_SLEEP_SCHEDULE, normalizeSleepSchedule, type SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
 import type { WeatherLocation } from "@/lib/weather/open-meteo";
-import { queryKeys, useOptimisticMutation, type UserSettingsRow } from "./core";
+import { queryKeys, useOptimisticMutation, type UserSettingsRow, useAppQuery } from "./core";
 
 export type PlannerPreferences = {
   /** Drag/resize grid in minutes. */
@@ -63,7 +62,7 @@ export function parseSettings(row: UserSettingsRow | null): Settings {
 
 /** Settings row of the signed-in user; created with defaults on first use. */
 export function useSettingsRow() {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.settings,
     queryFn: async () => {
       const supabase = createClient();

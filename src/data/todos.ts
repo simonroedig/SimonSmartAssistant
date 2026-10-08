@@ -1,12 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { byPosition } from "@/lib/ordering";
 import { createClient } from "@/lib/supabase/client";
-import { newId, nowIso, queryKeys, type Todo, useOptimisticMutation } from "./core";
+import { newId, nowIso, queryKeys, type Todo, useOptimisticMutation, useAppQuery } from "./core";
 
 export function useTodos() {
-  return useQuery({
+  return useAppQuery({
     queryKey: queryKeys.todos,
     queryFn: async () => {
       const { data, error } = await createClient().from("todos").select("*").order("position", { ascending: true });
