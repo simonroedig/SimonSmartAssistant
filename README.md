@@ -22,6 +22,8 @@ laptop – always in sync.
 - **Wall display mode** – built-in German on-screen keyboard, night mode with a dim clock, auto-update
   after deploys, screen wake lock, no cursor, finger scrolling even when the touch screen reports itself
   as a mouse.
+- **Android launcher** – the dashboard as the phone's home screen: Home switches to all apps, search the
+  web in Firefox, self-updating (see [docs/LAUNCHER.md](docs/LAUNCHER.md)).
 - **Installable PWA** for the phone with app-like back navigation (sheets close on "back", sections go
   back to home), light/dark/auto (sunset) theme, offline-first cache.
 

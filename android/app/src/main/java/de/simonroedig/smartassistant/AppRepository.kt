@@ -25,7 +25,9 @@ class AppRepository(private val context: Context) {
     fun list(): JSONArray {
         val result = JSONArray()
         for (user in launcherApps.profiles) {
-            for (info in launcherApps.getActivityList(null, user)) {
+            if (!isShown(user)) continue
+            val activities = runCatching { launcherApps.getActivityList(null, user) }.getOrDefault(emptyList())
+            for (info in activities) {
                 val packageName = info.componentName.packageName
                 if (packageName == context.packageName) continue
                 val id = idOf(info.componentName, user)
@@ -52,6 +54,17 @@ class AppRepository(private val context: Context) {
     fun showInfo(id: String): Boolean {
         val (component, user) = find(id) ?: return false
         return runCatching { launcherApps.startAppDetailsActivity(component, user, null, null) }.isSuccess
+    }
+
+    /** The phone's own apps and a work profile – not a locked/paused profile or the private space. */
+    private fun isShown(user: UserHandle): Boolean {
+        if (user == android.os.Process.myUserHandle()) return true
+        if (users.isQuietModeEnabled(user)) return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            val type = runCatching { launcherApps.getLauncherUserInfo(user)?.userType }.getOrNull()
+            if (type == null || type == UserManager.USER_TYPE_PROFILE_PRIVATE) return false
+        }
+        return true
     }
 
     private fun idOf(component: ComponentName, user: UserHandle) =
