@@ -9,21 +9,24 @@ export function Switch({
   label,
   className,
   id,
+  disabled,
 }: {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   label?: string;
   className?: string;
   id?: string;
+  disabled?: boolean;
 }) {
   return (
     <RadixSwitch.Root
       id={id}
       checked={checked}
+      disabled={disabled}
       onCheckedChange={onCheckedChange}
       aria-label={label}
       className={cn(
-        "relative h-7 w-12 shrink-0 rounded-full border border-line bg-surface-sunken transition-colors data-[state=checked]:border-transparent data-[state=checked]:bg-accent",
+        "relative h-7 w-12 shrink-0 rounded-full border border-line bg-surface-sunken transition-colors disabled:opacity-60 data-[state=checked]:border-transparent data-[state=checked]:bg-accent",
         className,
       )}
     >

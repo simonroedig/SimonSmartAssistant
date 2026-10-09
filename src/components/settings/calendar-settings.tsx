@@ -42,12 +42,13 @@ function useCalendarPreferences() {
   const set = (patch: Partial<CalendarPreferences>) => {
     if (row.data) update.mutate({ current: row.data, calendar: { ...settings.calendar, ...patch } });
   };
-  return [settings.calendar, set] as const;
+  // Until the row is loaded a change would be lost – the controls wait for it.
+  return [settings.calendar, set, !row.data] as const;
 }
 
 /** Public holidays in the planner, for the chosen state – with what they mean for the shops. */
 export function HolidaysSection() {
-  const [calendar, set] = useCalendarPreferences();
+  const [calendar, set, loading] = useCalendarPreferences();
   return (
     <Section
       icon={<Flag />}
@@ -55,19 +56,26 @@ export function HolidaysSection() {
       description="Shown in your planner, with whether the shops are open."
     >
       <Row label="Show holidays">
-        <Switch checked={calendar.holidays} onCheckedChange={(holidays) => set({ holidays })} label="Show holidays" />
+        <Switch
+          checked={calendar.holidays}
+          onCheckedChange={(holidays) => set({ holidays })}
+          label="Show holidays"
+          disabled={loading}
+        />
       </Row>
       <Row label="Clock changes" hint="Summer and winter time, with which way the clocks go">
         <Switch
           checked={calendar.clockChanges}
           onCheckedChange={(clockChanges) => set({ clockChanges })}
           label="Show clock changes"
+          disabled={loading}
         />
       </Row>
       <Row label="State" hint={calendar.region === "BY" ? "Includes Assumption Day (15 Aug), as in Munich" : undefined}>
         <select
           aria-label="State for public holidays"
           value={calendar.region}
+          disabled={loading}
           onChange={(e) => set({ region: e.target.value as HolidayRegion })}
           className={cn(SELECT, "max-w-full")}
         >
@@ -96,7 +104,7 @@ function toInput(draft: Draft): BirthdayInput | null {
 
 /** Friends and family with their birthday (the year is optional) – a simple list. */
 export function BirthdaysSection() {
-  const [calendar, set] = useCalendarPreferences();
+  const [calendar, set, loading] = useCalendarPreferences();
   const birthdays = useBirthdays();
   const save = useSaveBirthday();
   const remove = useDeleteBirthday();
@@ -133,6 +141,7 @@ export function BirthdaysSection() {
           checked={calendar.birthdays}
           onCheckedChange={(birthdays) => set({ birthdays })}
           label="Show birthdays"
+          disabled={loading}
         />
       </Row>
       <ul className="-mx-2 flex flex-col border-t border-line pt-2">
