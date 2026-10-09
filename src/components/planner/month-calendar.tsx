@@ -1,14 +1,14 @@
 "use client";
 
-import { Cake, Store } from "lucide-react";
+import { Cake, Clock, Store } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MonthGrid, monthGridDays, monthOf } from "@/components/ui/month-grid";
-import { useDayExtras } from "@/data/calendar";
+import { hasExtras, useDayExtras } from "@/data/calendar";
 import { useBlocks } from "@/data/planner";
 import { type DayKey, formatWeekdayShort, fromDayKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
-import { BIRTHDAY_TEXT, extrasLabel, holidayNumberClass } from "./day-extras";
+import { BIRTHDAY_TEXT, CLOCK_CHANGE_TEXT, extrasLabel, holidayNumberClass } from "./day-extras";
 
 /**
  * Month overview of the planner: dots show the planned blocks of each day,
@@ -49,7 +49,7 @@ export function MonthCalendar({
   const events = days
     .filter((day) => day.slice(0, 7) === month.slice(0, 7))
     .map((day) => ({ day, extras: dayExtras(day) }))
-    .filter(({ extras }) => extras.holiday || extras.birthdays.length > 0);
+    .filter(({ extras }) => hasExtras(extras));
 
   return (
     <div className={cn("flex flex-col", className)}>
@@ -61,10 +61,15 @@ export function MonthCalendar({
         dots={(day) => byDay.get(day) ?? []}
         decorate={(day) => {
           const extras = dayExtras(day);
-          if (!extras.holiday && extras.birthdays.length === 0) return null;
+          if (!hasExtras(extras)) return null;
           return {
             numberClassName: holidayNumberClass(extras.holiday),
-            marker: extras.birthdays.length > 0 && <Cake className={cn("size-2", BIRTHDAY_TEXT)} strokeWidth={3} />,
+            marker: (
+              <>
+                {extras.clockChange && <Clock className={cn("size-2", CLOCK_CHANGE_TEXT)} strokeWidth={3} />}
+                {extras.birthdays.length > 0 && <Cake className={cn("size-2", BIRTHDAY_TEXT)} strokeWidth={3} />}
+              </>
+            ),
             label: extrasLabel(extras),
           };
         }}
@@ -81,12 +86,20 @@ export function MonthCalendar({
         >
           {events.map(({ day, extras }) => {
             const date = fromDayKey(day);
+            // Already over this month: still listed, but crossed out.
+            const past = today !== null && day < today;
             return (
               <li key={day}>
                 <button
                   type="button"
                   onClick={() => onSelect(day)}
-                  className="flex w-full items-start gap-2.5 rounded-xl px-1.5 py-1.5 text-left text-sm transition-colors hover:bg-surface-hover"
+                  aria-label={
+                    past ? `${formatWeekdayShort(date)} ${date.getDate()} (past): ${extrasLabel(extras)}` : undefined
+                  }
+                  className={cn(
+                    "flex w-full items-start gap-2.5 rounded-xl px-1.5 py-1.5 text-left text-sm transition-colors hover:bg-surface-hover",
+                    past && "line-through decoration-1 opacity-50",
+                  )}
                 >
                   <span className="w-12 shrink-0 pt-px text-xs font-semibold text-muted tabular">
                     {formatWeekdayShort(date)} {date.getDate()}
@@ -97,11 +110,27 @@ export function MonthCalendar({
                         <span className={cn("font-medium", holidayNumberClass(extras.holiday))}>
                           {extras.holiday.name}
                         </span>
-                        <span className="text-xs text-muted">({extras.holiday.nameDe})</span>
-                        <span className="flex items-center gap-1 text-xs text-muted">
-                          <Store className="size-3" />
-                          {extras.holiday.shopsLabel}
-                        </span>
+                        {/* Over: the name is enough (keeps the list short). */}
+                        {!past && (
+                          <>
+                            <span className="text-xs text-muted">({extras.holiday.nameDe})</span>
+                            <span className="flex items-center gap-1 text-xs text-muted">
+                              <Store className="size-3" />
+                              {extras.holiday.shopsLabel}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    )}
+                    {extras.clockChange && (
+                      <span className="flex flex-wrap items-center gap-x-1.5">
+                        <span className={cn("font-medium", CLOCK_CHANGE_TEXT)}>{extras.clockChange.name}</span>
+                        {!past && (
+                          <span className="flex items-center gap-1 text-xs text-muted">
+                            <Clock className="size-3" />
+                            {extras.clockChange.detail}
+                          </span>
+                        )}
                       </span>
                     )}
                     {extras.birthdays.map(({ birthday, label }) => (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ageOn, birthdayIn, birthdayLabel, isBirthdayOn, isValidBirthday, nextBirthday } from "./birthdays";
+import { clockChangeOn } from "./clock-change";
 import { calendarDayOf, easterSunday, holidaysOfYear } from "./holidays";
 
 describe("easterSunday", () => {
@@ -87,5 +88,15 @@ describe("birthdays", () => {
     expect(birthdayIn(leap, 2028)).toBe("2028-02-29");
     expect(nextBirthday(anna, "2026-10-08")).toBe("2027-03-14");
     expect(nextBirthday(anna, "2026-03-14")).toBe("2026-03-14");
+  });
+});
+
+describe("clock changes", () => {
+  it("falls on the last Sunday of March and October", () => {
+    expect(clockChangeOn("2026-10-25")).toMatchObject({ forward: false, detail: "03:00 → 02:00 · 1 hour more sleep" });
+    expect(clockChangeOn("2026-03-29")).toMatchObject({ forward: true });
+    expect(clockChangeOn("2027-03-28")?.forward).toBe(true);
+    expect(clockChangeOn("2027-10-31")?.forward).toBe(false);
+    expect(clockChangeOn("2026-10-18")).toBeNull();
   });
 });

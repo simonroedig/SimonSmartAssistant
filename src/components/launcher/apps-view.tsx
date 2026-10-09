@@ -9,11 +9,11 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { type LauncherApp, launcher, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { cn } from "@/lib/utils";
 
-function AppTile({ app, onOpen }: { app: LauncherApp; onOpen: () => void }) {
+function AppTile({ app, onOpen, className }: { app: LauncherApp; onOpen: () => void; className?: string }) {
   // Press and hold: the system's app info (to uninstall, permissions, …).
   const longPress = useLongPress(() => void launcher.showInfo(app), 550);
   return (
-    <li>
+    <li className={className}>
       <button
         type="button"
         {...longPress.props}
@@ -44,10 +44,13 @@ export function AppsView() {
   const [query, setQuery] = useState("");
 
   const term = query.trim().toLowerCase();
-  const shown = useMemo(
-    () => (apps ?? []).filter((app) => !term || app.label.toLowerCase().includes(term)),
-    [apps, term],
-  );
+  // Searching: names that start with the text first.
+  const shown = useMemo(() => {
+    const all = (apps ?? []).filter((app) => !term || app.label.toLowerCase().includes(term));
+    if (!term) return all;
+    const starts = (app: LauncherApp) => (app.label.toLowerCase().startsWith(term) ? 0 : 1);
+    return [...all].sort((a, b) => starts(a) - starts(b));
+  }, [apps, term]);
 
   if (!isLauncher) {
     return (
@@ -79,20 +82,7 @@ export function AppsView() {
       <PageHeader title="Apps" subtitle={apps ? `${apps.length} apps` : undefined} />
       <PageBody className={FILL_BODY}>
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="-mx-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3">
-            {term && (
-              <button
-                type="button"
-                onClick={searchWeb}
-                className="mb-2 flex w-full items-center gap-3 rounded-2xl bg-surface-strong px-4 py-3 text-left text-sm shadow-(--shadow-card)"
-              >
-                <Globe className="size-5 shrink-0 text-orange-500" />
-                <span className="min-w-0 flex-1 truncate">
-                  Search the web for <span className="font-semibold">“{query.trim()}”</span>
-                </span>
-                <span className="text-xs text-faint">Firefox</span>
-              </button>
-            )}
+          <div className="-mx-4 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-3">
             {apps === null ? (
               <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6">
                 {Array.from({ length: 16 }, (_, i) => (
@@ -103,13 +93,33 @@ export function AppsView() {
                 ))}
               </ul>
             ) : shown.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted">No app called “{query.trim()}”.</p>
+              <p className="mt-auto py-8 text-center text-sm text-muted">No app called “{query.trim()}”.</p>
+            ) : term ? (
+              // Search results start at the bottom right, next to the thumb, and go up from there.
+              <ul className="mt-auto flex flex-row-reverse flex-wrap-reverse gap-y-3" aria-label="Apps">
+                {shown.map((app) => (
+                  <AppTile key={app.id} app={app} onOpen={() => setQuery("")} className="w-1/4 px-1 sm:w-1/6" />
+                ))}
+              </ul>
             ) : (
               <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6" aria-label="Apps">
                 {shown.map((app) => (
                   <AppTile key={app.id} app={app} onOpen={() => setQuery("")} />
                 ))}
               </ul>
+            )}
+            {term && (
+              <button
+                type="button"
+                onClick={searchWeb}
+                className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-surface-strong px-4 py-3 text-left text-sm shadow-(--shadow-card)"
+              >
+                <Globe className="size-5 shrink-0 text-orange-500" />
+                <span className="min-w-0 flex-1 truncate">
+                  Search the web for <span className="font-semibold">“{query.trim()}”</span>
+                </span>
+                <span className="text-xs text-faint">Firefox</span>
+              </button>
             )}
           </div>
           {/* Search at the bottom, near the thumb – apps first, Enter searches the web. */}

@@ -163,3 +163,30 @@ test("phone: pick a day – the month's holidays above the calendar, swipe throu
   await expect(page).toHaveURL(/day=2030-10-03/);
   await context.close();
 });
+
+test("clock changes: in the planner with which way the clocks go; past events of the month crossed out", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expectChip(page, "2030-10-27", "Clocks go back");
+  await expect(dayChips(page)).toContainText("03:00 → 02:00 · 1 hour more sleep");
+  await expect(dayChips(page)).toContainText("Zeitumstellung auf Winterzeit");
+  await expectChip(page, "2030-03-31", "Clocks go forward");
+
+  // Earlier days of this month are still listed, crossed out.
+  const today = new Date();
+  const first = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  await openFresh(page, `/planner?day=${first}`);
+  const list = page.getByRole("list", { name: "Holidays and birthdays this month" });
+  if (today.getDate() > 1 && (await list.count()) > 0) {
+    const rows = list.getByRole("button");
+    const days = await rows.evaluateAll((els) => els.map((el) => el.textContent ?? ""));
+    for (let i = 0; i < days.length; i++) {
+      const day = Number(days[i].match(/^\w{3} (\d+)/)?.[1]);
+      const crossed = await rows
+        .nth(i)
+        .evaluate((el) => getComputedStyle(el).textDecorationLine.includes("line-through"));
+      expect(crossed).toBe(day < today.getDate());
+    }
+  }
+});

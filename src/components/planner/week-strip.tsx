@@ -1,6 +1,6 @@
 "use client";
 
-import { Cake, ChevronLeft, ChevronRight } from "lucide-react";
+import { Cake, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import type { PlanBlock } from "@/data/core";
 import {
   addDays,
@@ -15,7 +15,7 @@ import { SELECTED_DAY, TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT } from "@/lib/t
 import { cn } from "@/lib/utils";
 import { useDayExtras } from "@/data/calendar";
 import { blockStyle } from "./block-colors";
-import { BIRTHDAY_TEXT, extrasLabel, holidayNumberClass } from "./day-extras";
+import { BIRTHDAY_TEXT, CLOCK_CHANGE_TEXT, extrasLabel, holidayNumberClass } from "./day-extras";
 
 export function WeekStrip({
   week,
@@ -81,6 +81,7 @@ export function WeekStrip({
                 {date.getDate()}
               </span>
               <span className="flex h-1.5 items-center gap-0.5">
+                {extras.clockChange && <Clock className={cn("size-2.5", CLOCK_CHANGE_TEXT)} strokeWidth={3} />}
                 {extras.birthdays.length > 0 && <Cake className={cn("size-2.5", BIRTHDAY_TEXT)} strokeWidth={3} />}
                 {dayBlocks.slice(0, extras.birthdays.length > 0 ? 3 : 4).map((b) => (
                   <span key={b.id} className={cn("size-1.5 rounded-full", blockStyle(b.color).swatch)} />

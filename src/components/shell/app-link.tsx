@@ -5,6 +5,30 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 const HOME_BELOW_KEY = "ssa:home-below";
+const APPS_BELOW_KEY = "ssa:apps-below";
+
+function flag(key: string, value?: boolean): boolean {
+  try {
+    if (value !== undefined) sessionStorage.setItem(key, value ? "1" : "0");
+    return sessionStorage.getItem(key) === "1";
+  } catch {
+    // Private mode – back simply goes through the history then.
+    return false;
+  }
+}
+
+/**
+ * The launcher's apps page is a second home: sections opened from it sit on
+ * top of it, so back leads to the apps first and then home.
+ */
+export function appsIsBelow(): boolean {
+  return flag(APPS_BELOW_KEY);
+}
+
+/** Pages that act as a home: leaving them adds a history entry. */
+function isHomeLike(path: string) {
+  return path === "/" || path === "/apps";
+}
 
 /** Whether the history entry below this page is the home screen. */
 export function homeIsBelow(): boolean {
@@ -24,13 +48,9 @@ export function useTrackHomeBelow() {
   const pathname = usePathname();
   const previous = useRef<string | null>(null);
   useEffect(() => {
-    if (previous.current === "/" && pathname !== "/") {
-      try {
-        sessionStorage.setItem(HOME_BELOW_KEY, "1");
-      } catch {
-        // Private mode – back simply goes through the history then.
-      }
-    }
+    if (previous.current === "/" && pathname !== "/") flag(HOME_BELOW_KEY, true);
+    if (isHomeLike(pathname)) flag(APPS_BELOW_KEY, false);
+    else if (previous.current === "/apps") flag(APPS_BELOW_KEY, true);
     previous.current = pathname;
   }, [pathname]);
 }
@@ -47,7 +67,7 @@ export function AppLink({
 }: Omit<React.ComponentProps<typeof Link>, "href"> & { href: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const fromHome = pathname === "/";
+  const fromHome = isHomeLike(pathname);
 
   return (
     <Link
@@ -61,10 +81,14 @@ export function AppLink({
           window.scrollTo({ top: 0, behavior: "smooth" });
           return;
         }
-        if (!fromHome && href === "/") {
+        if (pathname !== "/" && href === "/") {
           e.preventDefault();
           if (homeIsBelow()) router.back();
           else router.replace("/");
+        } else if (!fromHome && href === "/apps") {
+          e.preventDefault();
+          if (appsIsBelow()) router.back();
+          else router.replace("/apps");
         }
       }}
       {...props}

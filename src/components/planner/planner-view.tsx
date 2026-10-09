@@ -332,7 +332,8 @@ export function PlannerView({
           </motion.div>
         </Card>
 
-        <aside className="hidden min-h-0 flex-col gap-4 lg:flex">
+        {/* On short screens the column scrolls rather than squeezing the backlog away. */}
+        <aside className="hidden min-h-0 flex-col gap-4 overflow-y-auto lg:flex">
           <Card className="shrink-0 p-4">
             <MonthCalendar selected={day} today={today} onSelect={go} />
           </Card>
@@ -366,7 +367,7 @@ export function PlannerView({
               </div>
             </dl>
           </Card>
-          <Card className="min-h-0 flex-1 overflow-hidden">
+          <Card className="min-h-64 flex-1 overflow-hidden">
             <div className="flex items-center gap-2 px-4 pt-4 pb-2">
               <ListTodo className="size-4 text-yellow-600 dark:text-yellow-300" />
               <h2 className="text-[0.95rem] font-semibold">Plan from backlog</h2>

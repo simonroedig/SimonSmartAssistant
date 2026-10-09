@@ -133,10 +133,6 @@ function NavRail({
       aria-label="Main"
       className="fixed inset-y-3 left-3 z-40 hidden w-[4.75rem] flex-col items-center rounded-[1.75rem] px-1.5 py-4 glass md:flex"
     >
-      <AppLink href="/" aria-label="Home" className="mb-5 block" onClick={() => onNavigate("/")}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icon.svg" alt="" className="size-10 rounded-xl" draggable={false} />
-      </AppLink>
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
         <SlidingPill index={RAIL_ITEMS.findIndex((item) => isCurrent(item.href))} items={RAIL_ITEMS} axis="y" />
         {RAIL_ITEMS.map((item) =>
@@ -161,7 +157,13 @@ function NavRail({
   );
 }
 
-function TabLink({ item, active, onNavigate, target = item.href }: LinkProps & { target?: string }) {
+function TabLink({
+  item,
+  active,
+  onNavigate,
+  target = item.href,
+  anchor = false,
+}: LinkProps & { target?: string; anchor?: boolean }) {
   const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
   return (
@@ -179,6 +181,8 @@ function TabLink({ item, active, onNavigate, target = item.href }: LinkProps & {
         strokeWidth={active ? 2.2 : 1.9}
       />
       <span className="relative">{item.label}</span>
+      {/* Home, in the middle: underlined as the app's anchor. */}
+      {anchor && <span aria-hidden="true" className="absolute bottom-0.5 h-[3px] w-5 rounded-full bg-accent/70" />}
     </AppLink>
   );
 }
@@ -208,6 +212,7 @@ function BottomNav({
               target={home.target}
               active={isCurrent(item.href)}
               onNavigate={onNavigate}
+              anchor
             />
           ) : (
             <TabLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />

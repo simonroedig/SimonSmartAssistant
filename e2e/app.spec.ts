@@ -169,9 +169,12 @@ test("weather: pick a city, then a day to see its hours", async ({ page }) => {
 
   await page.goto("/weather");
   await expect(page.getByText("Partly cloudy").first()).toBeVisible();
-  await page.getByRole("button", { name: /^Fri/ }).click();
+  // Tomorrow, whatever weekday that is (the list starts with "Today").
+  const tomorrow = new Date(Date.now() + 86_400_000);
+  const weekday = (style: "short" | "long") => tomorrow.toLocaleDateString("en-GB", { weekday: style });
+  await page.getByRole("button", { name: new RegExp(`^${weekday("short")}`) }).click();
   await expect(page).toHaveURL(/\/weather\?day=/);
-  await expect(page.getByRole("heading", { name: /Friday/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: new RegExp(weekday("long")) })).toBeVisible();
 });
 
 test("settings: navigating away works after changing preferences", async ({ page }) => {

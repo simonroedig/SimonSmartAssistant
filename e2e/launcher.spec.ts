@@ -62,6 +62,13 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   const apps = page.getByRole("list", { name: "Apps" });
   await expect(apps.getByRole("button")).toHaveText(["Bank", "Firefox", "WhatsApp"]);
 
+  // Search results start at the bottom right, next to the thumb.
+  await page.getByLabel("Search apps or the web").fill("a");
+  await expect(apps.getByRole("button")).toHaveText(["Bank", "WhatsApp"]);
+  const bank = (await apps.getByRole("button", { name: "Bank" }).boundingBox())!;
+  const whatsapp = (await apps.getByRole("button", { name: "WhatsApp" }).boundingBox())!;
+  expect(bank.x).toBeGreaterThan(whatsapp.x);
+
   // Filter and open an app.
   await page.getByLabel("Search apps or the web").fill("wha");
   await expect(apps.getByRole("button")).toHaveText(["WhatsApp"]);
@@ -79,6 +86,18 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   await expect(page).toHaveURL(/\/shopping$/);
   await expect(tabs.getByRole("link", { name: "Apps" })).toBeVisible();
   await tabs.getByRole("link", { name: "Apps" }).click();
+  await expect(page).toHaveURL(/\/apps$/);
+
+  // The apps are a second home: back from a section leads there first, then home.
+  await tabs.getByRole("link", { name: "Notes" }).click();
+  await expect(page).toHaveURL(/\/notes$/);
+  await tabs.getByRole("link", { name: "Backlog" }).click();
+  await expect(page).toHaveURL(/\/todos$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/apps$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await tabs.getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/apps$/);
 
   // The phone's home button opens the chosen view, too.

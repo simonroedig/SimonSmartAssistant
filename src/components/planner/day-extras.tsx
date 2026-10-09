@@ -1,7 +1,7 @@
 "use client";
 
-import { Cake, Flag, Store } from "lucide-react";
-import type { DayExtras } from "@/data/calendar";
+import { Cake, Clock, Flag, Store } from "lucide-react";
+import { type DayExtras, hasExtras } from "@/data/calendar";
 import type { CalendarDay } from "@/lib/holidays";
 import { cn } from "@/lib/utils";
 
@@ -12,21 +12,23 @@ export function holidayNumberClass(holiday: CalendarDay | null): string | undefi
 }
 
 export const BIRTHDAY_TEXT = "text-pink-600 dark:text-pink-300";
+export const CLOCK_CHANGE_TEXT = "text-indigo-600 dark:text-indigo-300";
 
 /** One line for tooltips and screen readers: "German Unity Day (Tag der Deutschen Einheit) · Shops closed · Anna turns 30". */
 export function extrasLabel(extras: DayExtras): string {
   return [
     extras.holiday && `${extras.holiday.name} (${extras.holiday.nameDe}) · ${extras.holiday.shopsLabel}`,
+    extras.clockChange && `${extras.clockChange.name} (${extras.clockChange.detail})`,
     ...extras.birthdays.map((b) => b.label),
   ]
     .filter(Boolean)
     .join(" · ");
 }
 
-/** The day's holiday (with what it means for the shops) and birthdays, as chips. */
+/** The day's holiday (with what it means for the shops), a clock change and birthdays, as chips. */
 export function DayExtrasChips({ extras, className }: { extras: DayExtras; className?: string }) {
-  const { holiday, birthdays } = extras;
-  if (!holiday && birthdays.length === 0) return null;
+  const { holiday, clockChange, birthdays } = extras;
+  if (!hasExtras(extras)) return null;
   return (
     <ul className={cn("flex flex-wrap gap-1.5", className)} aria-label="Holidays and birthdays">
       {holiday && (
@@ -46,6 +48,14 @@ export function DayExtrasChips({ extras, className }: { extras: DayExtras; class
             <Store className="size-3.5" />
             {holiday.shopsLabel}
           </span>
+        </li>
+      )}
+      {clockChange && (
+        <li className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-2xl bg-indigo-500/12 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-400/14 dark:text-indigo-200">
+          <Clock className="size-3.5 shrink-0" />
+          <span>{clockChange.name}</span>
+          <span className="font-medium opacity-75">({clockChange.nameDe})</span>
+          <span className="font-medium opacity-85">· {clockChange.detail}</span>
         </li>
       )}
       {birthdays.map(({ birthday, label }) => (

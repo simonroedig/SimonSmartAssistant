@@ -57,6 +57,13 @@ export function HolidaysSection() {
       <Row label="Show holidays">
         <Switch checked={calendar.holidays} onCheckedChange={(holidays) => set({ holidays })} label="Show holidays" />
       </Row>
+      <Row label="Clock changes" hint="Summer and winter time, with which way the clocks go">
+        <Switch
+          checked={calendar.clockChanges}
+          onCheckedChange={(clockChanges) => set({ clockChanges })}
+          label="Show clock changes"
+        />
+      </Row>
       <Row label="State" hint={calendar.region === "BY" ? "Includes Assumption Day (15 Aug), as in Munich" : undefined}>
         <select
           aria-label="State for public holidays"

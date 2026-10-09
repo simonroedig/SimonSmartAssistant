@@ -18,6 +18,8 @@ export type PlannerPreferences = {
 /** What the planner shows besides your own blocks. */
 export type CalendarPreferences = {
   holidays: boolean;
+  /** Summer/winter time changes (last Sunday of March and October). */
+  clockChanges: boolean;
   /** German state whose public holidays apply. */
   region: HolidayRegion;
   birthdays: boolean;
@@ -33,6 +35,7 @@ export type Settings = {
 export const DEFAULT_PLANNER_PREFERENCES: PlannerPreferences = { snap: 15, defaultDuration: 60 };
 export const DEFAULT_CALENDAR_PREFERENCES: CalendarPreferences = {
   holidays: true,
+  clockChanges: true,
   region: DEFAULT_HOLIDAY_REGION,
   birthdays: true,
 };
@@ -69,6 +72,8 @@ function parseCalendar(value: Json): CalendarPreferences {
   const calendar = (prefs.calendar ?? {}) as Record<string, unknown>;
   return {
     holidays: typeof calendar.holidays === "boolean" ? calendar.holidays : DEFAULT_CALENDAR_PREFERENCES.holidays,
+    clockChanges:
+      typeof calendar.clockChanges === "boolean" ? calendar.clockChanges : DEFAULT_CALENDAR_PREFERENCES.clockChanges,
     region: isHolidayRegion(calendar.region) ? calendar.region : DEFAULT_CALENDAR_PREFERENCES.region,
     birthdays: typeof calendar.birthdays === "boolean" ? calendar.birthdays : DEFAULT_CALENDAR_PREFERENCES.birthdays,
   };

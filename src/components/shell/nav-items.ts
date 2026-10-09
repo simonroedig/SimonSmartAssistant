@@ -23,8 +23,11 @@ export const SETTINGS_ITEM: NavItem = { href: "/settings", label: "Settings", ic
 /** Side rail on tablets, laptops and the wall display. */
 export const RAIL_ITEMS: NavItem[] = [HOME_ITEM, PLANNER_ITEM, SHOPPING_ITEM, BACKLOG_ITEM, NOTES_ITEM, WEATHER_ITEM];
 
-/** Bottom tab bar on phones – weather and settings are reached from the home screen. */
-export const TAB_ITEMS: NavItem[] = [HOME_ITEM, PLANNER_ITEM, SHOPPING_ITEM, BACKLOG_ITEM, NOTES_ITEM];
+/**
+ * Bottom tab bar on phones – Home in the middle, the anchor of the app. Weather
+ * and settings are reached from the home screen.
+ */
+export const TAB_ITEMS: NavItem[] = [PLANNER_ITEM, SHOPPING_ITEM, HOME_ITEM, BACKLOG_ITEM, NOTES_ITEM];
 
 export function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);

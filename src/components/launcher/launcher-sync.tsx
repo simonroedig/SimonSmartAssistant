@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { homeIsBelow } from "@/components/shell/app-link";
+import { appsIsBelow, homeIsBelow } from "@/components/shell/app-link";
 import {
   connectLauncher,
   getHomeView,
@@ -59,6 +59,7 @@ export function LauncherSync() {
           if (homeIsBelow()) router.back();
           else router.replace("/");
         } else if (path.current === "/") router.push("/apps");
+        else if (appsIsBelow()) router.back();
         else router.replace("/apps");
       } else if (event.type === "appsChanged") {
         void refreshApps();
