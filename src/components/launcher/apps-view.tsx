@@ -17,6 +17,9 @@ function AppTile({ app, onOpen, className }: { app: LauncherApp; onOpen: () => v
       <button
         type="button"
         {...longPress.props}
+        // Keeps the search field focused: otherwise the first tap only closes the keyboard
+        // (the results move with it) and a second tap is needed.
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           if (longPress.wasLongPress()) return;
           onOpen();
@@ -31,6 +34,11 @@ function AppTile({ app, onOpen, className }: { app: LauncherApp; onOpen: () => v
       </button>
     </li>
   );
+}
+
+/** Done with the search (an app or Firefox opens): the keyboard goes away. */
+function closeKeyboard() {
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
 }
 
 /**
@@ -75,6 +83,11 @@ export function AppsView() {
   const searchWeb = () => {
     void launcher.search(query);
     setQuery("");
+    closeKeyboard();
+  };
+  const opened = () => {
+    setQuery("");
+    closeKeyboard();
   };
 
   return (
@@ -98,19 +111,20 @@ export function AppsView() {
               // Search results start at the bottom right, next to the thumb, and go up from there.
               <ul className="mt-auto flex flex-row-reverse flex-wrap-reverse gap-y-3" aria-label="Apps">
                 {shown.map((app) => (
-                  <AppTile key={app.id} app={app} onOpen={() => setQuery("")} className="w-1/4 px-1 sm:w-1/6" />
+                  <AppTile key={app.id} app={app} onOpen={opened} className="w-1/4 px-1 sm:w-1/6" />
                 ))}
               </ul>
             ) : (
               <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6" aria-label="Apps">
                 {shown.map((app) => (
-                  <AppTile key={app.id} app={app} onOpen={() => setQuery("")} />
+                  <AppTile key={app.id} app={app} onOpen={opened} />
                 ))}
               </ul>
             )}
             {term && (
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={searchWeb}
                 className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-surface-strong px-4 py-3 text-left text-sm shadow-(--shadow-card)"
               >

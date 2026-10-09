@@ -35,7 +35,7 @@ const MONTHS = [
 const SELECT =
   "h-12 rounded-2xl border border-line bg-surface-sunken px-3 text-[0.95rem] outline-none focus:border-accent/60";
 
-function useCalendarPreferences() {
+export function useCalendarPreferences() {
   const { settings } = useSettings();
   const row = useSettingsRow();
   const update = useUpdateSettings();
@@ -60,14 +60,6 @@ export function HolidaysSection() {
           checked={calendar.holidays}
           onCheckedChange={(holidays) => set({ holidays })}
           label="Show holidays"
-          disabled={loading}
-        />
-      </Row>
-      <Row label="Clock changes" hint="Summer and winter time, with which way the clocks go">
-        <Switch
-          checked={calendar.clockChanges}
-          onCheckedChange={(clockChanges) => set({ clockChanges })}
-          label="Show clock changes"
           disabled={loading}
         />
       </Row>

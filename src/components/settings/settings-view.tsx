@@ -20,7 +20,8 @@ import { createClient } from "@/lib/supabase/client";
 import { formatLocationLong } from "@/lib/weather/open-meteo";
 import { Passkeys } from "./passkeys";
 import { LauncherSection } from "@/components/launcher/launcher-widgets";
-import { BirthdaysSection, HolidaysSection } from "./calendar-settings";
+import { BirthdaysSection, HolidaysSection, useCalendarPreferences } from "./calendar-settings";
+import { NavigationSection } from "./navigation-settings";
 import { Row, Section } from "./section";
 import { SleepScheduleEditor } from "./sleep-schedule-editor";
 
@@ -32,6 +33,7 @@ export function SettingsView() {
   const row = useSettingsRow();
   const updateSettings = useUpdateSettings();
   const [device, setDevice] = useDevicePrefs();
+  const [calendar, setCalendar, calendarLoading] = useCalendarPreferences();
   const [changingLocation, setChangingLocation] = useState(false);
 
   // Sleep edits are local first and saved shortly after the last tap.
@@ -116,10 +118,22 @@ export function SettingsView() {
                 options={[30, 45, 60, 90].map((v) => ({ value: v, label: v < 60 ? `${v}m` : `${v / 60}h` }))}
               />
             </Row>
+            <Row
+              label="Show clock changes"
+              hint="Marks the days of summer and winter time in the plan – the clocks change by themselves"
+            >
+              <Switch
+                checked={calendar.clockChanges}
+                onCheckedChange={(clockChanges) => setCalendar({ clockChanges })}
+                label="Show clock changes"
+                disabled={calendarLoading}
+              />
+            </Row>
           </Section>
 
           <HolidaysSection />
           <BirthdaysSection />
+          <NavigationSection />
           <LauncherSection />
         </div>
 

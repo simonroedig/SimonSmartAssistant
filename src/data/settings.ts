@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { Json } from "@/lib/database.types";
 import { DEFAULT_HOLIDAY_REGION, type HolidayRegion, isHolidayRegion } from "@/lib/holidays";
+import { DEFAULT_NAVIGATION, type NavigationPreferences, parseNavigation } from "@/lib/navigation";
 import { DEFAULT_SLEEP_SCHEDULE, normalizeSleepSchedule, type SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
 import type { WeatherLocation } from "@/lib/weather/open-meteo";
@@ -30,6 +31,7 @@ export type Settings = {
   sleepSchedule: SleepSchedule;
   planner: PlannerPreferences;
   calendar: CalendarPreferences;
+  navigation: NavigationPreferences;
 };
 
 export const DEFAULT_PLANNER_PREFERENCES: PlannerPreferences = { snap: 15, defaultDuration: 60 };
@@ -52,6 +54,10 @@ function parseLocation(value: Json | null): WeatherLocation | null {
     longitude: v.longitude,
     timezone: typeof v.timezone === "string" ? v.timezone : null,
   };
+}
+
+function preferencesOf(value: Json): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function parsePlanner(value: Json): PlannerPreferences {
@@ -86,6 +92,7 @@ export function parseSettings(row: UserSettingsRow | null): Settings {
       sleepSchedule: DEFAULT_SLEEP_SCHEDULE,
       planner: DEFAULT_PLANNER_PREFERENCES,
       calendar: DEFAULT_CALENDAR_PREFERENCES,
+      navigation: DEFAULT_NAVIGATION,
     };
   }
   return {
@@ -93,6 +100,7 @@ export function parseSettings(row: UserSettingsRow | null): Settings {
     sleepSchedule: normalizeSleepSchedule(row.sleep_schedule),
     planner: parsePlanner(row.preferences),
     calendar: parseCalendar(row.preferences),
+    navigation: parseNavigation(preferencesOf(row.preferences).navigation),
   };
 }
 
@@ -134,6 +142,7 @@ type SettingsPatch = {
   sleepSchedule?: SleepSchedule;
   planner?: PlannerPreferences;
   calendar?: CalendarPreferences;
+  navigation?: NavigationPreferences;
 };
 
 /** The JSON preferences with the patched parts replaced. */
@@ -146,6 +155,7 @@ function patchPreferences(current: Json, patch: SettingsPatch): NonNullable<Json
     ...prefs,
     ...(patch.planner ? { planner: patch.planner } : {}),
     ...(patch.calendar ? { calendar: patch.calendar } : {}),
+    ...(patch.navigation ? { navigation: patch.navigation } : {}),
   } as unknown as NonNullable<Json>;
 }
 
@@ -158,7 +168,8 @@ export function useUpdateSettings() {
       const update: Partial<UserSettingsRow> = {};
       if (patch.location !== undefined) update.location = patch.location as unknown as Json;
       if (patch.sleepSchedule) update.sleep_schedule = patch.sleepSchedule as unknown as NonNullable<Json>;
-      if (patch.planner || patch.calendar) update.preferences = patchPreferences(current.preferences, patch);
+      if (patch.planner || patch.calendar || patch.navigation)
+        update.preferences = patchPreferences(current.preferences, patch);
       const { error } = await createClient().from("user_settings").update(update).eq("user_id", current.user_id);
       if (error) throw error;
     },
@@ -168,7 +179,9 @@ export function useUpdateSettings() {
         ...row,
         ...(patch.location !== undefined ? { location: patch.location as unknown as Json } : {}),
         ...(patch.sleepSchedule ? { sleep_schedule: patch.sleepSchedule as unknown as NonNullable<Json> } : {}),
-        ...(patch.planner || patch.calendar ? { preferences: patchPreferences(row.preferences, patch) } : {}),
+        ...(patch.planner || patch.calendar || patch.navigation
+          ? { preferences: patchPreferences(row.preferences, patch) }
+          : {}),
       };
     },
   });

@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { LauncherSync } from "@/components/launcher/launcher-sync";
 import { useSyncStatus } from "@/components/providers/realtime-provider";
+import { useSettings, useSettingsRow } from "@/data/settings";
 import { setHomeView, useHomeView, useIsLauncher } from "@/lib/launcher";
+import { NAVIGATION_COOKIE, type NavigationPreferences, phoneTabs, railItems, type SectionId } from "@/lib/navigation";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
-import { HOME_ITEM, isActive, RAIL_ITEMS, SETTINGS_ITEM, TAB_ITEMS, type NavItem } from "./nav-items";
+import { HOME_ITEM, isActive, navItem, SETTINGS_ITEM, type NavItem } from "./nav-items";
 
 function SyncDot() {
   const status = useSyncStatus();
@@ -56,6 +58,24 @@ function useHomeSwitch(pathname: string) {
   return { item, target };
 }
 
+/**
+ * The order chosen in Settings. Until the settings are loaded it is the one the
+ * server rendered with (from the cookie), so the bar doesn't jump on load.
+ */
+function useNavigation(initial: NavigationPreferences): NavigationPreferences {
+  const row = useSettingsRow();
+  const { settings } = useSettings();
+  const loaded = row.data != null;
+  useEffect(() => {
+    if (!loaded) return;
+    const value = encodeURIComponent(JSON.stringify(settings.navigation));
+    if (document.cookie.split("; ").includes(`${NAVIGATION_COOKIE}=${value}`)) return;
+    const secure = location.protocol === "https:" ? "; secure" : "";
+    document.cookie = `${NAVIGATION_COOKIE}=${value}; path=/; max-age=31536000; samesite=lax${secure}`;
+  }, [loaded, settings.navigation]);
+  return loaded ? settings.navigation : initial;
+}
+
 /** The tab a path belongs to (the apps page belongs to Home). */
 function tabOf(path: string) {
   return path === "/apps" ? "/" : path;
@@ -89,13 +109,19 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
   );
 }
 
+/** Home: underlined as the app's anchor, in the rail and the tab bar alike. */
+function AnchorLine() {
+  return <span aria-hidden="true" className="absolute bottom-0.5 h-[3px] w-5 rounded-full bg-accent/70" />;
+}
+
 function RailLink({
   item,
   active,
   onNavigate,
   pill = false,
   target = item.href,
-}: LinkProps & { pill?: boolean; target?: string }) {
+  anchor = false,
+}: LinkProps & { pill?: boolean; target?: string; anchor?: boolean }) {
   const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
   return (
@@ -115,27 +141,31 @@ function RailLink({
         strokeWidth={active ? 2.2 : 1.9}
       />
       <span className="relative">{item.label}</span>
+      {anchor && <AnchorLine />}
     </AppLink>
   );
 }
 
 function NavRail({
+  order,
   isCurrent,
   onNavigate,
   home,
 }: {
+  order: (SectionId | "home")[];
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
   home: { item: NavItem; target: string };
 }) {
+  const items = order.map(navItem);
   return (
     <nav
       aria-label="Main"
       className="fixed inset-y-3 left-3 z-40 hidden w-[4.75rem] flex-col items-center rounded-[1.75rem] px-1.5 py-4 glass md:flex"
     >
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
-        <SlidingPill index={RAIL_ITEMS.findIndex((item) => isCurrent(item.href))} items={RAIL_ITEMS} axis="y" />
-        {RAIL_ITEMS.map((item) =>
+        <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="y" />
+        {items.map((item) =>
           item.href === "/" ? (
             <RailLink
               key={item.href}
@@ -143,6 +173,7 @@ function NavRail({
               target={home.target}
               active={isCurrent(item.href)}
               onNavigate={onNavigate}
+              anchor
             />
           ) : (
             <RailLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
@@ -181,21 +212,23 @@ function TabLink({
         strokeWidth={active ? 2.2 : 1.9}
       />
       <span className="relative">{item.label}</span>
-      {/* Home, in the middle: underlined as the app's anchor. */}
-      {anchor && <span aria-hidden="true" className="absolute bottom-0.5 h-[3px] w-5 rounded-full bg-accent/70" />}
+      {anchor && <AnchorLine />}
     </AppLink>
   );
 }
 
 function BottomNav({
+  order,
   isCurrent,
   onNavigate,
   home,
 }: {
+  order: (SectionId | "home")[];
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
   home: { item: NavItem; target: string };
 }) {
+  const items = order.map(navItem);
   return (
     <nav
       aria-label="Main"
@@ -203,8 +236,8 @@ function BottomNav({
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-[1.6rem] border border-line bg-(--nav-bg) p-1.5 shadow-(--shadow-card) md:hidden"
     >
       <div className="relative flex flex-1">
-        <SlidingPill index={TAB_ITEMS.findIndex((item) => isCurrent(item.href))} items={TAB_ITEMS} axis="x" />
-        {TAB_ITEMS.map((item) =>
+        <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="x" />
+        {items.map((item) =>
           item.href === "/" ? (
             <TabLink
               key={item.href}
@@ -262,8 +295,15 @@ function useKeyboardFlag() {
   }, []);
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  initialNavigation,
+}: {
+  children: React.ReactNode;
+  initialNavigation: NavigationPreferences;
+}) {
   const pathname = usePathname();
+  const navigation = useNavigation(initialNavigation);
   useTrackHomeBelow();
   useKeyboardFlag();
 
@@ -290,13 +330,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
       <LauncherSync />
-      <NavRail isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
+      <NavRail order={railItems(navigation)} isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
       <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-[5.75rem]">
         {children}
         {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
         <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
       </main>
-      <BottomNav isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
+      <BottomNav order={phoneTabs(navigation)} isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
     </div>
   );
 }

@@ -110,15 +110,13 @@ export function MonthCalendar({
                         <span className={cn("font-medium", holidayNumberClass(extras.holiday))}>
                           {extras.holiday.name}
                         </span>
-                        {/* Over: the name is enough (keeps the list short). */}
+                        <span className="text-xs text-muted">({extras.holiday.nameDe})</span>
+                        {/* Over: whether the shops were open no longer matters (keeps the list short). */}
                         {!past && (
-                          <>
-                            <span className="text-xs text-muted">({extras.holiday.nameDe})</span>
-                            <span className="flex items-center gap-1 text-xs text-muted">
-                              <Store className="size-3" />
-                              {extras.holiday.shopsLabel}
-                            </span>
-                          </>
+                          <span className="flex items-center gap-1 text-xs text-muted">
+                            <Store className="size-3" />
+                            {extras.holiday.shopsLabel}
+                          </span>
                         )}
                       </span>
                     )}

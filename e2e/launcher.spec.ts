@@ -69,12 +69,21 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   const whatsapp = (await apps.getByRole("button", { name: "WhatsApp" }).boundingBox())!;
   expect(bank.x).toBeGreaterThan(whatsapp.x);
 
-  // Filter and open an app.
+  // Filter and open an app: the tap doesn't take the focus from the search (on a phone
+  // that would close the keyboard first and swallow the tap).
   await page.getByLabel("Search apps or the web").fill("wha");
+  await page.evaluate(() =>
+    document.addEventListener("mousedown", (e) => {
+      (window as unknown as { __kept: boolean }).__kept = e.defaultPrevented;
+    }),
+  );
   await expect(apps.getByRole("button")).toHaveText(["WhatsApp"]);
   await apps.getByRole("button", { name: "WhatsApp" }).click();
   await expect.poll(async () => (await sent(page)).find((m) => m.type === "launch")?.app).toBe("w|0");
   await expect(page.getByLabel("Search apps or the web")).toHaveValue("");
+  expect(await page.evaluate(() => (window as unknown as { __kept: boolean }).__kept)).toBe(true);
+  // Afterwards the keyboard goes away.
+  await expect(page.getByLabel("Search apps or the web")).not.toBeFocused();
 
   // Enter searches the web in Firefox.
   await page.getByLabel("Search apps or the web").fill("Wetter München");

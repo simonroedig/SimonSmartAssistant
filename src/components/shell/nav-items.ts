@@ -8,6 +8,7 @@ import {
   StickyNote,
   type LucideIcon,
 } from "lucide-react";
+import type { SectionId } from "@/lib/navigation";
 import type { Tone } from "@/lib/tones";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon; tone: Tone };
@@ -20,14 +21,18 @@ export const NOTES_ITEM: NavItem = { href: "/notes", label: "Notes", icon: Stick
 export const WEATHER_ITEM: NavItem = { href: "/weather", label: "Weather", icon: CloudSun, tone: "sky" };
 export const SETTINGS_ITEM: NavItem = { href: "/settings", label: "Settings", icon: Settings2, tone: "slate" };
 
-/** Side rail on tablets, laptops and the wall display. */
-export const RAIL_ITEMS: NavItem[] = [HOME_ITEM, PLANNER_ITEM, SHOPPING_ITEM, BACKLOG_ITEM, NOTES_ITEM, WEATHER_ITEM];
+/** The sections that can be ordered in Settings (Home and Settings keep their place). */
+export const SECTION_ITEMS: Record<SectionId, NavItem> = {
+  planner: PLANNER_ITEM,
+  shopping: SHOPPING_ITEM,
+  backlog: BACKLOG_ITEM,
+  notes: NOTES_ITEM,
+  weather: WEATHER_ITEM,
+};
 
-/**
- * Bottom tab bar on phones – Home in the middle, the anchor of the app. Weather
- * and settings are reached from the home screen.
- */
-export const TAB_ITEMS: NavItem[] = [PLANNER_ITEM, SHOPPING_ITEM, HOME_ITEM, BACKLOG_ITEM, NOTES_ITEM];
+export function navItem(id: SectionId | "home"): NavItem {
+  return id === "home" ? HOME_ITEM : SECTION_ITEMS[id];
+}
 
 export function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
