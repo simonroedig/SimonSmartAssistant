@@ -15,22 +15,21 @@ async function fakeLauncher(page: Page) {
     const w = window as unknown as Record<string, unknown>;
     w.__launcherSent = sent;
     w.__launcherEmit = (event: unknown) => listeners.forEach((l) => l({ data: JSON.stringify(event) }));
+    // Blocked apps live natively; across a navigation in the test, keep them in localStorage.
+    w.__blocked = JSON.parse(localStorage.getItem("__blocked") ?? "[]");
     w.SmartLauncher = {
       postMessage(raw: string) {
         const message = JSON.parse(raw);
         sent.push(message);
+        if (message.type === "setBlockedApps") {
+          w.__blocked = message.packages;
+          localStorage.setItem("__blocked", JSON.stringify(message.packages));
+        }
         const answer =
           message.type === "hello"
-            ? { version: 3, versionName: "1.3", features: ["recent", "filter"] }
-            : message.type === "filter"
-              ? {
-                  enabled: w.__filterOn === true,
-                  count: w.__filterOn ? 48230 : 0,
-                  updatedAt: w.__filterOn ? Date.now() - 60_000 : 0,
-                  fetching: false,
-                  error: "",
-                  checkedAt: 0,
-                }
+            ? { version: 3, versionName: "1.3", features: ["recent", "appfilter"] }
+            : message.type === "appFilter"
+              ? { enabled: w.__filterOn === true, blocked: (w.__blocked as string[]) ?? [] }
               : message.type === "recent"
                 ? w.__usageAllowed
                   ? { allowed: true, apps: ["com.whatsapp", "de.bank", "com.android.systemui"] }
@@ -199,27 +198,29 @@ test("launcher: the apps used last, in a strip above the search", async ({ page 
   await expect(strip).toBeHidden();
 });
 
-test("launcher: the NSFW filter – turn on, list status and update", async ({ page }) => {
+test("launcher: block an app – from settings, greyed out and not opened in the apps", async ({ page }) => {
   await fakeLauncher(page);
   await page.goto("/settings");
-  const filter = page.locator("section").filter({ hasText: "NSFW filter" }).first();
-  await expect(filter.getByText("Off", { exact: true })).toBeVisible();
+  const filter = page.locator("section").filter({ hasText: "Blocked apps" }).first();
 
-  // Turning it on opens the system's accessibility settings.
+  // Add Bank to the blocked apps.
+  await filter.getByLabel("Add an app to block").fill("bank");
+  await filter.getByRole("button", { name: /Bank/ }).click();
+  await expect
+    .poll(async () => (await sent(page)).find((m) => m.type === "setBlockedApps")?.packages)
+    .toEqual(["de.bank"]);
+  await expect(filter.getByRole("button", { name: "Unblock" })).toBeVisible();
+
+  // Without the service on, a warning offers to turn it on (opens accessibility).
   await filter.getByRole("button", { name: "Turn on" }).click();
   await expect.poll(async () => (await sent(page)).some((m) => m.type === "filterSettings")).toBe(true);
 
-  // Back from the settings with the service on: the list's size and age show.
-  await page.evaluate(() => {
-    (window as unknown as { __filterOn: boolean }).__filterOn = true;
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await expect(filter.getByText("On", { exact: true })).toBeVisible();
-  await expect(filter.getByText(/48,230 sites/)).toBeVisible();
-
-  // Update re-downloads the list.
-  await filter.getByRole("button", { name: "Update" }).click();
-  await expect.poll(async () => (await sent(page)).some((m) => m.type === "filterRefresh")).toBe(true);
+  // In the apps list the blocked app is marked and doesn't open.
+  await page.goto("/apps");
+  const apps = page.getByRole("list", { name: "Apps" });
+  await apps.getByRole("button", { name: "Bank (blocked)" }).click();
+  await expect(page.getByText(/“Bank” is blocked/)).toBeVisible();
+  expect((await sent(page)).some((m) => m.type === "launch" && m.app === "b|0")).toBe(false);
 });
 
 test("launcher: a newer app version is offered on the home screen", async ({ page }) => {
@@ -231,6 +232,45 @@ test("launcher: a newer app version is offered on the home screen", async ({ pag
   await expect(page.getByText("Launcher update 1.7")).toBeVisible();
   await page.getByRole("button", { name: "Install" }).click();
   await expect.poll(async () => (await sent(page)).some((m) => m.type === "update")).toBe(true);
+});
+
+test("launcher: searching apps scrolls down to the best matches by the thumb", async ({ page }) => {
+  // A launcher with many apps, so the search results are taller than the screen.
+  await page.addInitScript(() => {
+    const listeners: ((e: { data: string }) => void)[] = [];
+    const names = "ABCDEFGHIJKLMNOPQRSTUVWX".split("").map((c) => `Tool ${c}`);
+    const apps = names.map((label, i) => ({
+      id: `${i}|0`,
+      label,
+      package: `p.${i}`,
+      icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E",
+    }));
+    (window as unknown as Record<string, unknown>).SmartLauncher = {
+      postMessage(raw: string) {
+        const m = JSON.parse(raw);
+        const a =
+          m.type === "hello"
+            ? { version: 9, features: [] }
+            : m.type === "apps"
+              ? { apps }
+              : m.type === "appFilter"
+                ? { enabled: false, blocked: [] }
+                : { ok: true };
+        setTimeout(() => listeners.forEach((l) => l({ data: JSON.stringify({ ...a, id: m.id }) })), 5);
+      },
+      addEventListener(_t: string, l: (e: { data: string }) => void) {
+        listeners.push(l);
+      },
+    };
+  });
+  await page.goto("/apps");
+  const scroller = page
+    .locator("[aria-label='Apps']")
+    .locator("xpath=ancestor::div[contains(@class,'overflow-y-auto')]");
+  await page.getByLabel("Search apps or the web").fill("tool"); // matches all 24
+  // The results fill past one screen and the view scrolls to the bottom (newest by the thumb).
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => scroller.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(4);
 });
 
 test("without the launcher app nothing of it shows", async ({ page }) => {

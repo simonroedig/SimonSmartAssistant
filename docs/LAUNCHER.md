@@ -59,24 +59,24 @@ Standard-Apps auswählen → Startbildschirm-App).
   Startbildschirm erscheint **„Launcher update 1.x – Install“**. Beim ersten Update fragt Android einmal,
   ob Smart Assistant Apps installieren darf → zulassen → nochmal **Install** → bestätigen.
 
-## NSFW-Filter (optional)
+## App-Filter (optional)
 
-Ein Filter, der nur im **Browser** bekannte Erwachsenen-Seiten und -Suchen blockt und dabei auf
-den **Home-Screen** zurückwirft. Alles wird **auf dem Handy** geprüft; was du öffnest oder suchst,
-verlässt das Gerät nie.
+Eine Selbstlimitierung: Apps, die du in **Settings → Blocked apps** auswählst, werden geblockt.
 
-- **Liste:** Hagezi `nsfw.txt` (dieselbe Art Liste wie im Pi-hole), einmal von jsDelivr geladen,
-  lokal zwischengespeichert und wöchentlich aufgefrischt. Fällt der Download aus, bleibt die alte
-  Liste aktiv; **Settings → NSFW filter** zeigt Größe, Alter und einen Fehler an, plus **Update**.
-- **Einschalten:** **Settings → NSFW filter → Turn on** öffnet die Bedienungshilfen. Dort Smart
-  Assistant einschalten; auf Android 13+ vorher einmal **„Eingeschränkte Einstellungen zulassen“**
-  (⋮ auf der App-Seite), wie bei den Nutzungsdaten.
-- **Grenzen:** nur Text (die Adresszeile und Suchfelder), keine Bilder/Videos; nur die gängigen
-  Browser; abschaltbar in den Android-Einstellungen – ein Launcher ist keine echte Kindersicherung.
-  Als zweite Ebene neben Pi-hole und **Privatem DNS** (`family.cloudflare-dns.com`, gilt auch bei
-  mobilen Daten) gedacht.
-- Dateien: `ContentFilter.kt` (lokale Liste, Download, Abgleich), `FilterService.kt`
-  (Bedienungshilfe, nur Browser, gedrosselt), `res/xml/filter_service.xml`.
+- **Im Launcher** öffnet eine geblockte App nicht; sie steht in der App-Liste grau mit einem
+  roten Verbots-Symbol, ein Tipp zeigt nur einen Hinweis.
+- **Systemweit** (optional): ein Bedienungshilfen-Dienst wirft dich auf den **Home-Screen**
+  zurück, sobald eine geblockte App in den Vordergrund kommt – egal, wie sie geöffnet wurde.
+  Er liest **nur**, welche App gerade vorn ist, nie etwas aus der App, und sendet nichts.
+- **Einschalten** des Dienstes: der Hinweis in **Blocked apps** öffnet die Bedienungshilfen.
+  Auf Android 13+ vorher einmal **„Eingeschränkte Einstellungen zulassen“** (⋮ auf der App-Seite),
+  wie bei den Nutzungsdaten.
+- **Grenzen:** Ein Launcher kann Apps nicht deinstallieren oder echt sperren; der Dienst ist in den
+  Android-Einstellungen abschaltbar. Also eine Selbstlimitierung, keine Kindersicherung.
+- NSFW-Seiten regelst du über **Privates DNS** (`family.cloudflare-dns.com`, wirkt auch bei
+  mobilen Daten) bzw. dein Pi-hole – dafür gibt es keinen Filter mehr in der App.
+- Dateien: `AppFilter.kt` (die blockierten Pakete, lokal gespeichert), `FilterService.kt`
+  (Bedienungshilfe: nur Fenster-Wechsel, Home bei blockierter App), `res/xml/filter_service.xml`.
 
 ## Technik in Kürze
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, Globe, House, RefreshCw, Search, ShieldBan, Smartphone } from "lucide-react";
+import { AlertTriangle, Ban, Download, Globe, House, Search, ShieldBan, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Row, Section } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
@@ -79,30 +79,19 @@ export function LauncherUpdateBanner({ className }: { className?: string }) {
   );
 }
 
-/** How long ago (in words), for the block list's last update. */
-function sinceLabel(ms: number): string {
-  if (!ms) return "never";
-  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  if (s < 90) return "just now";
-  const m = Math.round(s / 60);
-  if (m < 90) return `${m} min ago`;
-  const h = Math.round(m / 60);
-  if (h < 36) return `${h} h ago`;
-  return `${Math.round(h / 24)} days ago`;
-}
-
 /**
- * Settings: the NSFW filter. It runs in the launcher app as an accessibility
- * service that watches only the browsers and blocks adult sites and searches
- * against a list kept on the phone. Everything is matched on the device; what's
- * opened or searched is never sent anywhere. The switch opens the system's
- * accessibility settings, where Android asks for the permission by hand.
+ * Settings: the app filter. Apps you choose are blocked – a self-limit. In the
+ * launcher app an accessibility service sends you back to the home screen when a
+ * blocked app opens (it reads only which app is in front, nothing inside it);
+ * and the Apps list won't open a blocked one. Enforcing other apps needs the
+ * accessibility permission, which the switch opens the settings for.
  */
-export function ContentFilterSection() {
+export function BlockedAppsSection() {
   const isLauncher = useIsLauncher();
-  const { features, filter } = useLauncherState();
+  const { features, filter, apps } = useLauncherState();
+  const [query, setQuery] = useState("");
 
-  // Checked each time the settings open and on coming back (e.g. from the system settings).
+  // Checked each time the settings open and on coming back (e.g. from the accessibility settings).
   useEffect(() => {
     if (!isLauncher) return;
     void refreshFilter();
@@ -113,58 +102,107 @@ export function ContentFilterSection() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [isLauncher]);
 
-  if (!isLauncher || !features.includes("filter")) return null;
+  if (!isLauncher || !features.includes("appfilter")) return null;
 
   const on = filter?.enabled === true;
-  const count = filter?.count ?? 0;
-  const failed = !!filter?.error && count === 0;
+  const blocked = filter?.blocked ?? [];
+  const byPackage = new Map((apps ?? []).map((a) => [a.package, a]));
+  const blockedApps = blocked.map((pkg) => byPackage.get(pkg) ?? { id: pkg, label: pkg, package: pkg, icon: "" });
+
+  const term = query.trim().toLowerCase();
+  const matches = term
+    ? (apps ?? []).filter((a) => !blocked.includes(a.package) && a.label.toLowerCase().includes(term)).slice(0, 6)
+    : [];
+
+  const block = (pkg: string) => {
+    void launcher.setBlockedApps([...blocked, pkg]);
+    setQuery("");
+  };
+  const unblock = (pkg: string) => void launcher.setBlockedApps(blocked.filter((p) => p !== pkg));
 
   return (
     <Section
       icon={<ShieldBan />}
-      title="NSFW filter"
-      description="Blocks adult sites and searches in your browser. Everything is checked on the phone – nothing you open or search is ever sent anywhere."
+      title="Blocked apps"
+      description="Apps you'd rather stay off. A blocked app sends you back to the home screen and won't open from here. Checked on the phone; nothing about your apps is sent anywhere."
     >
-      <Row
-        label={on ? "On" : "Off"}
-        hint={
-          on
-            ? "Turn it off in the phone's accessibility settings."
-            : "Turning it on opens the accessibility settings. Allow “restricted settings” first if Android asks."
-        }
-      >
-        <Button variant={on ? "secondary" : "primary"} size="sm" onClick={() => void launcher.openFilterSettings()}>
-          {on ? "Open settings" : "Turn on"}
-        </Button>
-      </Row>
-      <Row
-        label="Block list"
-        hint={
-          filter === null
-            ? "…"
-            : failed
-              ? "Couldn't download the list yet."
-              : count > 0
-                ? `${count.toLocaleString("en")} sites · updated ${sinceLabel(filter.updatedAt)}`
-                : "Downloads when the filter is on."
-        }
-      >
-        <span className="flex items-center gap-2">
-          {filter?.error && count > 0 && (
-            <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="size-3.5" /> Update failed
-            </span>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={filter?.fetching}
-            onClick={() => void launcher.refreshFilterList().then(() => window.setTimeout(refreshFilter, 1500))}
-          >
-            <RefreshCw className={cn(filter?.fetching && "animate-spin")} /> Update
+      {blockedApps.length > 0 && (
+        <div className="flex flex-col gap-1 pb-1">
+          {blockedApps.map((app) => (
+            <div key={app.package} className="flex items-center gap-3 py-1.5">
+              {app.icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={app.icon} alt="" className="size-8 shrink-0 opacity-60 grayscale" draggable={false} />
+              ) : (
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken">
+                  <Ban className="size-4 text-faint" />
+                </span>
+              )}
+              <span className="min-w-0 flex-1 truncate font-medium">{app.label}</span>
+              <Button variant="ghost" size="sm" onClick={() => unblock(app.package)}>
+                Unblock
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="border-t border-line pt-3.5">
+        <label className="relative flex items-center">
+          <Search className="pointer-events-none absolute left-3.5 size-[18px] text-faint" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Add an app to block…"
+            aria-label="Add an app to block"
+            autoComplete="off"
+            className="field h-11 w-full rounded-2xl pr-3 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
+          />
+        </label>
+        {term && (
+          <ul className="mt-2 flex flex-col gap-0.5">
+            {matches.length === 0 ? (
+              <li className="px-1 py-2 text-sm text-muted">No app called “{query.trim()}”.</li>
+            ) : (
+              matches.map((app) => (
+                <li key={app.package}>
+                  <button
+                    type="button"
+                    onClick={() => block(app.package)}
+                    className="flex w-full items-center gap-3 rounded-xl px-1 py-1.5 text-left transition-colors hover:bg-surface-hover"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={app.icon} alt="" className="size-8 shrink-0" draggable={false} />
+                    <span className="min-w-0 flex-1 truncate font-medium">{app.label}</span>
+                    <Ban className="size-4 shrink-0 text-faint" />
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
+
+      {blocked.length > 0 && !on && (
+        <div className="mt-3.5 flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span className="min-w-0 flex-1">
+            Blocked apps won&apos;t open from this launcher, but to also send you home when one is opened another way,
+            turn on the service in accessibility.
+          </span>
+          <Button variant="primary" size="sm" onClick={() => void launcher.openFilterSettings()}>
+            Turn on
           </Button>
-        </span>
-      </Row>
+        </div>
+      )}
+      {on && (
+        <p className="mt-3.5 text-sm text-muted">
+          Enforced in the background.{" "}
+          <button type="button" className="font-medium text-accent" onClick={() => void launcher.openFilterSettings()}>
+            Accessibility settings
+          </button>
+        </p>
+      )}
     </Section>
   );
 }

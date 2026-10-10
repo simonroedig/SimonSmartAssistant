@@ -45,7 +45,7 @@ class Bridge(
                         .put("version", BuildConfig.VERSION_CODE)
                         .put("versionName", BuildConfig.VERSION_NAME)
                         // What this version can do beyond the basics (older ones don't say).
-                        .put("features", JSONArray(listOf("recent", "filter"))),
+                        .put("features", JSONArray(listOf("recent", "appfilter"))),
                 )
             "apps" -> background.execute {
                 val list = runCatching { apps.list() }.getOrNull()
@@ -60,17 +60,16 @@ class Bridge(
                 activity.openUsageAccess()
                 reply(id, JSONObject().put("ok", true))
             }
-            "filter" -> background.execute {
-                val status = activity.filterStatus()
-                main.post { reply(id, status) }
+            "appFilter" -> reply(id, activity.appFilterStatus())
+            "setBlockedApps" -> {
+                val array = request.optJSONArray("packages") ?: JSONArray()
+                val packages = (0 until array.length()).map { array.optString(it) }.filter { it.isNotEmpty() }.toSet()
+                AppFilter.set(activity, packages)
+                reply(id, JSONObject().put("ok", true))
             }
             "filterSettings" -> {
                 activity.openAccessibilitySettings()
                 reply(id, JSONObject().put("ok", true))
-            }
-            "filterRefresh" -> background.execute {
-                ContentFilter.refresh(activity)
-                main.post { reply(id, JSONObject().put("ok", true)) }
             }
             "launch" -> reply(id, JSONObject().put("ok", apps.launch(request.optString("app"))))
             "appInfo" -> reply(id, JSONObject().put("ok", apps.showInfo(request.optString("app"))))

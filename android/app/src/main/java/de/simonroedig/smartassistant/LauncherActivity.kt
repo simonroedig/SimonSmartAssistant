@@ -37,6 +37,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -87,8 +88,8 @@ class LauncherActivity : ComponentActivity() {
         webView = WebView(this).apply { setBackgroundColor(background) }
         root.addView(webView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         apps = AppRepository(this)
-        // The NSFW filter's list, ready and refreshed if old (only matters once it's on).
-        if (isFilterEnabled()) ContentFilter.ensureReady(this)
+        // The blocked-apps set, ready for the accessibility service.
+        AppFilter.ensureLoaded(this)
         offline = OfflineScreen(this, apps, onRetry = ::retry, onHomeSettings = ::openHomeSettings)
         root.addView(offline.view, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         setContentView(root)
@@ -317,12 +318,12 @@ class LauncherActivity : ComponentActivity() {
         openExternal(Intent(Settings.ACTION_HOME_SETTINGS))
     }
 
-    /** The accessibility settings, where the content filter is switched on. */
+    /** The accessibility settings, where the app filter is switched on. */
     fun openAccessibilitySettings() {
         openExternal(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
     }
 
-    /** Whether the content-filter accessibility service is on right now. */
+    /** Whether the app-filter accessibility service is on right now. */
     private fun isFilterEnabled(): Boolean {
         val manager = getSystemService(AccessibilityManager::class.java) ?: return false
         return manager
@@ -330,16 +331,12 @@ class LauncherActivity : ComponentActivity() {
             .any { it.resolveInfo.serviceInfo.packageName == packageName }
     }
 
-    /** For the page: is the filter on, and how is its list doing (size, when, any error). */
-    fun filterStatus(): JSONObject {
-        val prefs = getSharedPreferences("launcher", MODE_PRIVATE)
+    /** For the page: is the filter on (enforced), and which apps it blocks. */
+    fun appFilterStatus(): JSONObject {
+        AppFilter.ensureLoaded(this)
         return JSONObject()
             .put("enabled", isFilterEnabled())
-            .put("count", prefs.getInt("filterCount", 0))
-            .put("updatedAt", prefs.getLong("filterUpdatedAt", 0L))
-            .put("fetching", prefs.getBoolean("filterFetching", false))
-            .put("error", prefs.getString("filterError", "") ?: "")
-            .put("checkedAt", prefs.getLong("filterCheckedAt", 0L))
+            .put("blocked", JSONArray(AppFilter.blocked.toList()))
     }
 
     private fun openExternal(intent: Intent): Boolean =

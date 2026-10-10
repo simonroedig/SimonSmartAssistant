@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The NSFW filter reads only the browsers, only enough to see the address bar
-     and search box, and is throttled. It never retrieves window content on its
-     own beyond the active window it inspects on an event. -->
+<!-- The app filter only reacts to which app comes to the front (window state).
+     It does not read window content; it never inspects anything inside an app. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowContentChanged|typeWindowStateChanged|typeViewTextChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
-    android:canRetrieveWindowContent="true"
-    android:notificationTimeout="300"
-    android:description="@string/filter_description"
-    android:packageNames="org.mozilla.firefox,org.mozilla.firefox_beta,com.android.chrome,com.chrome.beta,com.sec.android.app.sbrowser,com.brave.browser,com.duckduckgo.mobile.android,com.opera.browser,com.microsoft.emmx" />
+    android:canRetrieveWindowContent="false"
+    android:notificationTimeout="100"
+    android:description="@string/filter_description" />

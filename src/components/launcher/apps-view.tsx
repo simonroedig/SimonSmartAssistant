@@ -1,25 +1,36 @@
 "use client";
 
-import { Globe, History, LayoutGrid, Search, X } from "lucide-react";
+import { Ban, Globe, History, LayoutGrid, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { AppLink } from "@/components/shell/app-link";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useDevicePrefs } from "@/hooks/use-device-prefs";
 import { useLongPress } from "@/hooks/use-long-press";
-import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import {
+  type LauncherApp,
+  launcher,
+  refreshFilter,
+  refreshRecent,
+  useIsLauncher,
+  useLauncherState,
+} from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 function AppTile({
   app,
   onOpen,
+  blocked,
   compact,
   className,
 }: {
   app: LauncherApp;
   onOpen: () => void;
+  /** Chosen in Settings → Blocked apps: shown greyed out and not opened from here. */
+  blocked?: boolean;
   /** Smaller, one line of name (the strip of apps used last). */
   compact?: boolean;
   className?: string;
@@ -31,11 +42,16 @@ function AppTile({
       <button
         type="button"
         {...longPress.props}
+        aria-label={blocked ? `${app.label} (blocked)` : undefined}
         // Keeps the search field focused: otherwise the first tap only closes the keyboard
         // (the results move with it) and a second tap is needed.
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => {
           if (longPress.wasLongPress()) return;
+          if (blocked) {
+            toast(`“${app.label}” is blocked`, { description: "Change it in Settings → Blocked apps." });
+            return;
+          }
           onOpen();
           void launcher.open(app);
         }}
@@ -45,12 +61,25 @@ function AppTile({
           compact && "gap-1 py-1.5",
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={app.icon} alt="" className={compact ? "size-11" : "size-14"} draggable={false} />
+        <span className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={app.icon}
+            alt=""
+            className={cn(compact ? "size-11" : "size-14", blocked && "opacity-40 grayscale")}
+            draggable={false}
+          />
+          {blocked && (
+            <span className="absolute -right-0.5 -bottom-0.5 grid size-5 place-items-center rounded-full bg-surface-strong text-danger shadow-(--shadow-card)">
+              <Ban className="size-3.5" strokeWidth={2.5} />
+            </span>
+          )}
+        </span>
         <span
           className={cn(
             "w-full text-center text-[0.72rem] leading-tight font-medium",
             compact ? "truncate text-[0.68rem]" : "line-clamp-2",
+            blocked && "text-faint",
           )}
         >
           {app.label}
@@ -165,12 +194,19 @@ function closeKeyboard() {
  */
 export function AppsView() {
   const isLauncher = useIsLauncher();
-  const { apps, features } = useLauncherState();
+  const { apps, features, filter } = useLauncherState();
   const [query, setQuery] = useState("");
   const [recentOpen, setRecentOpen] = useState(readRecentOpen);
   const [device] = useDevicePrefs();
   // Optional (Settings), and only with a launcher version that can.
   const hasRecent = device.recentApps && features.includes("recent");
+  const scroller = useRef<HTMLDivElement>(null);
+  const blocked = useMemo(() => new Set(filter?.blocked ?? []), [filter]);
+
+  // Which apps are blocked is loaded here too, so the list can grey them out.
+  useEffect(() => {
+    if (isLauncher) void refreshFilter();
+  }, [isLauncher]);
 
   const term = query.trim().toLowerCase();
   // Searching: names that start with the text first.
@@ -180,6 +216,11 @@ export function AppsView() {
     const starts = (app: LauncherApp) => (app.label.toLowerCase().startsWith(term) ? 0 : 1);
     return [...all].sort((a, b) => starts(a) - starts(b));
   }, [apps, term]);
+
+  // The best matches sit at the bottom right, by the thumb – scroll down to them.
+  useEffect(() => {
+    if (term && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+  }, [term, shown.length]);
 
   if (!isLauncher) {
     return (
@@ -225,7 +266,10 @@ export function AppsView() {
       <PageHeader title="Apps" subtitle={apps ? `${apps.length} apps` : undefined} />
       <PageBody className={FILL_BODY}>
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="-mx-4 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-3">
+          <div
+            ref={scroller}
+            className="-mx-4 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-3"
+          >
             {apps === null ? (
               <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6">
                 {Array.from({ length: 16 }, (_, i) => (
@@ -241,13 +285,19 @@ export function AppsView() {
               // Search results start at the bottom right, next to the thumb, and go up from there.
               <ul className="mt-auto flex flex-row-reverse flex-wrap-reverse gap-y-3" aria-label="Apps">
                 {shown.map((app) => (
-                  <AppTile key={app.id} app={app} onOpen={opened} className="w-1/4 px-1 sm:w-1/6" />
+                  <AppTile
+                    key={app.id}
+                    app={app}
+                    onOpen={opened}
+                    blocked={blocked.has(app.package)}
+                    className="w-1/4 px-1 sm:w-1/6"
+                  />
                 ))}
               </ul>
             ) : (
               <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6" aria-label="Apps">
                 {shown.map((app) => (
-                  <AppTile key={app.id} app={app} onOpen={opened} />
+                  <AppTile key={app.id} app={app} onOpen={opened} blocked={blocked.has(app.package)} />
                 ))}
               </ul>
             )}

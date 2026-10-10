@@ -80,19 +80,12 @@ export function onLauncherEvent(listener: (event: LauncherEvent) => void): () =>
 /** The apps used last (package names, newest first) – once usage access is allowed. */
 export type RecentApps = { allowed: boolean; packages: string[] };
 
-/** The NSFW filter: whether it's on, and how its local block list is doing. */
-export type FilterStatus = {
+/** The app filter: whether it's enforced (accessibility on) and which apps are blocked. */
+export type AppFilter = {
+  /** The accessibility service is on, so a blocked app really gets sent home. */
   enabled: boolean;
-  /** Domains on the list right now (0 before the first download). */
-  count: number;
-  /** When the list was last loaded (ms), 0 if never. */
-  updatedAt: number;
-  /** A download is running. */
-  fetching: boolean;
-  /** The last download's error, "" if the last one worked. */
-  error: string;
-  /** When the last (failed) download was tried (ms). */
-  checkedAt: number;
+  /** Package names the user chose to block. */
+  blocked: string[];
 };
 
 type State = {
@@ -102,7 +95,7 @@ type State = {
   features: string[];
   apps: LauncherApp[] | null;
   recent: RecentApps | null;
-  filter: FilterStatus | null;
+  filter: AppFilter | null;
   update: UpdateStatus;
 };
 
@@ -196,18 +189,14 @@ export async function refreshRecent() {
   setState({ recent: { allowed: answer.allowed === true, packages: answer.apps.map(String) } });
 }
 
-/** The NSFW filter's state (on? list fresh?), asked again when its settings are shown. */
+/** The app filter's state (enforced? which apps), asked again when its settings are shown. */
 export async function refreshFilter() {
-  const answer = await request("filter");
+  const answer = await request("appFilter");
   if (!answer) return;
   setState({
     filter: {
       enabled: answer.enabled === true,
-      count: Number(answer.count) || 0,
-      updatedAt: Number(answer.updatedAt) || 0,
-      fetching: answer.fetching === true,
-      error: String(answer.error ?? ""),
-      checkedAt: Number(answer.checkedAt) || 0,
+      blocked: Array.isArray(answer.blocked) ? answer.blocked.map(String) : [],
     },
   });
 }
@@ -229,10 +218,13 @@ export const launcher = {
   homeSettings: () => request("homeSettings"),
   /** The system page where usage access (for the apps used last) is allowed. */
   allowUsageAccess: () => request("usageAccess"),
-  /** The accessibility settings, where the NSFW filter is switched on. */
+  /** The accessibility settings, where the app filter is switched on. */
   openFilterSettings: () => request("filterSettings"),
-  /** Downloads the block list again now. */
-  refreshFilterList: () => request("filterRefresh"),
+  /** Sets which apps are blocked (package names), kept on the phone. */
+  setBlockedApps: (packages: string[]) => {
+    setState({ filter: state.filter ? { ...state.filter, blocked: packages } : { enabled: false, blocked: packages } });
+    return request("setBlockedApps", { packages });
+  },
 };
 
 /** The newest launcher version published on this server (by the Android workflow). */

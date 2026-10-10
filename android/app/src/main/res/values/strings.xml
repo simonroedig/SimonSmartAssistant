@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Smart Assistant</string>
-    <string name="filter_label">Smart Assistant content filter</string>
-    <string name="filter_description">Blocks adult sites and searches in your browser. Everything is checked on the phone; nothing you open is sent anywhere.</string>
+    <string name="filter_label">Smart Assistant app filter</string>
+    <string name="filter_description">Blocks the apps you choose: when a blocked app opens, it sends you back to the home screen. It only checks which app is in front; nothing inside any app is read or sent anywhere.</string>
 </resources>

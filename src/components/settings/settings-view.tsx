@@ -19,7 +19,7 @@ import type { SleepSchedule } from "@/lib/sleep";
 import { createClient } from "@/lib/supabase/client";
 import { formatLocationLong } from "@/lib/weather/open-meteo";
 import { Passkeys } from "./passkeys";
-import { ContentFilterSection, LauncherSection } from "@/components/launcher/launcher-widgets";
+import { BlockedAppsSection, LauncherSection } from "@/components/launcher/launcher-widgets";
 import { BirthdaysSection, HolidaysSection, useCalendarPreferences } from "./calendar-settings";
 import { DesignPicker } from "./design-picker";
 import { NavigationSection } from "./navigation-settings";
@@ -136,7 +136,7 @@ export function SettingsView() {
           <BirthdaysSection />
           <NavigationSection />
           <LauncherSection />
-          <ContentFilterSection />
+          <BlockedAppsSection />
         </div>
 
         <div className="flex flex-col gap-4">
