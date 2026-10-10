@@ -5,6 +5,8 @@ test("designs: pick one in Settings – it restyles the whole app and stays on t
   await mockWeather(page);
   await page.goto("/settings");
   const designs = page.getByRole("radiogroup", { name: "Design" });
+  // Wait for the picker to render before reading the labels (evaluateAll doesn't retry).
+  await expect(designs.getByRole("radio")).toHaveCount(4);
   expect(await designs.getByRole("radio").evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")))).toEqual(
     ["Aurora", "Tactile", "Block", "Doodle"],
   );
