@@ -7,7 +7,14 @@ import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/pa
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLongPress } from "@/hooks/use-long-press";
-import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import {
+  clearRecent,
+  type LauncherApp,
+  launcher,
+  refreshRecent,
+  useIsLauncher,
+  useLauncherState,
+} from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
@@ -70,22 +77,35 @@ function readRecentOpen() {
 }
 
 /**
- * The apps used last, in a strip above the search: the newest on the right,
- * older ones further left. Tapping one brings it back as you left it. (Previews
- * and closing apps stay with the system's own recents screen.)
+ * The apps used last, in a tray above the search (inside the same panel, so it
+ * reads as what the button opened): the newest on the right, older ones further
+ * left, and at the right end a button that clears the list. Tapping an app brings
+ * it back as you left it. (Previews and closing apps stay with the system's own
+ * recents screen.)
  */
-function RecentStrip({ apps, onOpen }: { apps: LauncherApp[]; onOpen: () => void }) {
+function RecentTray({
+  apps,
+  open,
+  canClear,
+  onOpen,
+}: {
+  apps: LauncherApp[];
+  open: boolean;
+  canClear: boolean;
+  onOpen: () => void;
+}) {
   const { recent } = useLauncherState();
 
-  // Asked again whenever the launcher comes back – an app has just been used.
+  // Asked when it opens and whenever the launcher comes back – an app has just been used.
   useEffect(() => {
+    if (!open) return;
     void refreshRecent();
     const onVisible = () => {
       if (document.visibilityState === "visible") void refreshRecent();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+  }, [open]);
 
   const shown = useMemo(() => {
     const byPackage = new Map<string, LauncherApp>();
@@ -94,40 +114,71 @@ function RecentStrip({ apps, onOpen }: { apps: LauncherApp[]; onOpen: () => void
   }, [apps, recent]);
 
   return (
-    // Swiping sideways scrolls the strip instead of switching the section.
-    <section aria-label="Recent apps" data-swipe className="mb-2 rounded-(--radius-bar) bar">
-      {recent === null ? (
-        <div className="flex h-[5.25rem] flex-row-reverse gap-1 overflow-hidden p-1.5">
-          {Array.from({ length: 5 }, (_, i) => (
-            <span key={i} className="flex w-[4.25rem] shrink-0 flex-col items-center gap-1 py-1.5">
-              <span className="skeleton size-11 rounded-2xl" />
-              <span className="skeleton h-2 w-10" />
-            </span>
-          ))}
-        </div>
-      ) : !recent.allowed ? (
-        <div className="flex items-center gap-3 py-2.5 pr-2.5 pl-4">
-          <p className="min-w-0 flex-1 text-sm leading-snug text-muted">
-            To see the apps you used last, allow usage access for Smart Assistant.
-          </p>
-          <Button size="sm" onClick={() => void launcher.allowUsageAccess()}>
-            Allow
-          </Button>
-        </div>
-      ) : shown.length === 0 ? (
-        <p className="px-4 py-4 text-center text-sm text-muted">No apps used in the last days.</p>
-      ) : (
-        <ul
-          aria-label="Recent apps"
-          // Fades out on the left: older apps are further that way.
-          className="flex [scrollbar-width:none] flex-row-reverse gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1.5rem)] p-1.5"
-        >
-          {shown.map((app) => (
-            <AppTile key={app.id} app={app} onOpen={onOpen} compact className="w-[4.25rem] shrink-0" />
-          ))}
-        </ul>
+    // Folds open upwards out of the search bar; closed it takes no room and no taps.
+    <div
+      inert={!open}
+      className={cn(
+        "grid transition-[grid-template-rows,opacity,visibility] duration-200 ease-out",
+        open ? "grid-rows-[1fr]" : "invisible grid-rows-[0fr] opacity-0",
       )}
-    </section>
+    >
+      <div className="min-h-0 overflow-hidden">
+        {/* Swiping sideways scrolls the tray instead of switching the section. */}
+        <section aria-label="Recent apps" data-swipe className="mb-2 rounded-2xl well">
+          <h2 className="flex items-center gap-1.5 px-3 pt-2 text-[0.68rem] font-semibold tracking-wide text-muted uppercase">
+            <History className="size-3" strokeWidth={2.5} />
+            Recent
+          </h2>
+          {recent === null ? (
+            <div className="flex h-[4.75rem] flex-row-reverse gap-1 overflow-hidden px-1.5 pb-1">
+              {Array.from({ length: 5 }, (_, i) => (
+                <span key={i} className="flex w-[4.25rem] shrink-0 flex-col items-center gap-1 py-1.5">
+                  <span className="skeleton size-11 rounded-2xl" />
+                  <span className="skeleton h-2 w-10" />
+                </span>
+              ))}
+            </div>
+          ) : !recent.allowed ? (
+            <div className="flex items-center gap-3 pt-1 pr-2 pb-2.5 pl-3">
+              <p className="min-w-0 flex-1 text-sm leading-snug text-muted">
+                To see the apps you used last, allow usage access for Smart Assistant.
+              </p>
+              <Button size="sm" onClick={() => void launcher.allowUsageAccess()}>
+                Allow
+              </Button>
+            </div>
+          ) : shown.length === 0 ? (
+            <p className="px-3 pt-2 pb-5 text-center text-sm text-muted">The apps you open show up here.</p>
+          ) : (
+            <div className="flex items-stretch">
+              <ul
+                aria-label="Recent apps"
+                // Fades out on the left: older apps are further that way.
+                className="flex min-w-0 flex-1 [scrollbar-width:none] flex-row-reverse gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1.5rem)] px-1.5 pb-1"
+              >
+                {shown.map((app) => (
+                  <AppTile key={app.id} app={app} onOpen={onOpen} compact className="w-[4.25rem] shrink-0" />
+                ))}
+              </ul>
+              {canClear && (
+                <button
+                  type="button"
+                  aria-label="Clear recent apps"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => void clearRecent()}
+                  className="my-2 mr-1.5 flex w-14 shrink-0 flex-col items-center justify-center gap-1 border-l border-line pl-1.5 text-muted transition-transform select-none active:scale-95"
+                >
+                  <span className="grid size-9 place-items-center rounded-full border border-line bg-surface-strong">
+                    <X className="size-4" strokeWidth={2.5} />
+                  </span>
+                  <span className="text-[0.68rem] leading-tight font-medium">Clear</span>
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
   );
 }
 
@@ -242,66 +293,80 @@ export function AppsView() {
               </button>
             )}
           </div>
-          {hasRecent && recentOpen && !term && apps && <RecentStrip apps={apps} onOpen={opened} />}
           {/* Search at the bottom, near the thumb – apps first, Enter searches the web. */}
-          <form
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              searchWeb();
-            }}
-            // A quiet frame while typing: searching belongs to no section.
-            className={cn("flex items-center gap-2 rounded-(--radius-bar) p-2 bar", FIELD_FOCUS.quiet)}
-          >
-            <label className="relative flex min-w-0 flex-1 items-center">
-              <Search className="pointer-events-none absolute left-4 size-[18px] text-faint" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search apps or web"
-                aria-label="Search apps or the web"
-                enterKeyHint="search"
-                autoComplete="off"
-                className="field h-12 w-full rounded-2xl pr-10 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
+          <div className="rounded-(--radius-bar) p-2 bar">
+            {hasRecent && apps && (
+              <RecentTray
+                apps={apps}
+                // Out of the way while searching.
+                open={recentOpen && !term}
+                canClear={features.includes("clearRecent")}
+                onOpen={opened}
               />
-              {query && (
-                <button
-                  type="button"
-                  aria-label="Clear"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setQuery("")}
-                  className="absolute right-1.5 grid size-9 place-items-center rounded-xl text-faint"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </label>
-            <button
-              type="submit"
-              aria-label="Search the web"
-              onMouseDown={(e) => e.preventDefault()}
-              className={cn(
-                "ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)",
-              )}
+            )}
+            <form
+              role="search"
+              onSubmit={(e) => {
+                e.preventDefault();
+                searchWeb();
+              }}
+              // A quiet frame while typing: searching belongs to no section.
+              className={cn("flex items-center gap-2", FIELD_FOCUS.quiet)}
             >
-              <Globe className="size-5" />
-            </button>
-            {hasRecent && (
+              <label className="relative flex min-w-0 flex-1 items-center">
+                <Search className="pointer-events-none absolute left-4 size-[18px] text-faint" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search apps or web"
+                  aria-label="Search apps or the web"
+                  enterKeyHint="search"
+                  autoComplete="off"
+                  className="field h-12 w-full rounded-2xl pr-10 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    aria-label="Clear"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setQuery("")}
+                    className="absolute right-1.5 grid size-9 place-items-center rounded-xl text-faint"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+              </label>
               <button
-                type="button"
-                aria-label="Recent apps"
-                aria-pressed={recentOpen}
+                type="submit"
+                aria-label="Search the web"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={toggleRecent}
                 className={cn(
-                  "grid size-12 shrink-0 place-items-center rounded-2xl transition-colors",
-                  recentOpen ? "bg-surface-strong text-fg shadow-(--shadow-card)" : "text-muted well",
+                  "ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)",
                 )}
               >
-                <History className="size-5" />
+                <Globe className="size-5" />
               </button>
-            )}
-          </form>
+              {hasRecent && (
+                <button
+                  type="button"
+                  aria-label="Recent apps"
+                  aria-pressed={recentOpen}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={toggleRecent}
+                  // Pressed in like the tray it opened (and marked like the open tab); raised while closed.
+                  className={cn(
+                    "relative grid size-12 shrink-0 place-items-center rounded-2xl transition-colors",
+                    recentOpen ? "text-fg well" : "bg-surface-strong text-muted shadow-(--shadow-card)",
+                  )}
+                >
+                  <History className="size-5" />
+                  {recentOpen && (
+                    <span aria-hidden="true" className="absolute bottom-1.5 h-[3px] w-4 rounded-full bg-fg/70" />
+                  )}
+                </button>
+              )}
+            </form>
+          </div>
         </div>
       </PageBody>
     </FillPage>

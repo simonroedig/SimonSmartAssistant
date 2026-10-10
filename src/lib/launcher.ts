@@ -172,6 +172,12 @@ export async function refreshRecent() {
   setState({ recent: { allowed: answer.allowed === true, packages: answer.apps.map(String) } });
 }
 
+/** Starts the list of apps used last afresh (it's empty right away). */
+export async function clearRecent() {
+  if (state.recent) setState({ recent: { ...state.recent, packages: [] } });
+  await request("clearRecent");
+}
+
 export function setUpdateStatus(update: UpdateStatus) {
   setState({ update });
 }
