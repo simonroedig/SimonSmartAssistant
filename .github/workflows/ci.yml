@@ -39,9 +39,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # A fixed version: "latest" asks the GitHub API first, which can hit its rate limit.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0
       - name: Start local Supabase (applies migrations + seed)
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,storage-api,supavisor,postgres-meta
       - name: Row Level Security / auth hook tests
