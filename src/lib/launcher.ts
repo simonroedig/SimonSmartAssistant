@@ -80,6 +80,21 @@ export function onLauncherEvent(listener: (event: LauncherEvent) => void): () =>
 /** The apps used last (package names, newest first) – once usage access is allowed. */
 export type RecentApps = { allowed: boolean; packages: string[] };
 
+/** The NSFW filter: whether it's on, and how its local block list is doing. */
+export type FilterStatus = {
+  enabled: boolean;
+  /** Domains on the list right now (0 before the first download). */
+  count: number;
+  /** When the list was last loaded (ms), 0 if never. */
+  updatedAt: number;
+  /** A download is running. */
+  fetching: boolean;
+  /** The last download's error, "" if the last one worked. */
+  error: string;
+  /** When the last (failed) download was tried (ms). */
+  checkedAt: number;
+};
+
 type State = {
   version: number | null;
   versionName: string | null;
@@ -87,12 +102,21 @@ type State = {
   features: string[];
   apps: LauncherApp[] | null;
   recent: RecentApps | null;
+  filter: FilterStatus | null;
   update: UpdateStatus;
 };
 
 const APPS_KEY = "ssa:launcher-apps";
 const FEATURES_KEY = "ssa:launcher-features";
-let state: State = { version: null, versionName: null, features: [], apps: null, recent: null, update: "idle" };
+let state: State = {
+  version: null,
+  versionName: null,
+  features: [],
+  apps: null,
+  recent: null,
+  filter: null,
+  update: "idle",
+};
 const subscribers = new Set<() => void>();
 
 function setState(patch: Partial<State>) {
@@ -172,6 +196,22 @@ export async function refreshRecent() {
   setState({ recent: { allowed: answer.allowed === true, packages: answer.apps.map(String) } });
 }
 
+/** The NSFW filter's state (on? list fresh?), asked again when its settings are shown. */
+export async function refreshFilter() {
+  const answer = await request("filter");
+  if (!answer) return;
+  setState({
+    filter: {
+      enabled: answer.enabled === true,
+      count: Number(answer.count) || 0,
+      updatedAt: Number(answer.updatedAt) || 0,
+      fetching: answer.fetching === true,
+      error: String(answer.error ?? ""),
+      checkedAt: Number(answer.checkedAt) || 0,
+    },
+  });
+}
+
 export function setUpdateStatus(update: UpdateStatus) {
   setState({ update });
 }
@@ -189,6 +229,10 @@ export const launcher = {
   homeSettings: () => request("homeSettings"),
   /** The system page where usage access (for the apps used last) is allowed. */
   allowUsageAccess: () => request("usageAccess"),
+  /** The accessibility settings, where the NSFW filter is switched on. */
+  openFilterSettings: () => request("filterSettings"),
+  /** Downloads the block list again now. */
+  refreshFilterList: () => request("filterRefresh"),
 };
 
 /** The newest launcher version published on this server (by the Android workflow). */

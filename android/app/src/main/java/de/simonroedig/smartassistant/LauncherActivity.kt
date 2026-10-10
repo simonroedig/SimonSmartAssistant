@@ -13,6 +13,8 @@ import android.os.Looper
 import android.os.SystemClock
 import android.os.UserHandle
 import android.provider.Settings
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.view.accessibility.AccessibilityManager
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.webkit.CookieManager
@@ -85,6 +87,8 @@ class LauncherActivity : ComponentActivity() {
         webView = WebView(this).apply { setBackgroundColor(background) }
         root.addView(webView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         apps = AppRepository(this)
+        // The NSFW filter's list, ready and refreshed if old (only matters once it's on).
+        if (isFilterEnabled()) ContentFilter.ensureReady(this)
         offline = OfflineScreen(this, apps, onRetry = ::retry, onHomeSettings = ::openHomeSettings)
         root.addView(offline.view, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         setContentView(root)
@@ -311,6 +315,31 @@ class LauncherActivity : ComponentActivity() {
     /** The system's choice of home app (to make this one the default). */
     fun openHomeSettings() {
         openExternal(Intent(Settings.ACTION_HOME_SETTINGS))
+    }
+
+    /** The accessibility settings, where the content filter is switched on. */
+    fun openAccessibilitySettings() {
+        openExternal(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    }
+
+    /** Whether the content-filter accessibility service is on right now. */
+    private fun isFilterEnabled(): Boolean {
+        val manager = getSystemService(AccessibilityManager::class.java) ?: return false
+        return manager
+            .getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            .any { it.resolveInfo.serviceInfo.packageName == packageName }
+    }
+
+    /** For the page: is the filter on, and how is its list doing (size, when, any error). */
+    fun filterStatus(): JSONObject {
+        val prefs = getSharedPreferences("launcher", MODE_PRIVATE)
+        return JSONObject()
+            .put("enabled", isFilterEnabled())
+            .put("count", prefs.getInt("filterCount", 0))
+            .put("updatedAt", prefs.getLong("filterUpdatedAt", 0L))
+            .put("fetching", prefs.getBoolean("filterFetching", false))
+            .put("error", prefs.getString("filterError", "") ?: "")
+            .put("checkedAt", prefs.getLong("filterCheckedAt", 0L))
     }
 
     private fun openExternal(intent: Intent): Boolean =

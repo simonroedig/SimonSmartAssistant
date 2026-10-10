@@ -1,13 +1,13 @@
 "use client";
 
-import { Download, Globe, House, Search, Smartphone } from "lucide-react";
+import { AlertTriangle, Download, Globe, House, RefreshCw, Search, ShieldBan, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Row, Section } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useDevicePrefs } from "@/hooks/use-device-prefs";
-import { latestLauncherVersion, launcher, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import { latestLauncherVersion, launcher, refreshFilter, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useLauncherUpdate } from "./launcher-sync";
@@ -76,6 +76,96 @@ export function LauncherUpdateBanner({ className }: { className?: string }) {
         Install
       </Button>
     </Card>
+  );
+}
+
+/** How long ago (in words), for the block list's last update. */
+function sinceLabel(ms: number): string {
+  if (!ms) return "never";
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 90) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 90) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return `${h} h ago`;
+  return `${Math.round(h / 24)} days ago`;
+}
+
+/**
+ * Settings: the NSFW filter. It runs in the launcher app as an accessibility
+ * service that watches only the browsers and blocks adult sites and searches
+ * against a list kept on the phone. Everything is matched on the device; what's
+ * opened or searched is never sent anywhere. The switch opens the system's
+ * accessibility settings, where Android asks for the permission by hand.
+ */
+export function ContentFilterSection() {
+  const isLauncher = useIsLauncher();
+  const { features, filter } = useLauncherState();
+
+  // Checked each time the settings open and on coming back (e.g. from the system settings).
+  useEffect(() => {
+    if (!isLauncher) return;
+    void refreshFilter();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshFilter();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isLauncher]);
+
+  if (!isLauncher || !features.includes("filter")) return null;
+
+  const on = filter?.enabled === true;
+  const count = filter?.count ?? 0;
+  const failed = !!filter?.error && count === 0;
+
+  return (
+    <Section
+      icon={<ShieldBan />}
+      title="NSFW filter"
+      description="Blocks adult sites and searches in your browser. Everything is checked on the phone – nothing you open or search is ever sent anywhere."
+    >
+      <Row
+        label={on ? "On" : "Off"}
+        hint={
+          on
+            ? "Turn it off in the phone's accessibility settings."
+            : "Turning it on opens the accessibility settings. Allow “restricted settings” first if Android asks."
+        }
+      >
+        <Button variant={on ? "secondary" : "primary"} size="sm" onClick={() => void launcher.openFilterSettings()}>
+          {on ? "Open settings" : "Turn on"}
+        </Button>
+      </Row>
+      <Row
+        label="Block list"
+        hint={
+          filter === null
+            ? "…"
+            : failed
+              ? "Couldn't download the list yet."
+              : count > 0
+                ? `${count.toLocaleString("en")} sites · updated ${sinceLabel(filter.updatedAt)}`
+                : "Downloads when the filter is on."
+        }
+      >
+        <span className="flex items-center gap-2">
+          {filter?.error && count > 0 && (
+            <span className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="size-3.5" /> Update failed
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={filter?.fetching}
+            onClick={() => void launcher.refreshFilterList().then(() => window.setTimeout(refreshFilter, 1500))}
+          >
+            <RefreshCw className={cn(filter?.fetching && "animate-spin")} /> Update
+          </Button>
+        </span>
+      </Row>
+    </Section>
   );
 }
 

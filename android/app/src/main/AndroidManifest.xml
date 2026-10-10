@@ -59,5 +59,20 @@
         <receiver
             android:name=".InstallReceiver"
             android:exported="false" />
+
+        <!-- The NSFW filter: reads the browsers' address bar / search box to block
+             adult sites. The user turns it on by hand; it is limited to browsers. -->
+        <service
+            android:name=".FilterService"
+            android:exported="false"
+            android:label="@string/filter_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/filter_service" />
+        </service>
     </application>
 </manifest>

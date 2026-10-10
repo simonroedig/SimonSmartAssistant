@@ -45,7 +45,7 @@ class Bridge(
                         .put("version", BuildConfig.VERSION_CODE)
                         .put("versionName", BuildConfig.VERSION_NAME)
                         // What this version can do beyond the basics (older ones don't say).
-                        .put("features", JSONArray(listOf("recent"))),
+                        .put("features", JSONArray(listOf("recent", "filter"))),
                 )
             "apps" -> background.execute {
                 val list = runCatching { apps.list() }.getOrNull()
@@ -59,6 +59,18 @@ class Bridge(
             "usageAccess" -> {
                 activity.openUsageAccess()
                 reply(id, JSONObject().put("ok", true))
+            }
+            "filter" -> background.execute {
+                val status = activity.filterStatus()
+                main.post { reply(id, status) }
+            }
+            "filterSettings" -> {
+                activity.openAccessibilitySettings()
+                reply(id, JSONObject().put("ok", true))
+            }
+            "filterRefresh" -> background.execute {
+                ContentFilter.refresh(activity)
+                main.post { reply(id, JSONObject().put("ok", true)) }
             }
             "launch" -> reply(id, JSONObject().put("ok", apps.launch(request.optString("app"))))
             "appInfo" -> reply(id, JSONObject().put("ok", apps.showInfo(request.optString("app"))))

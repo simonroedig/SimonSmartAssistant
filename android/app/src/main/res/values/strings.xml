@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Smart Assistant</string>
+    <string name="filter_label">Smart Assistant content filter</string>
+    <string name="filter_description">Blocks adult sites and searches in your browser. Everything is checked on the phone; nothing you open is sent anywhere.</string>
 </resources>

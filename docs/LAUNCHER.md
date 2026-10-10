@@ -59,6 +59,25 @@ Standard-Apps auswählen → Startbildschirm-App).
   Startbildschirm erscheint **„Launcher update 1.x – Install“**. Beim ersten Update fragt Android einmal,
   ob Smart Assistant Apps installieren darf → zulassen → nochmal **Install** → bestätigen.
 
+## NSFW-Filter (optional)
+
+Ein Filter, der nur im **Browser** bekannte Erwachsenen-Seiten und -Suchen blockt und dabei auf
+den **Home-Screen** zurückwirft. Alles wird **auf dem Handy** geprüft; was du öffnest oder suchst,
+verlässt das Gerät nie.
+
+- **Liste:** Hagezi `nsfw.txt` (dieselbe Art Liste wie im Pi-hole), einmal von jsDelivr geladen,
+  lokal zwischengespeichert und wöchentlich aufgefrischt. Fällt der Download aus, bleibt die alte
+  Liste aktiv; **Settings → NSFW filter** zeigt Größe, Alter und einen Fehler an, plus **Update**.
+- **Einschalten:** **Settings → NSFW filter → Turn on** öffnet die Bedienungshilfen. Dort Smart
+  Assistant einschalten; auf Android 13+ vorher einmal **„Eingeschränkte Einstellungen zulassen“**
+  (⋮ auf der App-Seite), wie bei den Nutzungsdaten.
+- **Grenzen:** nur Text (die Adresszeile und Suchfelder), keine Bilder/Videos; nur die gängigen
+  Browser; abschaltbar in den Android-Einstellungen – ein Launcher ist keine echte Kindersicherung.
+  Als zweite Ebene neben Pi-hole und **Privatem DNS** (`family.cloudflare-dns.com`, gilt auch bei
+  mobilen Daten) gedacht.
+- Dateien: `ContentFilter.kt` (lokale Liste, Download, Abgleich), `FilterService.kt`
+  (Bedienungshilfe, nur Browser, gedrosselt), `res/xml/filter_service.xml`.
+
 ## Technik in Kürze
 
 - `android/app/src/main/java/…/LauncherActivity.kt` – WebView, Home-Taste, Zurück, Tastatur/Statusleiste,

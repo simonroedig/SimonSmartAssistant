@@ -21,20 +21,29 @@ async function fakeLauncher(page: Page) {
         sent.push(message);
         const answer =
           message.type === "hello"
-            ? { version: 3, versionName: "1.3", features: ["recent"] }
-            : message.type === "recent"
-              ? w.__usageAllowed
-                ? { allowed: true, apps: ["com.whatsapp", "de.bank", "com.android.systemui"] }
-                : { allowed: false, apps: [] }
-              : message.type === "apps"
-                ? {
-                    apps: [
-                      { id: "w|0", label: "WhatsApp", package: "com.whatsapp", icon: icon("#25d366") },
-                      { id: "f|0", label: "Firefox", package: "org.mozilla.firefox", icon: icon("#ff7139") },
-                      { id: "b|0", label: "Bank", package: "de.bank", icon: icon("#1d4ed8") },
-                    ],
-                  }
-                : { ok: true };
+            ? { version: 3, versionName: "1.3", features: ["recent", "filter"] }
+            : message.type === "filter"
+              ? {
+                  enabled: w.__filterOn === true,
+                  count: w.__filterOn ? 48230 : 0,
+                  updatedAt: w.__filterOn ? Date.now() - 60_000 : 0,
+                  fetching: false,
+                  error: "",
+                  checkedAt: 0,
+                }
+              : message.type === "recent"
+                ? w.__usageAllowed
+                  ? { allowed: true, apps: ["com.whatsapp", "de.bank", "com.android.systemui"] }
+                  : { allowed: false, apps: [] }
+                : message.type === "apps"
+                  ? {
+                      apps: [
+                        { id: "w|0", label: "WhatsApp", package: "com.whatsapp", icon: icon("#25d366") },
+                        { id: "f|0", label: "Firefox", package: "org.mozilla.firefox", icon: icon("#ff7139") },
+                        { id: "b|0", label: "Bank", package: "de.bank", icon: icon("#1d4ed8") },
+                      ],
+                    }
+                  : { ok: true };
         setTimeout(() => listeners.forEach((l) => l({ data: JSON.stringify({ ...answer, id: message.id }) })), 5);
       },
       addEventListener(_type: string, listener: (event: { data: string }) => void) {
@@ -188,6 +197,29 @@ test("launcher: the apps used last, in a strip above the search", async ({ page 
   // Closed again: the tray folds away.
   await page.getByRole("button", { name: "Recent apps" }).click();
   await expect(strip).toBeHidden();
+});
+
+test("launcher: the NSFW filter – turn on, list status and update", async ({ page }) => {
+  await fakeLauncher(page);
+  await page.goto("/settings");
+  const filter = page.locator("section").filter({ hasText: "NSFW filter" }).first();
+  await expect(filter.getByText("Off", { exact: true })).toBeVisible();
+
+  // Turning it on opens the system's accessibility settings.
+  await filter.getByRole("button", { name: "Turn on" }).click();
+  await expect.poll(async () => (await sent(page)).some((m) => m.type === "filterSettings")).toBe(true);
+
+  // Back from the settings with the service on: the list's size and age show.
+  await page.evaluate(() => {
+    (window as unknown as { __filterOn: boolean }).__filterOn = true;
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(filter.getByText("On", { exact: true })).toBeVisible();
+  await expect(filter.getByText(/48,230 sites/)).toBeVisible();
+
+  // Update re-downloads the list.
+  await filter.getByRole("button", { name: "Update" }).click();
+  await expect.poll(async () => (await sent(page)).some((m) => m.type === "filterRefresh")).toBe(true);
 });
 
 test("launcher: a newer app version is offered on the home screen", async ({ page }) => {
