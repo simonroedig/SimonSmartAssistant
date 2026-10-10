@@ -14,7 +14,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-wrap items-end gap-3 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 md:px-8 md:pt-7",
+        "flex flex-wrap items-end gap-3 px-4 pt-[calc(var(--safe-top)+1.25rem)] pb-4 md:pt-(--gutter) md:pr-(--gutter) md:pl-0",
         className,
       )}
     >
@@ -28,7 +28,7 @@ export function PageHeader({
 }
 
 export function PageBody({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("px-4 pb-8 md:px-8", className)}>{children}</div>;
+  return <div className={cn("px-4 pb-8 md:pr-(--gutter) md:pb-(--gutter) md:pl-0", className)}>{children}</div>;
 }
 
 /**
@@ -38,7 +38,8 @@ export function PageBody({ className, children }: { className?: string; children
  */
 export function FillPage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col max-md:h-[calc(100dvh-var(--page-bottom))] max-md:overflow-hidden md:block">
+    // Clipped (not scrolled), with room for the cards' shadows to show above the tab bar.
+    <div className="flex flex-col max-md:h-[calc(100dvh-var(--page-bottom))] max-md:overflow-clip max-md:[overflow-clip-margin:1.5rem] md:block">
       {children}
     </div>
   );

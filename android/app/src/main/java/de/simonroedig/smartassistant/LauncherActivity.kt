@@ -29,10 +29,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONObject
-import kotlin.math.max
 
 /**
  * The home screen: the dashboard (the same web app as on the wall display and
@@ -46,6 +46,8 @@ class LauncherActivity : ComponentActivity() {
     private lateinit var bridge: Bridge
     private lateinit var offline: OfflineScreen
     private var loadFailed = false
+    private var insetScript: ScriptHandler? = null
+    private var safeArea: Pair<Float, Float>? = null
     private var failedUrl: String? = null
     private val connectivity by lazy { getSystemService(ConnectivityManager::class.java) }
 
@@ -83,11 +85,17 @@ class LauncherActivity : ComponentActivity() {
         root.addView(offline.view, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         setContentView(root)
 
-        // The page stays clear of the status bar, the gesture bar and the keyboard.
+        // The page draws behind the transparent status and gesture bars, so its own
+        // background shows through them; it keeps its content clear of them with the
+        // sizes it gets as --safe-top/--safe-bottom. Only the keyboard pushes it up.
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             val keyboard = insets.getInsets(WindowInsetsCompat.Type.ime())
-            view.setPadding(bars.left, bars.top, bars.right, max(bars.bottom, keyboard.bottom))
+            view.setPadding(bars.left, 0, bars.right, keyboard.bottom)
+            offline.applyInsets(bars.top, bars.bottom)
+            val density = resources.displayMetrics.density
+            // With the keyboard up, nothing of the page is behind the gesture bar.
+            publishSafeArea(bars.top / density, if (keyboard.bottom > 0) 0f else bars.bottom / density)
             WindowInsetsCompat.CONSUMED
         }
 
@@ -203,6 +211,24 @@ class LauncherActivity : ComponentActivity() {
 
     private fun appsChanged() {
         bridge.send(JSONObject().put("type", "appsChanged"))
+    }
+
+    /**
+     * Tells the page how much of the screen the status and gesture bars cover (CSS px):
+     * before its first paint (document-start script) and right away for the open page.
+     */
+    private fun publishSafeArea(top: Float, bottom: Float) {
+        if (safeArea == top to bottom) return
+        safeArea = top to bottom
+        val script =
+            "(function(s){s.setProperty('--safe-top','${top}px');s.setProperty('--safe-bottom','${bottom}px')})" +
+                "(document.documentElement.style)"
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            insetScript?.remove()
+            val origin = "${dashboard.scheme}://${dashboard.host}"
+            insetScript = WebViewCompat.addDocumentStartJavaScript(webView, script, setOf(origin))
+        }
+        webView.evaluateJavascript(script, null)
     }
 
     /** The dashboard's background and light/dark theme, so the status bar blends in. */

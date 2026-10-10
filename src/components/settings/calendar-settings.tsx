@@ -32,7 +32,7 @@ const MONTHS = [
   "December",
 ];
 
-const SELECT = "well field h-12 rounded-2xl px-3 text-[0.95rem] outline-none focus:border-accent/60";
+const SELECT = "well field h-12 rounded-2xl px-3 text-[0.95rem] outline-none focus:border-(--field-focus)";
 
 export function useCalendarPreferences() {
   const { settings } = useSettings();

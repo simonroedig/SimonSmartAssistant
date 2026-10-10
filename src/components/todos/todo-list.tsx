@@ -54,7 +54,7 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { afterSheetClosed } from "@/lib/history";
 import { plannedLabel } from "@/lib/plan-todo";
 import { formatEndMinutes, formatMinutes } from "@/lib/time";
-import { TONE_STYLES } from "@/lib/tones";
+import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 const DUE_TONES = {
@@ -219,7 +219,7 @@ export function TodoList({
     <>
       <div className={cn(onPage && PHONE_ADD_ROW)}>
         <form
-          className="flex items-end gap-2"
+          className={cn("flex items-end gap-2", FIELD_FOCUS.yellow)}
           onSubmit={(e) => {
             e.preventDefault();
             addDraft();
@@ -452,7 +452,7 @@ function TodoForm({
 
   return (
     <form
-      className="flex flex-col gap-5"
+      className={cn("flex flex-col gap-5", FIELD_FOCUS.yellow)}
       onSubmit={(e) => {
         e.preventDefault();
         save();
@@ -557,7 +557,12 @@ function TodoForm({
               <CalendarPlus /> Plan it
             </Button>
           ))}
-        <Button type="submit" variant="primary" className="ml-auto" disabled={!title.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          className={cn("ui-action ml-auto shadow-none", TONE_STYLES.yellow.solid)}
+          disabled={!title.trim()}
+        >
           Save
         </Button>
       </div>

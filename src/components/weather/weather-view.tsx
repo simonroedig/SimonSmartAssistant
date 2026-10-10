@@ -27,6 +27,7 @@ import { formatDayMonth, formatWeekday, fromDayKey, isDayKey, toDayKey } from "@
 import { aqiLabel, uvLabel, weatherInfo, windDirectionLabel } from "@/lib/weather/codes";
 import { awakeWindow } from "@/lib/sleep";
 import { formatLocationLong, hoursOfDay, locationNowIso, pollenLevel } from "@/lib/weather/open-meteo";
+import { TODAY_COLOR } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { DailyList } from "./daily-list";
 import { HourlyChart } from "./hourly-chart";
@@ -154,7 +155,8 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
         <div className="flex min-w-0 flex-col gap-4">
           <Card className="p-5">
             <h2 className="mb-1 text-[0.95rem] font-semibold">
-              {day === today ? "Today" : formatWeekday(fromDayKey(day))}, {formatDayMonth(fromDayKey(day))}
+              {day === today ? <span className={TODAY_COLOR}>Today</span> : formatWeekday(fromDayKey(day))},{" "}
+              {formatDayMonth(fromDayKey(day))}
             </h2>
             <p className="mb-4 text-sm text-muted">
               {weatherInfo(dayData.code).label} · {Math.round(dayData.min)}° to {Math.round(dayData.max)}° ·{" "}

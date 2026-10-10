@@ -54,6 +54,15 @@ test("menu: the order of the phone's tab bar and of the side bar is set in Setti
   await saved(page, () => phone.getByRole("button", { name: "Shopping" }).click());
   await expect.poll(() => labels(page, "last")).toEqual(["Shopping", "Backlog", "Home", "Planner", "Notes"]);
 
+  // Attached to the screen edges, then floating again (as wide as the cards).
+  const bar = page.locator("[data-tabbar]");
+  await saved(page, () => page.getByRole("radio", { name: "Attached" }).click());
+  await expect(bar).toHaveAttribute("data-attached", "");
+  expect((await bar.boundingBox())!.width).toBe(390);
+  await saved(page, () => page.getByRole("radio", { name: "Floating" }).click());
+  await expect(bar).not.toHaveAttribute("data-attached");
+  expect((await bar.boundingBox())!.width).toBe(390 - 2 * 16);
+
   // The side bar of PC and wall display has its own order; Home stays on top.
   await page.setViewportSize({ width: 1440, height: 900 });
   const rail = page.getByRole("group", { name: "Side bar" });

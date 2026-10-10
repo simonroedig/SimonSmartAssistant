@@ -7,6 +7,7 @@ import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/pa
 import { Card } from "@/components/ui/card";
 import { useLongPress } from "@/hooks/use-long-press";
 import { type LauncherApp, launcher, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 function AppTile({ app, onOpen, className }: { app: LauncherApp; onOpen: () => void; className?: string }) {
@@ -143,7 +144,8 @@ export function AppsView() {
               e.preventDefault();
               searchWeb();
             }}
-            className="flex items-center gap-2 rounded-(--radius-bar) p-2 bar"
+            // A quiet frame while typing: searching belongs to no section.
+            className={cn("flex items-center gap-2 rounded-(--radius-bar) p-2 bar", FIELD_FOCUS.quiet)}
           >
             <label className="relative flex min-w-0 flex-1 items-center">
               <Search className="pointer-events-none absolute left-4 size-[18px] text-faint" />
@@ -154,7 +156,7 @@ export function AppsView() {
                 aria-label="Search apps or the web"
                 enterKeyHint="search"
                 autoComplete="off"
-                className="field h-12 w-full rounded-2xl pr-10 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-accent/60"
+                className="field h-12 w-full rounded-2xl pr-10 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
               />
               {query && (
                 <button

@@ -120,7 +120,7 @@ export function Sheet({
                   className={cn(
                     "pointer-events-auto flex max-h-[min(88dvh,100%)] w-full flex-col overflow-hidden glass-strong outline-none",
                     isPhone
-                      ? "rounded-t-(--radius-card) border-b-0 pb-[env(safe-area-inset-bottom)]"
+                      ? "rounded-t-(--radius-card) border-b-0 pb-[var(--safe-bottom)]"
                       : cn(
                           "rounded-(--radius-card)",
                           size === "sm" && "max-w-md",

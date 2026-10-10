@@ -12,7 +12,7 @@ import type { PlanBlock } from "@/data/core";
 import { BLOCK_COLORS, type BlockColor } from "@/data/planner";
 import { useToday } from "@/hooks/use-today";
 import { addDays, type DayKey, formatDayMonth, formatWeekday, fromDayKey, relativeDayLabel } from "@/lib/date";
-import { TODAY_TEXT } from "@/lib/tones";
+import { FIELD_FOCUS, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
 import { clamp, formatDuration, MINUTES_PER_DAY } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BLOCK_STYLES, blockStyle } from "./block-colors";
@@ -156,7 +156,7 @@ function EditorForm({
 
   return (
     <form
-      className="flex flex-col gap-5"
+      className={cn("flex flex-col gap-5", FIELD_FOCUS.rose)}
       onSubmit={(e) => {
         e.preventDefault();
         submit();
@@ -354,7 +354,12 @@ function EditorForm({
             </Button>
           </>
         )}
-        <Button type="submit" variant="primary" className="ml-auto" disabled={!title.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          className={cn("ui-action ml-auto shadow-none", TONE_STYLES.rose.solid)}
+          disabled={!title.trim()}
+        >
           {existing ? (
             "Save"
           ) : (

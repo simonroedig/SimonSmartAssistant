@@ -9,6 +9,8 @@
 
 export type SectionId = "planner" | "shopping" | "backlog" | "notes" | "weather";
 export type PhoneHome = "middle" | "left";
+/** Floating cards with a margin, or attached to the screen edges. */
+export type NavStyle = "floating" | "attached";
 
 export type NavigationPreferences = {
   /** The four sections of the tab bar, left to right (Home sits between or before them). */
@@ -16,6 +18,7 @@ export type NavigationPreferences = {
   phoneHome: PhoneHome;
   /** All sections of the rail, top to bottom, below Home. */
   rail: SectionId[];
+  style: NavStyle;
 };
 
 export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather"];
@@ -26,6 +29,7 @@ export const DEFAULT_NAVIGATION: NavigationPreferences = {
   phone: ["shopping", "backlog", "planner", "notes"],
   phoneHome: "middle",
   rail: ["planner", "shopping", "backlog", "notes", "weather"],
+  style: "floating",
 };
 
 export const NAVIGATION_COOKIE = "ssa-nav";
@@ -43,6 +47,7 @@ export function parseNavigation(value: unknown): NavigationPreferences {
     phone: orderOf(nav.phone, PHONE_SECTIONS) ?? DEFAULT_NAVIGATION.phone,
     phoneHome: nav.phoneHome === "left" ? "left" : DEFAULT_NAVIGATION.phoneHome,
     rail: orderOf(nav.rail, RAIL_SECTIONS) ?? DEFAULT_NAVIGATION.rail,
+    style: nav.style === "attached" ? "attached" : DEFAULT_NAVIGATION.style,
   };
 }
 

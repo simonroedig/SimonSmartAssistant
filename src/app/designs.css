@@ -21,6 +21,22 @@
  * !important.
  */
 
+/* The menu attached to the screen edges: square, no lines along the edges – in
+   every design (they style bars and cards with rounded, outlined shapes). */
+nav[data-attached] {
+  border-radius: 0 !important;
+}
+nav[data-attached][data-tabbar] {
+  border-right-width: 0 !important;
+  border-bottom-width: 0 !important;
+  border-left-width: 0 !important;
+}
+nav[data-attached]:not([data-tabbar]) {
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  border-left-width: 0 !important;
+}
+
 /* The samples in Settings: each with its design's background. */
 .design-preview {
   background:
@@ -125,7 +141,7 @@
   .field:focus-within {
     box-shadow:
       var(--neu-in-sm),
-      0 0 0 2px var(--accent-soft);
+      0 0 0 2px var(--field-focus);
   }
   /* Notes rest in shallow hollows of the card (no shadow to cut off at its edge). */
   .paper {
@@ -299,7 +315,7 @@
   .field:focus,
   .field:focus-within {
     border-color: var(--ink);
-    box-shadow: 3px 3px 0 var(--accent);
+    box-shadow: 3px 3px 0 var(--field-focus);
   }
   :is(.ui-btn, .ui-action) {
     border: 2px solid var(--ink);
@@ -501,7 +517,7 @@
   .field:focus,
   .field:focus-within {
     border-style: solid;
-    border-color: var(--accent);
+    border-color: var(--field-focus);
   }
   :is(.ui-btn, .ui-action) {
     border: 2px solid var(--ink);

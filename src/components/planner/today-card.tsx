@@ -13,6 +13,7 @@ import { useSwipe } from "@/hooks/use-swipe";
 import { addDays, type DayKey, formatDayMonthShort, formatWeekday, formatWeekdayShort, fromDayKey } from "@/lib/date";
 import { showTomorrowFirst } from "@/lib/plan-todo";
 import { MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
+import { TODAY_COLOR } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useDayExtras } from "@/data/calendar";
 import { BlockEditor } from "./block-editor";
@@ -113,6 +114,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
         icon={<CalendarClock />}
         tone="rose"
         title={title}
+        titleClassName={cn(isToday && TODAY_COLOR)}
         subtitle={subtitle}
         // "Today" in the same blue as everywhere else.
         href={isToday ? "/planner" : `/planner?day=${day}`}

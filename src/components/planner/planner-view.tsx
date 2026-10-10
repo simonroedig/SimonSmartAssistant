@@ -27,7 +27,7 @@ import {
 } from "@/lib/date";
 import { afterSheetClosed } from "@/lib/history";
 import { planDay, planDuration, planStart } from "@/lib/plan-todo";
-import { TONE_STYLES } from "@/lib/tones";
+import { TODAY_COLOR, TONE_STYLES } from "@/lib/tones";
 import { formatDuration, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useDayExtras } from "@/data/calendar";
@@ -226,11 +226,20 @@ export function PlannerView({
   return (
     <div className="flex h-[calc(100dvh-var(--page-bottom))] flex-col md:h-dvh" {...swipe}>
       {/* On phones the title gets its own line, so a long weekday never wraps. */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 md:items-end md:px-8 md:pt-7">
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 pt-[calc(var(--safe-top)+1.25rem)] pb-4 md:items-end md:pt-(--gutter) md:pr-(--gutter) md:pl-0">
         <h1 className="ui-title col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
           {title}
           {relative && " "}
-          {relative && <span className="text-[0.62em] font-medium tracking-normal text-muted">({relative})</span>}
+          {relative && (
+            <span
+              className={cn(
+                "text-[0.62em] font-medium tracking-normal",
+                relative === "Today" ? TODAY_COLOR : "text-muted",
+              )}
+            >
+              ({relative})
+            </span>
+          )}
         </h1>
         <p className="truncate text-sm text-muted md:col-start-1 md:row-start-2 md:text-[0.95rem]">
           {/* Phones: the short month, so it fits next to the buttons. */}
@@ -266,18 +275,18 @@ export function PlannerView({
           {menu}
         </div>
       </header>
-      <div className="px-4 pb-3 md:px-8">
+      <div className="px-4 pb-3 md:pr-(--gutter) md:pl-0">
         <WeekStrip week={planner.week} selected={day} today={today} blocks={planner.weekBlocks} onSelect={go} />
       </div>
-      <div className="grid min-h-0 flex-1 gap-4 px-4 md:px-8 md:pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="grid min-h-0 flex-1 gap-4 px-4 md:pr-(--gutter) md:pb-(--gutter) md:pl-0 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card className="min-h-0 [touch-action:pan-y] overflow-hidden">
-          {/* Phones: "add" sits in the card's corner, near the thumb. */}
+          {/* "Add" sits in the card's corner (near the thumb on phones). */}
           <Button
             variant="primary"
             size="icon-lg"
             aria-label="Add block"
             onClick={() => planner.createAtNextFree()}
-            className={cn("ui-action absolute right-4 bottom-4 z-30 rounded-full shadow-pop md:hidden", rose.solid)}
+            className={cn("ui-action absolute right-4 bottom-4 z-30 rounded-full shadow-(--shadow-card)", rose.solid)}
           >
             <Plus className="!size-6" />
           </Button>

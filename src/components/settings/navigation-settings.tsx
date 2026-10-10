@@ -7,6 +7,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { useSettings, useSettingsRow, useUpdateSettings } from "@/data/settings";
 import {
   type NavigationPreferences,
+  type NavStyle,
   type PhoneHome,
   phoneTabs,
   railItems,
@@ -122,6 +123,17 @@ export function NavigationSection() {
           axis="y"
           disabled={loading}
           onSwap={(a, b) => set({ rail: swap(nav.rail, a, b) })}
+        />
+      </Row>
+      <Row label="Menu bar" hint="A floating card, or attached to the edges of the screen">
+        <Segmented
+          size="sm"
+          value={nav.style}
+          onChange={(style: NavStyle) => set({ style })}
+          options={[
+            { value: "floating", label: "Floating" },
+            { value: "attached", label: "Attached" },
+          ]}
         />
       </Row>
     </Section>

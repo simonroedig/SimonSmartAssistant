@@ -11,7 +11,7 @@ export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTML
     <input
       ref={ref}
       className={cn(
-        "field h-12 w-full rounded-2xl px-4 text-[0.95rem] transition-colors outline-none well placeholder:text-faint focus:border-accent/60 focus:bg-surface-hover",
+        "field h-12 w-full rounded-2xl px-4 text-[0.95rem] transition-colors outline-none well placeholder:text-faint focus:border-(--field-focus) focus:bg-surface-hover",
         className,
       )}
       {...props}
@@ -25,7 +25,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
       <textarea
         ref={ref}
         className={cn(
-          "field min-h-24 w-full resize-none rounded-2xl px-4 py-3 text-[0.95rem] leading-relaxed transition-colors outline-none well placeholder:text-faint focus:border-accent/60 focus:bg-surface-hover",
+          "field min-h-24 w-full resize-none rounded-2xl px-4 py-3 text-[0.95rem] leading-relaxed transition-colors outline-none well placeholder:text-faint focus:border-(--field-focus) focus:bg-surface-hover",
           className,
         )}
         {...props}
@@ -70,7 +70,7 @@ export const AutoTextarea = forwardRef<
         "w-full resize-none px-4 py-3 text-[0.95rem] leading-6 outline-none placeholder:text-faint",
         bare
           ? "bg-transparent"
-          : "field rounded-2xl transition-colors well focus:border-accent/60 focus:bg-surface-hover",
+          : "field rounded-2xl transition-colors well focus:border-(--field-focus) focus:bg-surface-hover",
         className,
       )}
       {...props}

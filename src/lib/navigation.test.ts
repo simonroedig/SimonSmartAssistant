@@ -38,6 +38,12 @@ describe("navigation order", () => {
     });
   });
 
+  it("floats the menu unless it is attached", () => {
+    expect(parseNavigation({}).style).toBe("floating");
+    expect(parseNavigation({ style: "attached" }).style).toBe("attached");
+    expect(parseNavigation({ style: "glued" }).style).toBe("floating");
+  });
+
   it("reads the cookie, encoded or not", () => {
     const nav = { ...DEFAULT_NAVIGATION, phoneHome: "left" as const };
     expect(navigationFromCookie(JSON.stringify(nav))).toEqual(nav);

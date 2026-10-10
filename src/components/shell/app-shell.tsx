@@ -151,11 +151,13 @@ function RailLink({
 
 function NavRail({
   order,
+  attached,
   isCurrent,
   onNavigate,
   home,
 }: {
   order: (SectionId | "home")[];
+  attached: boolean;
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
   home: { item: NavItem; target: string };
@@ -164,7 +166,11 @@ function NavRail({
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-y-3 left-3 z-40 hidden w-[4.75rem] flex-col items-center rounded-(--radius-card) px-1.5 py-4 glass md:flex"
+      data-attached={attached ? "" : undefined}
+      className={cn(
+        "fixed z-40 hidden w-[4.75rem] flex-col items-center px-1.5 py-4 glass md:flex",
+        attached ? "inset-y-0 left-0" : "inset-y-(--gutter) left-(--gutter) rounded-(--radius-card)",
+      )}
     >
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
         <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="y" />
@@ -222,11 +228,13 @@ function TabLink({
 
 function BottomNav({
   order,
+  attached,
   isCurrent,
   onNavigate,
   home,
 }: {
   order: (SectionId | "home")[];
+  attached: boolean;
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
   home: { item: NavItem; target: string };
@@ -236,7 +244,14 @@ function BottomNav({
     <nav
       aria-label="Main"
       data-tabbar
-      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-(--radius-bar) p-1.5 bar md:hidden"
+      data-attached={attached ? "" : undefined}
+      className={cn(
+        "fixed z-40 flex p-1.5 bar md:hidden",
+        // Floating: as wide as the cards (px-4), just above the gesture bar.
+        attached
+          ? "inset-x-0 bottom-0 pb-[calc(var(--safe-bottom)+0.375rem)]"
+          : "inset-x-4 bottom-[calc(var(--safe-bottom)+0.75rem)] rounded-(--radius-bar)",
+      )}
     >
       <div className="relative flex flex-1">
         <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="x" />
@@ -326,20 +341,37 @@ export function AppShell({
   const home = useHomeSwitch(pathname);
 
   return (
-    <div className="relative min-h-dvh">
+    <div className="relative min-h-dvh" data-nav={navigation.style}>
+      {/* Android app: the page shows through the status bar; a soft veil keeps its icons legible. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-(--safe-top) bg-linear-to-b from-(--bg)/70 to-transparent"
+      />
       {pendingHref && (
         <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden" role="progressbar" aria-label="Loading">
           <div className="nav-progress h-full w-1/3 rounded-full bg-accent" />
         </div>
       )}
       <LauncherSync />
-      <NavRail order={railItems(navigation)} isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
-      <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-[5.75rem]">
+      <NavRail
+        order={railItems(navigation)}
+        attached={navigation.style === "attached"}
+        isCurrent={isCurrent}
+        onNavigate={onNavigate}
+        home={home}
+      />
+      <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-(--rail-space)">
         {children}
         {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
         <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
       </main>
-      <BottomNav order={phoneTabs(navigation)} isCurrent={isCurrent} onNavigate={onNavigate} home={home} />
+      <BottomNav
+        order={phoneTabs(navigation)}
+        attached={navigation.style === "attached"}
+        isCurrent={isCurrent}
+        onNavigate={onNavigate}
+        home={home}
+      />
     </div>
   );
 }

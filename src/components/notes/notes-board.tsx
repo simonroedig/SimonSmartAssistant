@@ -19,7 +19,7 @@ import {
   useUpdateNote,
 } from "@/data/notes";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
-import { TONE_STYLES } from "@/lib/tones";
+import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 export function noteLabel(note: Pick<Note, "title" | "body">): string {
@@ -264,10 +264,11 @@ export function NotesBoard({
           <span className="field flex h-12 flex-1 items-center rounded-2xl px-4 text-[0.95rem] text-faint well">
             Take a note…
           </span>
+          {/* Pale like the empty add buttons of shopping and backlog: tapping opens the editor, nothing is added yet. */}
           <span
             aria-hidden="true"
             className={cn(
-              "ui-action grid size-12 shrink-0 place-items-center rounded-2xl shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
+              "ui-action grid size-12 shrink-0 place-items-center rounded-2xl opacity-45",
               TONE_STYLES.orange.solid,
             )}
           >
@@ -358,7 +359,7 @@ function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: b
             variant="primary"
             size="sm"
             disabled={!title.trim() && !body.trim()}
-            className={cn("shadow-none", TONE_STYLES.orange.solid)}
+            className={cn("ui-action shadow-none", TONE_STYLES.orange.solid)}
           >
             Add note
           </Button>
@@ -446,6 +447,7 @@ function NoteEditorSheet({
       open={open}
       onOpenChange={(o) => !o && close()}
       title={note ? "Note" : "New note"}
+      className={FIELD_FOCUS.orange}
       footer={
         <>
           <Button
@@ -471,7 +473,11 @@ function NoteEditorSheet({
               <Trash2 />
             </Button>
           )}
-          <Button variant="primary" className="ml-auto" onClick={close}>
+          <Button
+            variant="primary"
+            className={cn("ui-action ml-auto shadow-none", TONE_STYLES.orange.solid)}
+            onClick={close}
+          >
             Done
           </Button>
         </>

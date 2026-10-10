@@ -34,6 +34,8 @@
   --sleep-stripe: rgb(15 23 42 / 0.05);
   --now: #f43f5e;
   --today: #0284c7;
+  /* Frame of a focused field; sections set their own colour (FIELD_FOCUS). */
+  --field-focus: color-mix(in oklab, var(--accent) 60%, transparent);
   --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -24px rgb(30 41 82 / 0.28);
   --shadow-pop: 0 30px 80px -20px rgb(15 23 42 / 0.35);
   --blob-1: #c7d2fe;
@@ -47,10 +49,18 @@
   --radius-2xl: 1rem;
   --radius-3xl: 1.5rem;
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Room taken by the phone's status and gesture bars. The Android app sets them
+     (it draws the page behind transparent bars); browsers report their own. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --osk-height: 0px;
   /* Phones: room kept free at the bottom of every page – the floating tab bar
      (0.75rem from the edge, 4.375rem tall) plus the usual 1rem gap between cards. */
-  --page-bottom: calc(max(0.75rem, env(safe-area-inset-bottom)) + 5.375rem);
+  --page-bottom: calc(var(--safe-bottom) + 6.125rem);
+  /* PC and wall display: one gap everywhere – around the rail, between the rail and
+     the page, and around the page. */
+  --gutter: 1rem;
+  --rail-space: calc(4.75rem + 2 * var(--gutter));
   color-scheme: light;
 }
 
@@ -85,9 +95,16 @@
   color-scheme: dark;
 }
 
+/* Menu attached to the screen edges (Settings → Menu): no gap around it. */
+[data-nav="attached"] {
+  --page-bottom: calc(var(--safe-bottom) + 5.375rem);
+  --rail-space: calc(4.75rem + var(--gutter));
+}
+
 /* Phones: while the on-screen keyboard is up, the tab bar steps aside for the typing. */
 @media (max-width: 767px) {
-  :root[data-keyboard] {
+  :root[data-keyboard],
+  :root[data-keyboard] [data-nav] {
     --page-bottom: 0.5rem;
   }
   :root[data-keyboard] [data-tabbar] {
@@ -292,11 +309,11 @@
 }
 
 @utility safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  padding-bottom: max(var(--safe-bottom), 0px);
 }
 
 @utility safe-top {
-  padding-top: max(env(safe-area-inset-top), 0px);
+  padding-top: max(var(--safe-top), 0px);
 }
 
 /* -------------------------------------------------------------------------- */

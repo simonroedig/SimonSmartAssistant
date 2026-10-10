@@ -6,6 +6,7 @@ import { Row, Section } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { latestLauncherVersion, launcher, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useLauncherUpdate } from "./launcher-sync";
 
@@ -17,7 +18,7 @@ export function WebSearchBar({ className }: { className?: string }) {
   return (
     <form
       role="search"
-      className={cn("flex items-center gap-2", className)}
+      className={cn("flex items-center gap-2", FIELD_FOCUS.quiet, className)}
       onSubmit={(e) => {
         e.preventDefault();
         void launcher.search(query);
@@ -34,7 +35,7 @@ export function WebSearchBar({ className }: { className?: string }) {
           aria-label="Search the web"
           enterKeyHint="search"
           autoComplete="off"
-          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-4 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-accent/60"
+          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-4 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
         />
       </label>
       <button

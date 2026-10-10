@@ -22,7 +22,7 @@ export function Dashboard() {
   const wide = useMediaQuery("(min-width: 1280px)");
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 pt-[max(1rem,env(safe-area-inset-top))] md:grid-cols-2 md:p-6 xl:h-dvh xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,0.95fr)] xl:overflow-hidden">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 pt-[calc(var(--safe-top)+1rem)] md:grid-cols-2 md:p-(--gutter) md:pl-0 xl:h-dvh xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,0.95fr)] xl:overflow-hidden">
       {/* Column 1: clock + weather */}
       <div className="flex min-h-0 flex-col gap-4">
         <div className="flex items-start gap-3 px-2 pt-2 md:pt-1">

@@ -19,7 +19,8 @@ export const TONE_STYLES: Record<
   rose: {
     text: "text-rose-500 dark:text-rose-300",
     soft: "bg-rose-500/12 dark:bg-rose-400/14",
-    solid: "bg-rose-500 text-white dark:bg-rose-400 dark:text-rose-950",
+    // The icon's own shades: deep in light, soft in dark.
+    solid: "bg-rose-500 text-white dark:bg-rose-300 dark:text-rose-950",
   },
   emerald: {
     text: "text-emerald-600 dark:text-emerald-300",
@@ -39,7 +40,7 @@ export const TONE_STYLES: Record<
   orange: {
     text: "text-orange-600 dark:text-orange-300",
     soft: "bg-orange-500/14",
-    solid: "bg-orange-500 text-white dark:text-orange-950",
+    solid: "bg-orange-400 text-orange-950 dark:bg-orange-300 dark:text-orange-950",
   },
   sky: {
     text: "text-sky-600 dark:text-sky-300",
@@ -63,5 +64,20 @@ export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-2 ring-slate-400/55
 export const TODAY_RING = "bg-today/10";
 /** Today while it is also the picked day: picked wins, the blue number stays. */
 export const TODAY_RING_STRONG = SELECTED_DAY;
-/** The blue of today's label or number. Words like "Today" in titles stay plain. */
+/** The blue of today's label or number. */
 export const TODAY_TEXT = "font-semibold text-today";
+/** The word "Today" in a title: the same blue, at the title's own weight. */
+export const TODAY_COLOR = "text-today";
+
+/**
+ * The frame of a focused text field in a section's colour (it sets --field-focus
+ * for the fields inside). Elsewhere fields use the accent.
+ */
+export const FIELD_FOCUS = {
+  emerald: "[--field-focus:color-mix(in_oklab,var(--color-emerald-500)_60%,transparent)]",
+  yellow: "[--field-focus:color-mix(in_oklab,var(--color-yellow-500)_65%,transparent)]",
+  rose: "[--field-focus:color-mix(in_oklab,var(--color-rose-500)_55%,transparent)]",
+  orange: "[--field-focus:color-mix(in_oklab,var(--color-orange-400)_65%,transparent)]",
+  /** Searches: a quiet grey. */
+  quiet: "[--field-focus:var(--text-faint)]",
+} as const;

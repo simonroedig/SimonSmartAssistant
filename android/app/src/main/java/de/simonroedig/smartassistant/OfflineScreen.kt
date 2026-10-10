@@ -41,6 +41,11 @@ class OfflineScreen(
         }
     val isShown: Boolean get() = view.visibility == View.VISIBLE
 
+    /** Keeps the screen clear of the status and gesture bars (the app draws behind them). */
+    fun applyInsets(top: Int, bottom: Int) {
+        view.setPadding(dp(20), dp(28) + top, dp(20), dp(12) + bottom)
+    }
+
     init {
         title.text = "You're offline"
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)

@@ -28,7 +28,7 @@ export function PlannerClient({ requestedDay, planTodoId }: { requestedDay?: str
 
   if (!day) {
     return (
-      <div className="flex flex-col gap-4 p-4 md:p-8" aria-busy="true">
+      <div className="flex flex-col gap-4 p-4 md:p-(--gutter) md:pl-0" aria-busy="true">
         <div className="skeleton h-10 w-56" />
         <div className="skeleton h-16 w-full" />
         <div className="skeleton h-[60dvh] w-full" />

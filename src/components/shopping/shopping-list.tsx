@@ -25,7 +25,7 @@ import {
 } from "@/data/shopping";
 import { useLongPress } from "@/hooks/use-long-press";
 import { byPosition, positionAtStart, positionForMove } from "@/lib/ordering";
-import { TONE_STYLES } from "@/lib/tones";
+import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 function ItemRow({
@@ -162,7 +162,7 @@ export function ShoppingList({
     <>
       <div className={cn(onPage && PHONE_ADD_ROW, onPage && "max-md:flex max-md:flex-col-reverse")}>
         <form
-          className="flex items-center gap-2"
+          className={cn("flex items-center gap-2", FIELD_FOCUS.emerald)}
           onSubmit={(e) => {
             e.preventDefault();
             addItem(draft);
@@ -384,7 +384,7 @@ function EditItemForm({
   const [note, setNote] = useState(item.note ?? "");
   return (
     <form
-      className="flex flex-col gap-4"
+      className={cn("flex flex-col gap-4", FIELD_FOCUS.emerald)}
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return;
@@ -416,7 +416,12 @@ function EditItemForm({
         >
           Delete
         </Button>
-        <Button type="submit" variant="primary" className="ml-auto" disabled={!name.trim()}>
+        <Button
+          type="submit"
+          variant="primary"
+          className={cn("ui-action ml-auto shadow-none", TONE_STYLES.emerald.solid)}
+          disabled={!name.trim()}
+        >
           Save
         </Button>
       </div>
