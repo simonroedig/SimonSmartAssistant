@@ -1,13 +1,23 @@
 "use client";
 
-import { AlertTriangle, Ban, Download, Globe, House, Search, ShieldBan, Smartphone } from "lucide-react";
+import { AlertTriangle, Ban, Download, Globe, House, Lock, Search, ShieldBan, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Row, Section } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { useBlockApp, useBlockedApps } from "@/data/blocked-apps";
+import { newId } from "@/data/core";
 import { useDevicePrefs } from "@/hooks/use-device-prefs";
-import { latestLauncherVersion, launcher, refreshFilter, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import { rankApps } from "@/lib/app-search";
+import {
+  type LauncherApp,
+  latestLauncherVersion,
+  launcher,
+  refreshFilter,
+  useIsLauncher,
+  useLauncherState,
+} from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useLauncherUpdate } from "./launcher-sync";
@@ -80,16 +90,19 @@ export function LauncherUpdateBanner({ className }: { className?: string }) {
 }
 
 /**
- * Settings: the app filter. Apps you choose are blocked – a self-limit. In the
- * launcher app an accessibility service sends you back to the home screen when a
- * blocked app opens (it reads only which app is in front, nothing inside it);
- * and the Apps list won't open a blocked one. Enforcing other apps needs the
- * accessibility permission, which the switch opens the settings for.
+ * Settings: blocked apps, a self-limit. Once blocked, an app stays blocked: the
+ * app can only add to the list (the database has no delete grant), so unblocking
+ * means deleting its row in the Supabase dashboard. The launcher won't open a
+ * blocked app, and with the accessibility service on, opening it any other way
+ * sends you back to the home screen.
  */
 export function BlockedAppsSection() {
   const isLauncher = useIsLauncher();
   const { features, filter, apps } = useLauncherState();
+  const { data: blockedRows } = useBlockedApps(isLauncher);
+  const { mutate: block } = useBlockApp();
   const [query, setQuery] = useState("");
+  const [confirming, setConfirming] = useState<LauncherApp | null>(null);
 
   // Checked each time the settings open and on coming back (e.g. from the accessibility settings).
   useEffect(() => {
@@ -105,90 +118,126 @@ export function BlockedAppsSection() {
   if (!isLauncher || !features.includes("appfilter")) return null;
 
   const on = filter?.enabled === true;
-  const blocked = filter?.blocked ?? [];
+  const blocked = blockedRows ?? [];
+  const blockedPackages = new Set(blocked.map((b) => b.package));
   const byPackage = new Map((apps ?? []).map((a) => [a.package, a]));
-  const blockedApps = blocked.map((pkg) => byPackage.get(pkg) ?? { id: pkg, label: pkg, package: pkg, icon: "" });
-
   const term = query.trim().toLowerCase();
   const matches = term
-    ? (apps ?? []).filter((a) => !blocked.includes(a.package) && a.label.toLowerCase().includes(term)).slice(0, 6)
+    ? rankApps(
+        (apps ?? []).filter((a) => !blockedPackages.has(a.package)),
+        term,
+      )
     : [];
-
-  const block = (pkg: string) => {
-    void launcher.setBlockedApps([...blocked, pkg]);
-    setQuery("");
-  };
-  const unblock = (pkg: string) => void launcher.setBlockedApps(blocked.filter((p) => p !== pkg));
 
   return (
     <Section
       icon={<ShieldBan />}
       title="Blocked apps"
-      description="Apps you'd rather stay off. A blocked app sends you back to the home screen and won't open from here. Checked on the phone; nothing about your apps is sent anywhere."
+      description="Apps you'd rather stay off. A blocked app won't open from here and sends you back to the home screen. Checked on the phone; nothing about your apps is sent anywhere."
     >
-      {blockedApps.length > 0 && (
-        <div className="flex flex-col gap-1 pb-1">
-          {blockedApps.map((app) => (
-            <div key={app.package} className="flex items-center gap-3 py-1.5">
-              {app.icon ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={app.icon} alt="" className="size-8 shrink-0 opacity-60 grayscale" draggable={false} />
-              ) : (
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken">
-                  <Ban className="size-4 text-faint" />
-                </span>
-              )}
-              <span className="min-w-0 flex-1 truncate font-medium">{app.label}</span>
-              <Button variant="ghost" size="sm" onClick={() => unblock(app.package)}>
-                Unblock
-              </Button>
+      {blocked.length > 0 && (
+        <ul className="flex flex-col gap-1 pb-3" aria-label="Blocked apps">
+          {blocked.map((row) => {
+            const app = byPackage.get(row.package);
+            return (
+              <li key={row.package} className="flex items-center gap-3 py-1.5">
+                {app?.icon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={app.icon} alt="" className="size-8 shrink-0 opacity-60 grayscale" draggable={false} />
+                ) : (
+                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken">
+                    <Ban className="size-4 text-faint" />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1 truncate font-medium">{app?.label || row.label || row.package}</span>
+                <Lock className="size-4 shrink-0 text-faint" aria-label="Blocked for good" />
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {confirming ? (
+        <div className="rounded-2xl border border-line p-4 well">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={confirming.icon} alt="" className="size-10 shrink-0" draggable={false} />
+            <div className="min-w-0">
+              <div className="font-semibold">Block {confirming.label} for good?</div>
+              <div className="text-sm text-muted">
+                You can&apos;t unblock it here – only by deleting it in Supabase (table blocked_apps).
+              </div>
             </div>
-          ))}
+          </div>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setConfirming(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                block({ id: newId(), package: confirming.package, label: confirming.label });
+                setConfirming(null);
+                setQuery("");
+              }}
+            >
+              <Ban /> Block
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className={cn(blocked.length > 0 && "border-t border-line pt-3.5")}>
+          <label className="relative flex items-center">
+            <Search className="pointer-events-none absolute left-3.5 size-[18px] text-faint" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Add an app to block…"
+              aria-label="Add an app to block"
+              autoComplete="off"
+              className="field h-11 w-full rounded-2xl pr-3 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
+            />
+          </label>
+          {term && (
+            // All matches, scrollable – an app called just "X" is found first.
+            <ul
+              className="mt-2 flex max-h-72 flex-col gap-0.5 overflow-y-auto overscroll-contain"
+              aria-label="Apps to block"
+            >
+              {matches.length === 0 ? (
+                <li className="px-1 py-2 text-sm text-muted">No app called “{query.trim()}”.</li>
+              ) : (
+                matches.map((app) => (
+                  <li key={app.package}>
+                    <button
+                      type="button"
+                      onClick={() => setConfirming(app)}
+                      className="flex w-full items-center gap-3 rounded-xl px-1 py-1.5 text-left transition-colors hover:bg-surface-hover"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={app.icon} alt="" className="size-8 shrink-0" draggable={false} />
+                      <span className="min-w-0 flex-1 truncate font-medium">{app.label}</span>
+                      <Ban className="size-4 shrink-0 text-faint" />
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
         </div>
       )}
 
-      <div className="border-t border-line pt-3.5">
-        <label className="relative flex items-center">
-          <Search className="pointer-events-none absolute left-3.5 size-[18px] text-faint" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Add an app to block…"
-            aria-label="Add an app to block"
-            autoComplete="off"
-            className="field h-11 w-full rounded-2xl pr-3 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
-          />
-        </label>
-        {term && (
-          <ul className="mt-2 flex flex-col gap-0.5">
-            {matches.length === 0 ? (
-              <li className="px-1 py-2 text-sm text-muted">No app called “{query.trim()}”.</li>
-            ) : (
-              matches.map((app) => (
-                <li key={app.package}>
-                  <button
-                    type="button"
-                    onClick={() => block(app.package)}
-                    className="flex w-full items-center gap-3 rounded-xl px-1 py-1.5 text-left transition-colors hover:bg-surface-hover"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={app.icon} alt="" className="size-8 shrink-0" draggable={false} />
-                    <span className="min-w-0 flex-1 truncate font-medium">{app.label}</span>
-                    <Ban className="size-4 shrink-0 text-faint" />
-                  </button>
-                </li>
-              ))
-            )}
-          </ul>
-        )}
-      </div>
-
+      {blocked.length > 0 && (
+        <p className="mt-3.5 text-sm text-muted">
+          Blocked apps stay blocked – to unblock one, delete its row in Supabase (table <code>blocked_apps</code>).
+        </p>
+      )}
       {blocked.length > 0 && !on && (
         <div className="mt-3.5 flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span className="min-w-0 flex-1">
-            Blocked apps won&apos;t open from this launcher, but to also send you home when one is opened another way,
-            turn on the service in accessibility.
+            To also send you home when a blocked app is opened another way, turn on the service in accessibility.
           </span>
           <Button variant="primary" size="sm" onClick={() => void launcher.openFilterSettings()}>
             Turn on

@@ -80,11 +80,11 @@ export function onLauncherEvent(listener: (event: LauncherEvent) => void): () =>
 /** The apps used last (package names, newest first) – once usage access is allowed. */
 export type RecentApps = { allowed: boolean; packages: string[] };
 
-/** The app filter: whether it's enforced (accessibility on) and which apps are blocked. */
+/** The app filter on the phone: whether it's enforced, and the apps it was last given. */
 export type AppFilter = {
   /** The accessibility service is on, so a blocked app really gets sent home. */
   enabled: boolean;
-  /** Package names the user chose to block. */
+  /** Package names the phone blocks (the list itself lives in the account: blocked_apps). */
   blocked: string[];
 };
 
@@ -131,6 +131,11 @@ export function useIsLauncher(): boolean {
     () => bridge() !== null,
     () => false,
   );
+}
+
+/** The current state, outside of React (e.g. right after an `await`). */
+export function getLauncherState(): State {
+  return state;
 }
 
 export function useLauncherState(): State {
@@ -220,11 +225,8 @@ export const launcher = {
   allowUsageAccess: () => request("usageAccess"),
   /** The accessibility settings, where the app filter is switched on. */
   openFilterSettings: () => request("filterSettings"),
-  /** Sets which apps are blocked (package names), kept on the phone. */
-  setBlockedApps: (packages: string[]) => {
-    setState({ filter: state.filter ? { ...state.filter, blocked: packages } : { enabled: false, blocked: packages } });
-    return request("setBlockedApps", { packages });
-  },
+  /** Hands the blocked apps (package names, from the account) to the phone, which enforces them. */
+  setBlockedApps: (packages: string[]) => request("setBlockedApps", { packages }),
 };
 
 /** The newest launcher version published on this server (by the Android workflow). */

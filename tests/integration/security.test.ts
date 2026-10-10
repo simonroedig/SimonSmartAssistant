@@ -28,6 +28,7 @@ const TABLES = [
   "day_notes",
   "notes",
   "birthdays",
+  "blocked_apps",
 ] as const;
 
 function newClient(): Client {
@@ -320,6 +321,39 @@ describe("database security", () => {
     expect(restoredByBob).toEqual([]);
     const { error: deleteError } = await alice.client.from("notes").delete().eq("id", note!.id);
     expect(deleteError).toBeNull();
+  });
+
+  it("keeps blocked apps private and lets the app only add them, never unblock", async () => {
+    // Rows can't be deleted by the app, so each run uses its own package names.
+    const run = Date.now();
+    const pkg = `com.example.blocked${run}`;
+    const { data: row, error } = await alice.client
+      .from("blocked_apps")
+      .insert({ package: pkg, label: "Blocked" })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(row!.user_id).toBe(alice.userId);
+
+    // Unblocking from the app isn't possible: no update or delete (only in the dashboard).
+    const { error: updateError } = await alice.client.from("blocked_apps").update({ label: "x" }).eq("id", row!.id);
+    expect(updateError?.code).toBe("42501");
+    const { error: deleteError } = await alice.client.from("blocked_apps").delete().eq("id", row!.id);
+    expect(deleteError?.code).toBe("42501");
+    const { data: still } = await alice.client.from("blocked_apps").select("package").eq("id", row!.id);
+    expect(still).toEqual([{ package: pkg }]);
+
+    // Private, no spoofing, no duplicates, only package names.
+    const { data: seenByBob } = await bob.client.from("blocked_apps").select("*").eq("id", row!.id);
+    expect(seenByBob).toEqual([]);
+    const { error: spoofError } = await bob.client
+      .from("blocked_apps")
+      .insert({ package: `com.example.spoof${run}`, user_id: alice.userId });
+    expect(spoofError?.code).toBe("42501");
+    const { error: duplicate } = await alice.client.from("blocked_apps").insert({ package: pkg });
+    expect(duplicate?.code).toBe("23505");
+    const { error: invalid } = await alice.client.from("blocked_apps").insert({ package: "not a package" });
+    expect(invalid?.code).toBe("23514");
   });
 
   it("keeps birthdays private and only accepts real dates", async () => {

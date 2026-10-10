@@ -4,6 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { appsIsBelow, homeIsBelow } from "@/components/shell/app-link";
+import { useBlockApp, useBlockedApps } from "@/data/blocked-apps";
+import { newId } from "@/data/core";
 import {
   connectLauncher,
   getHomeView,
@@ -11,7 +13,9 @@ import {
   launcher,
   onLauncherEvent,
   refreshApps,
+  refreshFilter,
   setUpdateStatus,
+  getLauncherState,
   useIsLauncher,
   useLauncherState,
 } from "@/lib/launcher";
@@ -26,8 +30,56 @@ const UPDATE_MESSAGES: Partial<Record<string, string>> = {
  * Inside the Android launcher app: connects to it, keeps the status bar in the
  * dashboard's colours, and reacts to the home button and to installed apps.
  */
+const BLOCKED_MOVED_KEY = "ssa:blocked-apps-moved";
+
+/**
+ * The blocked apps live in the account (table blocked_apps); the phone enforces
+ * whatever it was last given. So: hand it the list whenever it changes – also
+ * when a row is deleted in the Supabase dashboard (realtime). Apps blocked on
+ * the phone before the list moved to the account are carried over once.
+ */
+function useSyncBlockedApps(isLauncher: boolean) {
+  const { data } = useBlockedApps(isLauncher);
+  // (`mutate` keeps its identity, unlike the mutation object.)
+  const { mutate: block } = useBlockApp();
+  const moving = useRef(false);
+
+  useEffect(() => {
+    if (!isLauncher || !data) return;
+    let moved = true;
+    try {
+      moved = localStorage.getItem(BLOCKED_MOVED_KEY) === "1";
+    } catch {
+      // Private mode: nothing to carry over then.
+    }
+    if (moved) {
+      void launcher.setBlockedApps(data.map((b) => b.package));
+      return;
+    }
+    if (moving.current) return;
+    moving.current = true;
+    void (async () => {
+      await refreshFilter();
+      const { filter, apps } = getLauncherState();
+      const known = new Set(data.map((b) => b.package));
+      for (const pkg of filter?.blocked ?? []) {
+        if (known.has(pkg)) continue;
+        const label = apps?.find((a) => a.package === pkg)?.label ?? "";
+        block({ id: newId(), package: pkg, label });
+      }
+      try {
+        localStorage.setItem(BLOCKED_MOVED_KEY, "1");
+      } catch {
+        // Tried again next time; inserting twice is harmless.
+      }
+      void launcher.setBlockedApps([...known, ...(filter?.blocked ?? [])]);
+    })();
+  }, [isLauncher, data, block]);
+}
+
 export function LauncherSync() {
   const isLauncher = useIsLauncher();
+  useSyncBlockedApps(isLauncher);
   const router = useRouter();
   const pathname = usePathname();
   const path = useRef(pathname);

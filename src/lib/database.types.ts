@@ -37,6 +37,31 @@ export type Database = {
         };
         Relationships: [];
       };
+      blocked_apps: {
+        Row: {
+          created_at: string;
+          id: string;
+          label: string;
+          package: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          label?: string;
+          package: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          label?: string;
+          package?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       day_notes: {
         Row: {
           day: string;

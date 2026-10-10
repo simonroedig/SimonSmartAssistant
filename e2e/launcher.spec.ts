@@ -4,8 +4,8 @@ import { mockWeather } from "./helpers";
 type Sent = { type: string; [key: string]: unknown };
 
 /** Pretends to be the Android launcher app: answers like its bridge and records what the page asks. */
-async function fakeLauncher(page: Page) {
-  await page.addInitScript(() => {
+async function fakeLauncher(page: Page, extraApps: { id: string; label: string; package: string }[] = []) {
+  await page.addInitScript((extra) => {
     const icon = (color: string) =>
       `data:image/svg+xml,${encodeURIComponent(
         `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" rx="3" fill="${color}"/></svg>`,
@@ -40,6 +40,7 @@ async function fakeLauncher(page: Page) {
                         { id: "w|0", label: "WhatsApp", package: "com.whatsapp", icon: icon("#25d366") },
                         { id: "f|0", label: "Firefox", package: "org.mozilla.firefox", icon: icon("#ff7139") },
                         { id: "b|0", label: "Bank", package: "de.bank", icon: icon("#1d4ed8") },
+                        ...extra.map((app) => ({ ...app, icon: icon("#7d4698") })),
                       ],
                     }
                   : { ok: true };
@@ -49,7 +50,7 @@ async function fakeLauncher(page: Page) {
         listeners.push(listener);
       },
     };
-  });
+  }, extraApps);
 }
 
 const sent = (page: Page) => page.evaluate(() => (window as unknown as { __launcherSent: Sent[] }).__launcherSent);
@@ -198,29 +199,54 @@ test("launcher: the apps used last, in a strip above the search", async ({ page 
   await expect(strip).toBeHidden();
 });
 
-test("launcher: block an app – from settings, greyed out and not opened in the apps", async ({ page }) => {
-  await fakeLauncher(page);
+test("launcher: block an app for good – confirm, no unblock, greyed out and not opened", async ({ page }) => {
+  const tor = { id: "t|0", label: "Tor Browser", package: "org.torproject.torbrowser" };
+  await fakeLauncher(page, [tor]);
+  const loaded = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/blocked_apps") && r.request().method() === "GET",
+  );
   await page.goto("/settings");
-  const filter = page.locator("section").filter({ hasText: "Blocked apps" }).first();
+  const section = page.locator("section").filter({ hasText: "Blocked apps" }).first();
+  const list = section.getByRole("list", { name: "Blocked apps" });
+  // (The app can't delete rows, so a local database may still have it from an earlier run.)
+  const already = ((await (await loaded).json()) as { package: string }[]).some((b) => b.package === tor.package);
+  await expect(section.getByLabel("Add an app to block")).toBeVisible();
 
-  // Add Bank to the blocked apps.
-  await filter.getByLabel("Add an app to block").fill("bank");
-  await filter.getByRole("button", { name: /Bank/ }).click();
+  if (!already) {
+    // Cancelling the confirmation blocks nothing.
+    await section.getByLabel("Add an app to block").fill("tor");
+    await section
+      .getByRole("list", { name: "Apps to block" })
+      .getByRole("button", { name: /Tor Browser/ })
+      .click();
+    await expect(section.getByText("Block Tor Browser for good?")).toBeVisible();
+    await section.getByRole("button", { name: "Cancel" }).click();
+    await expect(list.getByText(tor.label)).toHaveCount(0);
+
+    await section.getByLabel("Add an app to block").fill("tor");
+    await section
+      .getByRole("list", { name: "Apps to block" })
+      .getByRole("button", { name: /Tor Browser/ })
+      .click();
+    await section.getByRole("button", { name: "Block", exact: true }).click();
+  }
+  // Listed for good – nothing here unblocks it – and handed to the phone.
+  await expect(list.getByText(tor.label)).toBeVisible();
+  await expect(section.getByRole("button", { name: /unblock/i })).toHaveCount(0);
+  await expect(section.getByText(/delete its row in Supabase/)).toBeVisible();
   await expect
-    .poll(async () => (await sent(page)).find((m) => m.type === "setBlockedApps")?.packages)
-    .toEqual(["de.bank"]);
-  await expect(filter.getByRole("button", { name: "Unblock" })).toBeVisible();
+    .poll(async () => (await sent(page)).filter((m) => m.type === "setBlockedApps").at(-1)?.packages)
+    .toContain(tor.package);
 
-  // Without the service on, a warning offers to turn it on (opens accessibility).
-  await filter.getByRole("button", { name: "Turn on" }).click();
+  // Without the service on, a note offers to turn it on (opens accessibility).
+  await section.getByRole("button", { name: "Turn on" }).click();
   await expect.poll(async () => (await sent(page)).some((m) => m.type === "filterSettings")).toBe(true);
 
-  // In the apps list the blocked app is marked and doesn't open.
+  // In the apps list it's greyed out and a tap only says it's blocked.
   await page.goto("/apps");
-  const apps = page.getByRole("list", { name: "Apps" });
-  await apps.getByRole("button", { name: "Bank (blocked)" }).click();
-  await expect(page.getByText(/“Bank” is blocked/)).toBeVisible();
-  expect((await sent(page)).some((m) => m.type === "launch" && m.app === "b|0")).toBe(false);
+  await page.getByRole("list", { name: "Apps" }).getByRole("button", { name: "Tor Browser (blocked)" }).click();
+  await expect(page.getByText("Tor Browser is blocked")).toBeVisible();
+  expect((await sent(page)).some((m) => m.type === "launch" && m.app === tor.id)).toBe(false);
 });
 
 test("launcher: a newer app version is offered on the home screen", async ({ page }) => {

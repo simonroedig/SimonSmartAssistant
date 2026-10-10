@@ -61,22 +61,28 @@ Standard-Apps auswählen → Startbildschirm-App).
 
 ## App-Filter (optional)
 
-Eine Selbstlimitierung: Apps, die du in **Settings → Blocked apps** auswählst, werden geblockt.
+Eine Selbstlimitierung: Apps, die du in **Settings → Blocked apps** auswählst, werden geblockt –
+**für immer**. Vor dem Blocken fragt die App einmal nach.
 
-- **Im Launcher** öffnet eine geblockte App nicht; sie steht in der App-Liste grau mit einem
-  roten Verbots-Symbol, ein Tipp zeigt nur einen Hinweis.
-- **Systemweit** (optional): ein Bedienungshilfen-Dienst wirft dich auf den **Home-Screen**
-  zurück, sobald eine geblockte App in den Vordergrund kommt – egal, wie sie geöffnet wurde.
-  Er liest **nur**, welche App gerade vorn ist, nie etwas aus der App, und sendet nichts.
-- **Einschalten** des Dienstes: der Hinweis in **Blocked apps** öffnet die Bedienungshilfen.
-  Auf Android 13+ vorher einmal **„Eingeschränkte Einstellungen zulassen“** (⋮ auf der App-Seite),
-  wie bei den Nutzungsdaten.
-- **Grenzen:** Ein Launcher kann Apps nicht deinstallieren oder echt sperren; der Dienst ist in den
-  Android-Einstellungen abschaltbar. Also eine Selbstlimitierung, keine Kindersicherung.
-- NSFW-Seiten regelst du über **Privates DNS** (`family.cloudflare-dns.com`, wirkt auch bei
-  mobilen Daten) bzw. dein Pi-hole – dafür gibt es keinen Filter mehr in der App.
-- Dateien: `AppFilter.kt` (die blockierten Pakete, lokal gespeichert), `FilterService.kt`
-  (Bedienungshilfe: nur Fenster-Wechsel, Home bei blockierter App), `res/xml/filter_service.xml`.
+- **Entsperren geht nur in Supabase:** Die Liste liegt in der Tabelle `blocked_apps`. Die App darf dort
+  nur hinzufügen, nicht ändern oder löschen (die Datenbank gibt ihr kein Recht dazu). Zum Entsperren im
+  Supabase-Dashboard → **Table Editor → blocked_apps** die Zeile der App löschen; der Launcher übernimmt
+  das sofort (Realtime).
+- **Im Launcher** öffnet eine geblockte App nicht; sie steht in der App-Liste grau mit einem roten
+  Verbots-Symbol, ein Tipp zeigt nur „… is blocked“.
+- **Systemweit** (optional): ein Bedienungshilfen-Dienst wirft dich auf den **Home-Screen** zurück, sobald
+  eine geblockte App in den Vordergrund kommt – egal, wie sie geöffnet wurde. Er liest **nur**, welche App
+  gerade vorn ist, nie etwas aus der App, und sendet nichts.
+- **Einschalten** des Dienstes: der Hinweis in **Blocked apps** öffnet die Bedienungshilfen. Auf Android
+  13+ vorher einmal **„Eingeschränkte Einstellungen zulassen“** (⋮ auf der App-Seite), wie bei den
+  Nutzungsdaten.
+- **Grenzen:** Ein Launcher kann Apps nicht deinstallieren; der Dienst ist in den Android-Einstellungen
+  abschaltbar. Also eine Selbstlimitierung, keine Kindersicherung.
+- NSFW-Seiten regelst du über **Privates DNS** (`family.cloudflare-dns.com`, wirkt auch bei mobilen
+  Daten) bzw. dein Pi-hole.
+- Dateien: `supabase/migrations/…_blocked_apps.sql`, `src/data/blocked-apps.ts`, die Übergabe ans Handy in
+  `src/components/launcher/launcher-sync.tsx`; im Launcher `AppFilter.kt` (die Pakete, die das Handy
+  durchsetzt) und `FilterService.kt` (Bedienungshilfe: nur Fenster-Wechsel).
 
 ## Technik in Kürze
 

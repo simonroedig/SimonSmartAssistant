@@ -7,16 +7,10 @@ import { AppLink } from "@/components/shell/app-link";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useBlockedApps } from "@/data/blocked-apps";
 import { useDevicePrefs } from "@/hooks/use-device-prefs";
 import { useLongPress } from "@/hooks/use-long-press";
-import {
-  type LauncherApp,
-  launcher,
-  refreshFilter,
-  refreshRecent,
-  useIsLauncher,
-  useLauncherState,
-} from "@/lib/launcher";
+import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +23,7 @@ function AppTile({
 }: {
   app: LauncherApp;
   onOpen: () => void;
-  /** Chosen in Settings → Blocked apps: shown greyed out and not opened from here. */
+  /** In Settings → Blocked apps: shown greyed out and not opened from here. */
   blocked?: boolean;
   /** Smaller, one line of name (the strip of apps used last). */
   compact?: boolean;
@@ -49,7 +43,7 @@ function AppTile({
         onClick={() => {
           if (longPress.wasLongPress()) return;
           if (blocked) {
-            toast(`“${app.label}” is blocked`, { description: "Change it in Settings → Blocked apps." });
+            toast(`${app.label} is blocked`);
             return;
           }
           onOpen();
@@ -194,19 +188,16 @@ function closeKeyboard() {
  */
 export function AppsView() {
   const isLauncher = useIsLauncher();
-  const { apps, features, filter } = useLauncherState();
+  const { apps, features } = useLauncherState();
   const [query, setQuery] = useState("");
   const [recentOpen, setRecentOpen] = useState(readRecentOpen);
   const [device] = useDevicePrefs();
   // Optional (Settings), and only with a launcher version that can.
   const hasRecent = device.recentApps && features.includes("recent");
   const scroller = useRef<HTMLDivElement>(null);
-  const blocked = useMemo(() => new Set(filter?.blocked ?? []), [filter]);
-
-  // Which apps are blocked is loaded here too, so the list can grey them out.
-  useEffect(() => {
-    if (isLauncher) void refreshFilter();
-  }, [isLauncher]);
+  // Blocked in Settings (kept in the account): greyed out and not opened from here.
+  const { data: blockedRows } = useBlockedApps(isLauncher);
+  const blocked = useMemo(() => new Set((blockedRows ?? []).map((b) => b.package)), [blockedRows]);
 
   const term = query.trim().toLowerCase();
   // Searching: names that start with the text first.
