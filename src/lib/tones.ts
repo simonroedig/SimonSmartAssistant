@@ -75,9 +75,23 @@ export const TODAY_COLOR = "text-today";
  */
 export const FIELD_FOCUS = {
   emerald: "[--field-focus:color-mix(in_oklab,var(--color-emerald-500)_60%,transparent)]",
-  yellow: "[--field-focus:color-mix(in_oklab,var(--color-yellow-500)_65%,transparent)]",
+  // The backlog icon's yellow (deeper ones turn orange as a thin line).
+  yellow:
+    "[--field-focus:color-mix(in_oklab,var(--color-yellow-400)_80%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-yellow-300)_75%,transparent)]",
   rose: "[--field-focus:color-mix(in_oklab,var(--color-rose-500)_55%,transparent)]",
   orange: "[--field-focus:color-mix(in_oklab,var(--color-orange-400)_65%,transparent)]",
   /** Searches: a quiet grey. */
   quiet: "[--field-focus:var(--text-faint)]",
 } as const;
+
+/** A starred backlog item: the backlog's own yellow, filled. */
+export const STAR_ON = "fill-yellow-400 text-yellow-400 dark:fill-yellow-300 dark:text-yellow-300";
+
+/**
+ * A section's add button: solid in the section's colour once there is something
+ * to add, a soft tint before (a faded solid colour looks muddy on dark backgrounds).
+ */
+export function addButtonTone(tone: "emerald" | "yellow", ready: boolean): string {
+  const styles = TONE_STYLES[tone];
+  return ready ? styles.solid : `${styles.soft} ${styles.text} shadow-none disabled:opacity-100`;
+}

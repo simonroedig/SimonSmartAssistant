@@ -25,7 +25,7 @@ import {
 } from "@/data/shopping";
 import { useLongPress } from "@/hooks/use-long-press";
 import { byPosition, positionAtStart, positionForMove } from "@/lib/ordering";
-import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
+import { addButtonTone, FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 function ItemRow({
@@ -191,7 +191,7 @@ export function ShoppingList({
             onMouseDown={(e) => e.preventDefault()}
             className={cn(
               "ui-action size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]",
-              TONE_STYLES.emerald.solid,
+              addButtonTone("emerald", !!draft.trim()),
             )}
           >
             <Plus className="!size-5" />

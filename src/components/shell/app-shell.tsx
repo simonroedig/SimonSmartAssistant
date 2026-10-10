@@ -341,7 +341,7 @@ export function AppShell({
   const home = useHomeSwitch(pathname);
 
   return (
-    <div className="relative min-h-dvh" data-nav={navigation.style}>
+    <div className="relative min-h-dvh" data-phone-nav={navigation.phoneStyle} data-rail-nav={navigation.railStyle}>
       {/* Android app: the page shows through the status bar; a soft veil keeps its icons legible. */}
       <div
         aria-hidden="true"
@@ -355,7 +355,7 @@ export function AppShell({
       <LauncherSync />
       <NavRail
         order={railItems(navigation)}
-        attached={navigation.style === "attached"}
+        attached={navigation.railStyle === "attached"}
         isCurrent={isCurrent}
         onNavigate={onNavigate}
         home={home}
@@ -367,7 +367,7 @@ export function AppShell({
       </main>
       <BottomNav
         order={phoneTabs(navigation)}
-        attached={navigation.style === "attached"}
+        attached={navigation.phoneStyle === "attached"}
         isCurrent={isCurrent}
         onNavigate={onNavigate}
         home={home}

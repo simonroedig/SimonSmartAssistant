@@ -93,7 +93,7 @@ export function MonthGrid({
           <button
             type="button"
             onClick={() => setMonth(monthOf(today))}
-            className="h-8 shrink-0 rounded-xl px-2.5 text-xs font-semibold whitespace-nowrap text-muted transition-colors well hover:text-fg"
+            className="h-8 shrink-0 rounded-xl px-2.5 text-xs font-semibold whitespace-nowrap text-today transition-colors well"
           >
             Today
           </button>

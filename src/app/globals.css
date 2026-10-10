@@ -95,16 +95,18 @@
   color-scheme: dark;
 }
 
-/* Menu attached to the screen edges (Settings → Menu): no gap around it. */
-[data-nav="attached"] {
+/* Menus attached to the screen edges (Settings → Menu): no gap around them. */
+[data-phone-nav="attached"] {
   --page-bottom: calc(var(--safe-bottom) + 5.375rem);
+}
+[data-rail-nav="attached"] {
   --rail-space: calc(4.75rem + var(--gutter));
 }
 
 /* Phones: while the on-screen keyboard is up, the tab bar steps aside for the typing. */
 @media (max-width: 767px) {
   :root[data-keyboard],
-  :root[data-keyboard] [data-nav] {
+  :root[data-keyboard] [data-phone-nav] {
     --page-bottom: 0.5rem;
   }
   :root[data-keyboard] [data-tabbar] {
@@ -225,10 +227,19 @@
     color: var(--text-faint);
   }
 
-  /* Calm, thin scrollbars everywhere. */
+  /* Calm, thin scrollbars everywhere … */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--line-strong) transparent;
+  }
+  /* … and none on phones: lists show they scroll by moving under the finger. */
+  @media (max-width: 767px) {
+    * {
+      scrollbar-width: none;
+    }
+    *::-webkit-scrollbar {
+      display: none;
+    }
   }
 }
 

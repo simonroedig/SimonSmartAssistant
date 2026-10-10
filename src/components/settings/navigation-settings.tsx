@@ -82,6 +82,31 @@ function SwapPicker({
   );
 }
 
+/** Floating card, or attached to the screen edges – for the phone and the PC each on its own. */
+function StyleChoice({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: NavStyle;
+  onChange: (style: NavStyle) => void;
+}) {
+  return (
+    <Segmented
+      size="sm"
+      className="self-start"
+      label={`${label} style`}
+      value={value}
+      onChange={onChange}
+      options={[
+        { value: "floating", label: "Floating" },
+        { value: "attached", label: "Attached" },
+      ]}
+    />
+  );
+}
+
 /** Order of the menu, separately for the phone's tab bar and the side bar of PC and wall display. */
 export function NavigationSection() {
   const { settings } = useSettings();
@@ -108,6 +133,7 @@ export function NavigationSection() {
             ]}
           />
         </div>
+        <StyleChoice label="Phone menu bar" value={nav.phoneStyle} onChange={(phoneStyle) => set({ phoneStyle })} />
         <SwapPicker
           label="Phone tab bar"
           items={phoneTabs(nav)}
@@ -117,24 +143,16 @@ export function NavigationSection() {
         />
       </div>
       <Row label="PC & wall display" hint="The side bar, top to bottom – Home stays on top">
-        <SwapPicker
-          label="Side bar"
-          items={railItems(nav)}
-          axis="y"
-          disabled={loading}
-          onSwap={(a, b) => set({ rail: swap(nav.rail, a, b) })}
-        />
-      </Row>
-      <Row label="Menu bar" hint="A floating card, or attached to the edges of the screen">
-        <Segmented
-          size="sm"
-          value={nav.style}
-          onChange={(style: NavStyle) => set({ style })}
-          options={[
-            { value: "floating", label: "Floating" },
-            { value: "attached", label: "Attached" },
-          ]}
-        />
+        <div className="flex flex-col items-end gap-3 [&>[role=radiogroup]]:self-end">
+          <StyleChoice label="Side bar" value={nav.railStyle} onChange={(railStyle) => set({ railStyle })} />
+          <SwapPicker
+            label="Side bar"
+            items={railItems(nav)}
+            axis="y"
+            disabled={loading}
+            onSwap={(a, b) => set({ rail: swap(nav.rail, a, b) })}
+          />
+        </div>
       </Row>
     </Section>
   );

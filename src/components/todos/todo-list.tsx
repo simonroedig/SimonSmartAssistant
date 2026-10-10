@@ -54,7 +54,7 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { afterSheetClosed } from "@/lib/history";
 import { plannedLabel } from "@/lib/plan-todo";
 import { formatEndMinutes, formatMinutes } from "@/lib/time";
-import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
+import { addButtonTone, FIELD_FOCUS, STAR_ON, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 const DUE_TONES = {
@@ -110,6 +110,8 @@ function TodoRow({
           <span
             className={cn(
               "line-clamp-2 text-[0.98rem] leading-snug break-words",
+              // Important: in bold, next to its filled star.
+              todo.starred && !todo.done && "font-semibold",
               todo.done && "line-clamp-1 text-faint line-through decoration-faint/60",
             )}
           >
@@ -145,10 +147,7 @@ function TodoRow({
             className="grid size-11 shrink-0 place-items-center rounded-xl"
           >
             <Star
-              className={cn(
-                "size-[1.1rem] transition-all",
-                todo.starred ? "scale-110 fill-amber-400 text-amber-400" : "text-faint",
-              )}
+              className={cn("size-[1.1rem] transition-all", todo.starred ? cn("scale-110", STAR_ON) : "text-faint")}
             />
           </button>
         )}
@@ -252,7 +251,7 @@ export function TodoList({
             onMouseDown={(e) => e.preventDefault()}
             className={cn(
               "ui-action size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]",
-              TONE_STYLES.yellow.solid,
+              addButtonTone("yellow", !!draft.trim()),
             )}
           >
             <Plus className="!size-5" />
@@ -522,7 +521,7 @@ function TodoForm({
         aria-pressed={starred}
       >
         <span className="font-medium">Important</span>
-        <Star className={cn("size-5", starred ? "fill-amber-400 text-amber-400" : "text-faint")} />
+        <Star className={cn("size-5", starred ? STAR_ON : "text-faint")} />
       </button>
       {planned && (
         <p className="flex items-center gap-2 rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">

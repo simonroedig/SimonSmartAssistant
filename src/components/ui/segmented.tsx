@@ -10,16 +10,19 @@ export function Segmented<T extends string | number>({
   options,
   className,
   size = "md",
+  label,
 }: {
   value: T;
   onChange: (value: T) => void;
   options: { value: T; label: React.ReactNode }[];
   className?: string;
   size?: "sm" | "md";
+  /** Name of the choice (when several look alike on one page). */
+  label?: string;
 }) {
   const id = useId();
   return (
-    <div role="radiogroup" className={cn("inline-flex rounded-2xl p-1 well", className)}>
+    <div role="radiogroup" aria-label={label} className={cn("inline-flex rounded-2xl p-1 well", className)}>
       {options.map((option) => {
         const active = option.value === value;
         return (

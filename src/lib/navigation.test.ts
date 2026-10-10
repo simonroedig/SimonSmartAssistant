@@ -38,10 +38,15 @@ describe("navigation order", () => {
     });
   });
 
-  it("floats the menu unless it is attached", () => {
-    expect(parseNavigation({}).style).toBe("floating");
-    expect(parseNavigation({ style: "attached" }).style).toBe("attached");
-    expect(parseNavigation({ style: "glued" }).style).toBe("floating");
+  it("floats the menus unless attached – phone and rail each on their own", () => {
+    expect(parseNavigation({})).toMatchObject({ phoneStyle: "floating", railStyle: "floating" });
+    expect(parseNavigation({ phoneStyle: "attached" })).toMatchObject({
+      phoneStyle: "attached",
+      railStyle: "floating",
+    });
+    expect(parseNavigation({ phoneStyle: "glued" }).phoneStyle).toBe("floating");
+    // The earlier shared setting carries over to both.
+    expect(parseNavigation({ style: "attached" })).toMatchObject({ phoneStyle: "attached", railStyle: "attached" });
   });
 
   it("reads the cookie, encoded or not", () => {

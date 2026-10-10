@@ -5,6 +5,7 @@ import type { PlanBlock, Todo } from "@/data/core";
 import { todoHeadline } from "@/data/todos";
 import { type DayKey, dueLabel } from "@/lib/date";
 import { plannedLabel } from "@/lib/plan-todo";
+import { STAR_ON } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 /**
@@ -40,9 +41,11 @@ export function BacklogPlanList({
               aria-label={block ? `Show "${headline}" in the plan` : `Plan "${headline}"`}
               className="group flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
             >
-              {todo.starred && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" />}
+              {todo.starred && <Star className={cn("size-3.5 shrink-0", STAR_ON)} />}
               <span className="min-w-0 flex-1">
-                <span className={cn("block truncate text-sm", block && "text-muted")}>{headline}</span>
+                <span className={cn("block truncate text-sm", todo.starred && "font-semibold", block && "text-muted")}>
+                  {headline}
+                </span>
                 {block && today ? (
                   <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-rose-600 dark:text-rose-300">
                     <CalendarCheck className="size-3.5" />

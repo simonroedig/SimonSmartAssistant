@@ -259,20 +259,10 @@ export function NotesBoard({
         <button
           type="button"
           onClick={() => setEditor({ mode: "create" })}
-          className="flex w-full items-center gap-2 text-left"
+          className="flex w-full items-center text-left"
         >
           <span className="field flex h-12 flex-1 items-center rounded-2xl px-4 text-[0.95rem] text-faint well">
             Take a note…
-          </span>
-          {/* Pale like the empty add buttons of shopping and backlog: tapping opens the editor, nothing is added yet. */}
-          <span
-            aria-hidden="true"
-            className={cn(
-              "ui-action grid size-12 shrink-0 place-items-center rounded-2xl opacity-45",
-              TONE_STYLES.orange.solid,
-            )}
-          >
-            <Plus className="size-5" />
           </span>
         </button>
       </div>

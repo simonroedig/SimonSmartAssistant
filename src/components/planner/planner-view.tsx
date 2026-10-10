@@ -250,7 +250,12 @@ export function PlannerView({
         </p>
         <div className="flex items-center gap-1.5 md:col-start-2 md:row-span-2 md:row-start-1 md:gap-2">
           {!isToday && today && (
-            <Button variant="secondary" size="sm" className="px-3 max-md:h-10" onClick={() => go(today)}>
+            <Button
+              variant="secondary"
+              size="sm"
+              className={cn("px-3 max-md:h-10", TODAY_COLOR)}
+              onClick={() => go(today)}
+            >
               Today
             </Button>
           )}

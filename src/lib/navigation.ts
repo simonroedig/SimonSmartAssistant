@@ -18,7 +18,10 @@ export type NavigationPreferences = {
   phoneHome: PhoneHome;
   /** All sections of the rail, top to bottom, below Home. */
   rail: SectionId[];
-  style: NavStyle;
+  /** Phone tab bar: floating or attached – independent of the side rail's. */
+  phoneStyle: NavStyle;
+  /** Side rail of PC and wall display. */
+  railStyle: NavStyle;
 };
 
 export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather"];
@@ -29,7 +32,8 @@ export const DEFAULT_NAVIGATION: NavigationPreferences = {
   phone: ["shopping", "backlog", "planner", "notes"],
   phoneHome: "middle",
   rail: ["planner", "shopping", "backlog", "notes", "weather"],
-  style: "floating",
+  phoneStyle: "floating",
+  railStyle: "floating",
 };
 
 export const NAVIGATION_COOKIE = "ssa-nav";
@@ -47,8 +51,14 @@ export function parseNavigation(value: unknown): NavigationPreferences {
     phone: orderOf(nav.phone, PHONE_SECTIONS) ?? DEFAULT_NAVIGATION.phone,
     phoneHome: nav.phoneHome === "left" ? "left" : DEFAULT_NAVIGATION.phoneHome,
     rail: orderOf(nav.rail, RAIL_SECTIONS) ?? DEFAULT_NAVIGATION.rail,
-    style: nav.style === "attached" ? "attached" : DEFAULT_NAVIGATION.style,
+    // (Earlier one shared `style` for both.)
+    phoneStyle: navStyle(nav.phoneStyle ?? nav.style),
+    railStyle: navStyle(nav.railStyle ?? nav.style),
   };
+}
+
+function navStyle(value: unknown): NavStyle {
+  return value === "attached" ? "attached" : "floating";
 }
 
 /** The tab bar from left to right, Home included. */
