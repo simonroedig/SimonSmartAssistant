@@ -13,13 +13,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <OnScreenKeyboard />
       <Toaster
         position="top-center"
-        offset={16}
+        // Below the status bar (phones; the Android app draws under it).
+        offset={{ top: "calc(var(--safe-top, 0px) + 1rem)" }}
+        mobileOffset={{ top: "calc(var(--safe-top, 0px) + 0.75rem)" }}
         gap={8}
         toastOptions={{
           classNames: {
             toast: "!glass-strong !rounded-2xl !border-line !text-fg !shadow-pop !font-sans !text-[0.9rem] !px-4 !py-3",
             description: "!text-muted",
-            actionButton: "!bg-accent !text-accent-fg !rounded-xl !font-semibold !px-3 !h-8",
+            // In the colour of the section the toast belongs to (TOAST_TONE), else the accent.
+            actionButton:
+              "!bg-[var(--toast-action,var(--accent))] !text-[color:var(--toast-action-fg,var(--accent-fg))] !rounded-xl !font-semibold !px-3 !h-8",
           },
         }}
       />

@@ -19,7 +19,7 @@ import {
   useUpdateNote,
 } from "@/data/notes";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
-import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
+import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 export function noteLabel(note: Pick<Note, "title" | "body">): string {
@@ -119,6 +119,7 @@ export function NotesBoard({
     trash.mutate({ ids: [note.id], trash: true });
     toast(`Moved "${noteLabel(note)}" to the trash`, {
       action: { label: "Undo", onClick: () => trash.mutate({ ids: [note.id], trash: false }) },
+      classNames: { toast: TOAST_TONE.orange },
       duration: 6000,
     });
   };

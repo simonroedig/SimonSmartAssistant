@@ -67,6 +67,21 @@ export const TODAY_RING_STRONG = SELECTED_DAY;
 /** The blue of today's label or number. */
 export const TODAY_TEXT = "font-semibold text-today";
 /** The word "Today" in a title: the same blue, at the title's own weight. */
+/**
+ * A toast's action (Undo) in the colour of the section it belongs to – the same
+ * as the section's solid buttons. Put on the toast (`classNames.toast`); sonner's
+ * own button styles only give way to the variables the Toaster reads.
+ */
+export const TOAST_TONE = {
+  rose: "[--toast-action:var(--color-rose-500)] [--toast-action-fg:white] dark:[--toast-action:var(--color-rose-300)] dark:[--toast-action-fg:var(--color-rose-950)]",
+  emerald:
+    "[--toast-action:var(--color-emerald-500)] [--toast-action-fg:white] dark:[--toast-action-fg:var(--color-emerald-950)]",
+  yellow:
+    "[--toast-action:var(--color-yellow-400)] [--toast-action-fg:var(--color-yellow-950)] dark:[--toast-action:var(--color-yellow-300)]",
+  orange:
+    "[--toast-action:var(--color-orange-400)] [--toast-action-fg:var(--color-orange-950)] dark:[--toast-action:var(--color-orange-300)]",
+} as const;
+
 export const TODAY_COLOR = "text-today";
 
 /**

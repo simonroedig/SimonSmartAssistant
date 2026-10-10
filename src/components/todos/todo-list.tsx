@@ -54,7 +54,7 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { afterSheetClosed } from "@/lib/history";
 import { plannedLabel } from "@/lib/plan-todo";
 import { formatEndMinutes, formatMinutes } from "@/lib/time";
-import { addButtonTone, FIELD_FOCUS, STAR_ON, TONE_STYLES } from "@/lib/tones";
+import { addButtonTone, FIELD_FOCUS, STAR_ON, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 const DUE_TONES = {
@@ -194,7 +194,11 @@ export function TodoList({
   const deleteWithUndo = (items: Todo[], label: string) => {
     if (items.length === 0) return;
     remove.mutate({ ids: items.map((t) => t.id) });
-    toast(label, { action: { label: "Undo", onClick: () => restore.mutate({ todos: items }) }, duration: 6000 });
+    toast(label, {
+      action: { label: "Undo", onClick: () => restore.mutate({ todos: items }) },
+      classNames: { toast: TOAST_TONE.yellow },
+      duration: 6000,
+    });
   };
 
   // Ticking an item off also ticks off its blocks in the planner (and back).
@@ -208,6 +212,7 @@ export function TodoList({
     if (!todo.done) {
       toast(`Done: ${todoHeadline(todo.title, 60)}`, {
         action: { label: "Undo", onClick: () => setDone(todo, false) },
+        classNames: { toast: TOAST_TONE.yellow },
         duration: 4000,
       });
     }
@@ -299,11 +304,13 @@ export function TodoList({
 
         {!limit && done.length > 0 && (
           <div className="mt-2">
-            <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1 px-1">
+              {/* The whole row opens it, not just the words. */}
               <button
                 type="button"
+                aria-expanded={showDone}
                 onClick={() => setShowDone((v) => !v)}
-                className="flex h-10 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold tracking-wide text-faint uppercase hover:text-muted"
+                className="flex h-10 min-w-0 flex-1 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold tracking-wide text-faint uppercase transition-colors hover:bg-surface-hover hover:text-muted"
               >
                 <ChevronDown className={cn("size-4 transition-transform", showDone && "rotate-180")} />
                 Completed · {done.length}

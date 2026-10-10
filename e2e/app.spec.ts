@@ -64,6 +64,46 @@ test("backlog: add, star, edit due date and plan it", async ({ page }) => {
   await expect(page.getByRole("button", { name: new RegExp(title) }).first()).toBeVisible();
 });
 
+test("backlog: Undo in the backlog's yellow, below the status bar; the whole Completed row opens", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/todos");
+  // As in the Android app: the page draws under a 40px status bar.
+  await page.evaluate(() => document.documentElement.style.setProperty("--safe-top", "40px"));
+  const title = `E2E done ${Date.now() % 10000}`;
+  await page.getByLabel("New todo").fill(title);
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: `Complete "${title}"` }).click();
+
+  const undo = page.getByRole("button", { name: "Undo" });
+  await expect(undo).toBeVisible();
+  // (Once it has slid in.)
+  await expect
+    .poll(async () => (await page.locator("[data-sonner-toast]").first().boundingBox())!.y)
+    .toBeGreaterThanOrEqual(40);
+  const yellow = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.className = "bg-yellow-400 dark:bg-yellow-300";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return color;
+  });
+  expect(await undo.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(yellow);
+  await undo.click();
+  await expect(page.getByRole("button", { name: `Complete "${title}"` })).toBeVisible();
+
+  // Done again; the Completed row opens from anywhere on it, not just its words.
+  await page.getByRole("button", { name: `Complete "${title}"` }).click();
+  const completed = page.getByRole("button", { name: /^Completed/ });
+  await expect(completed).toHaveAttribute("aria-expanded", "false");
+  await completed.scrollIntoViewIfNeeded();
+  const row = (await completed.boundingBox())!;
+  await page.mouse.click(row.x + row.width - 12, row.y + row.height / 2);
+  await expect(completed).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("button", { name: `Mark "${title}" as open` })).toBeVisible();
+  await page.getByRole("button", { name: `Mark "${title}" as open` }).click();
+});
+
 test("planner: tap to create, drag to move, resize and complete", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/planner?day=2030-01-07"); // a quiet Monday far in the future

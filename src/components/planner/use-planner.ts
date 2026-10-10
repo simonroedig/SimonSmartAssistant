@@ -18,6 +18,7 @@ import { addDays, type DayKey, formatDayMonth, fromDayKey, relativeDayLabel, toD
 import { findFreeSlot } from "@/lib/planner-layout";
 import { awakeWindow, planSleepRanges, planViewEnd } from "@/lib/sleep";
 import { formatEndMinutes, formatMinutes, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
+import { TOAST_TONE } from "@/lib/tones";
 import type { BlockDraft, EditorState } from "./block-editor";
 
 /** Everything the planner UIs (full page and dashboard card) need for one day. */
@@ -75,6 +76,7 @@ export function usePlanner(day: DayKey) {
     remove.mutate({ ids: [block.id] });
     toast(`Removed "${block.title}"`, {
       action: { label: "Undo", onClick: () => add.mutate({ blocks: [block] }) },
+      classNames: { toast: TOAST_TONE.rose },
       duration: 6000,
     });
   };
@@ -95,6 +97,7 @@ export function usePlanner(day: DayKey) {
     remove.mutate({ ids: removed.map((b) => b.id) });
     toast(`Cleared ${removed.length} ${removed.length === 1 ? "block" : "blocks"}`, {
       action: { label: "Undo", onClick: () => add.mutate({ blocks: removed }) },
+      classNames: { toast: TOAST_TONE.rose },
       duration: 8000,
     });
   };

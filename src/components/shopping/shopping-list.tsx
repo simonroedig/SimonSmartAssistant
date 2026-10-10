@@ -25,7 +25,7 @@ import {
 } from "@/data/shopping";
 import { useLongPress } from "@/hooks/use-long-press";
 import { byPosition, positionAtStart, positionForMove } from "@/lib/ordering";
-import { addButtonTone, FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
+import { addButtonTone, FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 function ItemRow({
@@ -151,6 +151,7 @@ export function ShoppingList({
     remove.mutate({ ids: toDelete.map((i) => i.id) });
     toast(label, {
       action: { label: "Undo", onClick: () => restore.mutate({ items: toDelete }) },
+      classNames: { toast: TOAST_TONE.emerald },
       duration: 6000,
     });
   };

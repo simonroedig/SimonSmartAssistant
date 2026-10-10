@@ -9,6 +9,7 @@ import type { Note } from "@/data/core";
 import { useDeleteNotes, useNotes, useRestoreNotes, useTrashedNotes, useTrashNotes } from "@/data/notes";
 import { formatDayMonthShort } from "@/lib/date";
 import { positionAtStart } from "@/lib/ordering";
+import { TOAST_TONE } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { noteLabel } from "./notes-board";
 
@@ -36,6 +37,7 @@ export function NotesTrashButton({ className }: { className?: string }) {
     remove.mutate({ ids: items.map((n) => n.id) });
     toast(label, {
       action: { label: "Undo", onClick: () => restoreDeleted.mutate({ notes: items }) },
+      classNames: { toast: TOAST_TONE.orange },
       duration: 6000,
     });
   };
