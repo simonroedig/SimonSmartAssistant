@@ -42,9 +42,14 @@ export function LauncherSync() {
 
     // The status bar follows the look (design, light/dark: the background colour).
     const root = document.documentElement;
+    let posted = "";
     const postTheme = () => {
       const color = getComputedStyle(root).getPropertyValue("--bg").trim();
-      if (color) void launcher.theme(color, root.classList.contains("dark"));
+      const dark = root.classList.contains("dark");
+      // Only real changes (the look is set again each time the page comes back).
+      if (!color || posted === `${color}|${dark}`) return;
+      posted = `${color}|${dark}`;
+      void launcher.theme(color, dark);
     };
     postTheme();
     const observer = new MutationObserver(postTheme);

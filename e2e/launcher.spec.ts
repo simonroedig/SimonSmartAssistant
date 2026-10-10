@@ -21,16 +21,20 @@ async function fakeLauncher(page: Page) {
         sent.push(message);
         const answer =
           message.type === "hello"
-            ? { version: 3, versionName: "1.3" }
-            : message.type === "apps"
-              ? {
-                  apps: [
-                    { id: "w|0", label: "WhatsApp", package: "com.whatsapp", icon: icon("#25d366") },
-                    { id: "f|0", label: "Firefox", package: "org.mozilla.firefox", icon: icon("#ff7139") },
-                    { id: "b|0", label: "Bank", package: "de.bank", icon: icon("#1d4ed8") },
-                  ],
-                }
-              : { ok: true };
+            ? { version: 3, versionName: "1.3", features: ["recent"] }
+            : message.type === "recent"
+              ? w.__usageAllowed
+                ? { allowed: true, apps: ["com.whatsapp", "de.bank", "com.android.systemui"] }
+                : { allowed: false, apps: [] }
+              : message.type === "apps"
+                ? {
+                    apps: [
+                      { id: "w|0", label: "WhatsApp", package: "com.whatsapp", icon: icon("#25d366") },
+                      { id: "f|0", label: "Firefox", package: "org.mozilla.firefox", icon: icon("#ff7139") },
+                      { id: "b|0", label: "Bank", package: "de.bank", icon: icon("#1d4ed8") },
+                    ],
+                  }
+                : { ok: true };
         setTimeout(() => listeners.forEach((l) => l({ data: JSON.stringify({ ...answer, id: message.id }) })), 5);
       },
       addEventListener(_type: string, listener: (event: { data: string }) => void) {
@@ -132,6 +136,47 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   await expect
     .poll(async () => (await sent(page)).filter((m) => m.type === "search").map((m) => m.query))
     .toContain("Feiertage Bayern");
+});
+
+test("launcher: the apps used last, in a strip above the search", async ({ page }) => {
+  await fakeLauncher(page);
+  await page.goto("/apps");
+  const strip = page.getByRole("region", { name: "Recent apps" });
+  const toggle = page.getByRole("button", { name: "Recent apps" });
+  await expect(strip).toHaveCount(0);
+
+  // First the system's permission is needed.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await strip.getByRole("button", { name: "Allow" }).click();
+  await expect.poll(async () => (await sent(page)).some((m) => m.type === "usageAccess")).toBe(true);
+
+  // Allowed and back in the launcher: newest on the right, what isn't an app left out.
+  await page.evaluate(() => {
+    (window as unknown as { __usageAllowed: boolean }).__usageAllowed = true;
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  const recent = strip.getByRole("list", { name: "Recent apps" }).getByRole("button");
+  await expect(recent).toHaveText(["WhatsApp", "Bank"]);
+  const whatsapp = (await recent.nth(0).boundingBox())!;
+  const bank = (await recent.nth(1).boundingBox())!;
+  expect(whatsapp.x).toBeGreaterThan(bank.x);
+  // Just above the search, at the bottom.
+  const search = (await page.getByRole("search").boundingBox())!;
+  const box = (await strip.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(search.y);
+  expect(search.y - (box.y + box.height)).toBeLessThan(16);
+
+  await recent.nth(1).click();
+  await expect.poll(async () => (await sent(page)).find((m) => m.type === "launch")?.app).toBe("b|0");
+
+  // Out of the way while searching; stays open on this phone.
+  await page.getByLabel("Search apps or the web").fill("fi");
+  await expect(strip).toHaveCount(0);
+  await page.getByLabel("Search apps or the web").fill("");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Recent apps" })).toHaveAttribute("aria-pressed", "true");
+  await expect(strip).toBeVisible();
 });
 
 test("launcher: a newer app version is offered on the home screen", async ({ page }) => {

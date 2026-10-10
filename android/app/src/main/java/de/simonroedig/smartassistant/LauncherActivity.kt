@@ -10,8 +10,11 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.UserHandle
 import android.provider.Settings
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.net.ConnectivityManager
@@ -49,6 +52,7 @@ class LauncherActivity : ComponentActivity() {
     private var insetScript: ScriptHandler? = null
     private var safeArea: Pair<Float, Float>? = null
     private var failedUrl: String? = null
+    private var themed = false
     private val connectivity by lazy { getSystemService(ConnectivityManager::class.java) }
 
     // Back online: bring the dashboard back by itself.
@@ -175,13 +179,35 @@ class LauncherActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         webView.onResume()
+        endTouch()
         if (offline.isShown) retry()
     }
 
     override fun onPause() {
+        endTouch()
         webView.onPause()
         CookieManager.getInstance().flush()
         super.onPause()
+    }
+
+    // Back from another app: the page has the focus again before the first tap, so
+    // that tap isn't spent on giving it the focus.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && !webView.hasFocus()) webView.requestFocus()
+    }
+
+    /**
+     * Ends a touch the page may still count as going on – the tap that opened an
+     * app, ended while the launcher was already leaving. Otherwise the next tap
+     * after coming back can get lost.
+     */
+    private fun endTouch() {
+        val now = SystemClock.uptimeMillis()
+        val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+        cancel.source = InputDevice.SOURCE_TOUCHSCREEN
+        webView.dispatchTouchEvent(cancel)
+        cancel.recycle()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -234,6 +260,9 @@ class LauncherActivity : ComponentActivity() {
     /** The dashboard's background and light/dark theme, so the status bar blends in. */
     fun applyTheme(color: String, dark: Boolean) {
         val parsed = runCatching { Color.parseColor(color) }.getOrNull() ?: return
+        // Unchanged (the page says it again when it comes back): leave the window alone.
+        if (themed && prefs.getInt("background", 0) == parsed && prefs.getBoolean("dark", true) == dark) return
+        themed = true
         root.setBackgroundColor(parsed)
         webView.setBackgroundColor(parsed)
         applySystemBars(dark)
@@ -271,6 +300,12 @@ class LauncherActivity : ComponentActivity() {
         for (intent in attempts) {
             if (openExternal(intent)) return
         }
+    }
+
+    /** Where "Usage data access" is allowed (for the apps used last) – this app's page, if the phone has one. */
+    fun openUsageAccess() {
+        val page = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName"))
+        if (!openExternal(page)) openExternal(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
     }
 
     /** The system's choice of home app (to make this one the default). */

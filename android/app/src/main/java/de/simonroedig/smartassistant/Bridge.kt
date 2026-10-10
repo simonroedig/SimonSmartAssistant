@@ -7,6 +7,7 @@ import android.webkit.WebView
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
@@ -22,6 +23,7 @@ class Bridge(
     private val main = Handler(Looper.getMainLooper())
     private val background = Executors.newSingleThreadExecutor()
     private val updater = Updater(activity)
+    private val recent = RecentApps(activity)
     private var page: JavaScriptReplyProxy? = null
 
     override fun onPostMessage(
@@ -41,11 +43,22 @@ class Bridge(
                     id,
                     JSONObject()
                         .put("version", BuildConfig.VERSION_CODE)
-                        .put("versionName", BuildConfig.VERSION_NAME),
+                        .put("versionName", BuildConfig.VERSION_NAME)
+                        // What this version can do beyond the basics (older ones don't say).
+                        .put("features", JSONArray(listOf("recent"))),
                 )
             "apps" -> background.execute {
                 val list = runCatching { apps.list() }.getOrNull()
                 main.post { reply(id, JSONObject().put("apps", list)) }
+            }
+            "recent" -> background.execute {
+                val allowed = recent.allowed()
+                val list = if (allowed) runCatching { recent.list() }.getOrNull() else null
+                main.post { reply(id, JSONObject().put("allowed", allowed).put("apps", list ?: JSONArray())) }
+            }
+            "usageAccess" -> {
+                activity.openUsageAccess()
+                reply(id, JSONObject().put("ok", true))
             }
             "launch" -> reply(id, JSONObject().put("ok", apps.launch(request.optString("app"))))
             "appInfo" -> reply(id, JSONObject().put("ok", apps.showInfo(request.optString("app"))))

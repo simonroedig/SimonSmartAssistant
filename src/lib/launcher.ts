@@ -77,15 +77,22 @@ export function onLauncherEvent(listener: (event: LauncherEvent) => void): () =>
 
 // --- A tiny store for what the page shows -----------------------------------
 
+/** The apps used last (package names, newest first) – once usage access is allowed. */
+export type RecentApps = { allowed: boolean; packages: string[] };
+
 type State = {
   version: number | null;
   versionName: string | null;
+  /** What the app can do beyond the basics (e.g. "recent"; older versions say nothing). */
+  features: string[];
   apps: LauncherApp[] | null;
+  recent: RecentApps | null;
   update: UpdateStatus;
 };
 
 const APPS_KEY = "ssa:launcher-apps";
-let state: State = { version: null, versionName: null, apps: null, update: "idle" };
+const FEATURES_KEY = "ssa:launcher-features";
+let state: State = { version: null, versionName: null, features: [], apps: null, recent: null, update: "idle" };
 const subscribers = new Set<() => void>();
 
 function setState(patch: Partial<State>) {
@@ -124,12 +131,23 @@ export async function connectLauncher() {
     try {
       const cached = JSON.parse(localStorage.getItem(APPS_KEY) ?? "null");
       if (Array.isArray(cached)) setState({ apps: cached });
+      // Known right away, so the search bar doesn't change while the app answers.
+      const features = JSON.parse(localStorage.getItem(FEATURES_KEY) ?? "null");
+      if (Array.isArray(features)) setState({ features });
     } catch {
       // No cache yet.
     }
   }
   const hello = await request("hello");
-  if (hello) setState({ version: Number(hello.version) || null, versionName: String(hello.versionName ?? "") });
+  if (hello) {
+    const features = Array.isArray(hello.features) ? hello.features.map(String) : [];
+    setState({ version: Number(hello.version) || null, versionName: String(hello.versionName ?? ""), features });
+    try {
+      localStorage.setItem(FEATURES_KEY, JSON.stringify(features));
+    } catch {
+      // Asked again next time.
+    }
+  }
   await refreshApps();
 }
 
@@ -147,6 +165,13 @@ export async function refreshApps() {
   }
 }
 
+/** The apps used last, asked again whenever they're shown (an app may have been used meanwhile). */
+export async function refreshRecent() {
+  const answer = await request("recent");
+  if (!answer || !Array.isArray(answer.apps)) return;
+  setState({ recent: { allowed: answer.allowed === true, packages: answer.apps.map(String) } });
+}
+
 export function setUpdateStatus(update: UpdateStatus) {
   setState({ update });
 }
@@ -162,6 +187,8 @@ export const launcher = {
     return request("update");
   },
   homeSettings: () => request("homeSettings"),
+  /** The system page where usage access (for the apps used last) is allowed. */
+  allowUsageAccess: () => request("usageAccess"),
 };
 
 /** The newest launcher version published on this server (by the Android workflow). */

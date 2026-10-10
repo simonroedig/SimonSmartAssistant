@@ -1,16 +1,28 @@
 "use client";
 
-import { Globe, LayoutGrid, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Globe, History, LayoutGrid, Search, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLink } from "@/components/shell/app-link";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLongPress } from "@/hooks/use-long-press";
-import { type LauncherApp, launcher, useIsLauncher, useLauncherState } from "@/lib/launcher";
+import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
-function AppTile({ app, onOpen, className }: { app: LauncherApp; onOpen: () => void; className?: string }) {
+function AppTile({
+  app,
+  onOpen,
+  compact,
+  className,
+}: {
+  app: LauncherApp;
+  onOpen: () => void;
+  /** Smaller, one line of name (the strip of apps used last). */
+  compact?: boolean;
+  className?: string;
+}) {
   // Press and hold: the system's app info (to uninstall, permissions, …).
   const longPress = useLongPress(() => void launcher.showInfo(app), 550);
   return (
@@ -27,13 +39,95 @@ function AppTile({ app, onOpen, className }: { app: LauncherApp; onOpen: () => v
           void launcher.open(app);
         }}
         onContextMenu={(e) => e.preventDefault()}
-        className="flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 py-2 transition-transform select-none [-webkit-touch-callout:none] active:scale-95"
+        className={cn(
+          "flex w-full flex-col items-center gap-1.5 rounded-2xl px-1 py-2 transition-transform select-none [-webkit-touch-callout:none] active:scale-95",
+          compact && "gap-1 py-1.5",
+        )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={app.icon} alt="" className="size-14" draggable={false} />
-        <span className="line-clamp-2 w-full text-center text-[0.72rem] leading-tight font-medium">{app.label}</span>
+        <img src={app.icon} alt="" className={compact ? "size-11" : "size-14"} draggable={false} />
+        <span
+          className={cn(
+            "w-full text-center text-[0.72rem] leading-tight font-medium",
+            compact ? "truncate text-[0.68rem]" : "line-clamp-2",
+          )}
+        >
+          {app.label}
+        </span>
       </button>
     </li>
+  );
+}
+
+const RECENT_KEY = "ssa:recent-apps";
+
+function readRecentOpen() {
+  try {
+    return localStorage.getItem(RECENT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The apps used last, in a strip above the search: the newest on the right,
+ * older ones further left. Tapping one brings it back as you left it. (Previews
+ * and closing apps stay with the system's own recents screen.)
+ */
+function RecentStrip({ apps, onOpen }: { apps: LauncherApp[]; onOpen: () => void }) {
+  const { recent } = useLauncherState();
+
+  // Asked again whenever the launcher comes back – an app has just been used.
+  useEffect(() => {
+    void refreshRecent();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshRecent();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  const shown = useMemo(() => {
+    const byPackage = new Map<string, LauncherApp>();
+    for (const app of apps) if (!byPackage.has(app.package)) byPackage.set(app.package, app);
+    return (recent?.packages ?? []).flatMap((name) => byPackage.get(name) ?? []);
+  }, [apps, recent]);
+
+  return (
+    // Swiping sideways scrolls the strip instead of switching the section.
+    <section aria-label="Recent apps" data-swipe className="mb-2 rounded-(--radius-bar) bar">
+      {recent === null ? (
+        <div className="flex h-[5.25rem] flex-row-reverse gap-1 overflow-hidden p-1.5">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span key={i} className="flex w-[4.25rem] shrink-0 flex-col items-center gap-1 py-1.5">
+              <span className="skeleton size-11 rounded-2xl" />
+              <span className="skeleton h-2 w-10" />
+            </span>
+          ))}
+        </div>
+      ) : !recent.allowed ? (
+        <div className="flex items-center gap-3 py-2.5 pr-2.5 pl-4">
+          <p className="min-w-0 flex-1 text-sm leading-snug text-muted">
+            To see the apps you used last, allow usage access for Smart Assistant.
+          </p>
+          <Button size="sm" onClick={() => void launcher.allowUsageAccess()}>
+            Allow
+          </Button>
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="px-4 py-4 text-center text-sm text-muted">No apps used in the last days.</p>
+      ) : (
+        <ul
+          aria-label="Recent apps"
+          // Fades out on the left: older apps are further that way.
+          className="flex [scrollbar-width:none] flex-row-reverse gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1.5rem)] p-1.5"
+        >
+          {shown.map((app) => (
+            <AppTile key={app.id} app={app} onOpen={onOpen} compact className="w-[4.25rem] shrink-0" />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -49,8 +143,10 @@ function closeKeyboard() {
  */
 export function AppsView() {
   const isLauncher = useIsLauncher();
-  const { apps } = useLauncherState();
+  const { apps, features } = useLauncherState();
   const [query, setQuery] = useState("");
+  const [recentOpen, setRecentOpen] = useState(readRecentOpen);
+  const hasRecent = features.includes("recent");
 
   const term = query.trim().toLowerCase();
   // Searching: names that start with the text first.
@@ -89,6 +185,15 @@ export function AppsView() {
   const opened = () => {
     setQuery("");
     closeKeyboard();
+  };
+  // Stays open or closed on this phone, as you left it.
+  const toggleRecent = () => {
+    setRecentOpen(!recentOpen);
+    try {
+      localStorage.setItem(RECENT_KEY, recentOpen ? "0" : "1");
+    } catch {
+      // Private mode – remembered until the page reloads.
+    }
   };
 
   return (
@@ -137,6 +242,7 @@ export function AppsView() {
               </button>
             )}
           </div>
+          {hasRecent && recentOpen && !term && apps && <RecentStrip apps={apps} onOpen={opened} />}
           {/* Search at the bottom, near the thumb – apps first, Enter searches the web. */}
           <form
             role="search"
@@ -152,7 +258,7 @@ export function AppsView() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search apps or the web"
+                placeholder="Search apps or web"
                 aria-label="Search apps or the web"
                 enterKeyHint="search"
                 autoComplete="off"
@@ -180,6 +286,21 @@ export function AppsView() {
             >
               <Globe className="size-5" />
             </button>
+            {hasRecent && (
+              <button
+                type="button"
+                aria-label="Recent apps"
+                aria-pressed={recentOpen}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={toggleRecent}
+                className={cn(
+                  "grid size-12 shrink-0 place-items-center rounded-2xl transition-colors",
+                  recentOpen ? "bg-surface-strong text-fg shadow-(--shadow-card)" : "text-muted well",
+                )}
+              >
+                <History className="size-5" />
+              </button>
+            )}
           </form>
         </div>
       </PageBody>
