@@ -141,6 +141,13 @@ test("launcher: Home switches to the apps; open, search and come back with the h
 test("launcher: the apps used last, in a strip above the search", async ({ page }) => {
   await fakeLauncher(page);
   await page.goto("/apps");
+  await expect(page.getByRole("button", { name: "Search the web" })).toBeVisible();
+  // Off until switched on in Settings.
+  await expect(page.getByRole("button", { name: "Recent apps" })).toHaveCount(0);
+  await page.goto("/settings");
+  await page.getByRole("switch", { name: "Recently used apps" }).click();
+  await expect(page.getByRole("switch", { name: "Recently used apps" })).toBeChecked();
+  await page.goto("/apps");
   const strip = page.getByRole("region", { name: "Recent apps" });
   const toggle = page.getByRole("button", { name: "Recent apps" });
   await expect(strip).toBeHidden();

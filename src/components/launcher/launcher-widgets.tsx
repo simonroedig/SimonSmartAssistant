@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { Row, Section } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { useDevicePrefs } from "@/hooks/use-device-prefs";
 import { latestLauncherVersion, launcher, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
@@ -81,7 +83,8 @@ export function LauncherUpdateBanner({ className }: { className?: string }) {
 export function LauncherSection() {
   const isLauncher = useIsLauncher();
   const { latest, available, status } = useLauncherUpdate();
-  const { versionName } = useLauncherState();
+  const { versionName, features } = useLauncherState();
+  const [device, setDevice] = useDevicePrefs();
   const [published, setPublished] = useState<{ versionName: string } | null>(null);
 
   useEffect(() => {
@@ -118,6 +121,18 @@ export function LauncherSection() {
               )}
             </span>
           </Row>
+          {features.includes("recent") && (
+            <Row
+              label="Recently used apps"
+              hint="A button next to the apps search shows the apps you used last. Android doesn't tell other apps which ones are still open."
+            >
+              <Switch
+                checked={device.recentApps}
+                onCheckedChange={(recentApps) => setDevice({ recentApps })}
+                label="Recently used apps"
+              />
+            </Row>
+          )}
           <Row label="Home app" hint="Make this your phone's home screen">
             <Button variant="secondary" size="sm" onClick={() => void launcher.homeSettings()}>
               <House /> Choose

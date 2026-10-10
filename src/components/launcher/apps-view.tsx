@@ -1,11 +1,12 @@
 "use client";
 
 import { Globe, History, LayoutGrid, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppLink } from "@/components/shell/app-link";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useDevicePrefs } from "@/hooks/use-device-prefs";
 import { useLongPress } from "@/hooks/use-long-press";
 import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
@@ -77,6 +78,13 @@ function readRecentOpen() {
  */
 function RecentTray({ apps, open, onOpen }: { apps: LauncherApp[]; open: boolean; onOpen: () => void }) {
   const { recent } = useLauncherState();
+  const list = useRef<HTMLUListElement>(null);
+
+  // Back at the newest whenever the list is asked again (opening it, coming back
+  // from an app): scrolled-to older apps don't stay in the way. (Its start is on the right.)
+  useEffect(() => {
+    if (open) list.current?.scrollTo({ left: 0 });
+  }, [open, recent]);
 
   // Asked when it opens and whenever the launcher comes back – an app has just been used.
   useEffect(() => {
@@ -129,6 +137,7 @@ function RecentTray({ apps, open, onOpen }: { apps: LauncherApp[]; open: boolean
             <p className="px-3 py-5 text-center text-sm text-muted">The apps you open show up here.</p>
           ) : (
             <ul
+              ref={list}
               aria-label="Recent apps"
               // Fades out on the left: older apps are further that way.
               className="flex [scrollbar-width:none] flex-row-reverse gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1.5rem)] p-1.5"
@@ -159,7 +168,9 @@ export function AppsView() {
   const { apps, features } = useLauncherState();
   const [query, setQuery] = useState("");
   const [recentOpen, setRecentOpen] = useState(readRecentOpen);
-  const hasRecent = features.includes("recent");
+  const [device] = useDevicePrefs();
+  // Optional (Settings), and only with a launcher version that can.
+  const hasRecent = device.recentApps && features.includes("recent");
 
   const term = query.trim().toLowerCase();
   // Searching: names that start with the text first.

@@ -21,6 +21,8 @@ export type DevicePrefs = {
   screensaver: ScreensaverMode;
   /** Minutes without interaction before the screensaver starts. */
   screensaverDelay: number;
+  /** Android launcher: a button next to the apps search for the apps used last. */
+  recentApps: boolean;
 };
 
 export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
@@ -31,6 +33,7 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   scale: 1,
   screensaver: "night",
   screensaverDelay: 2,
+  recentApps: false,
 };
 
 export const DEVICE_STORAGE_KEY = "ssa:device";
