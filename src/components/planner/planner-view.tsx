@@ -27,7 +27,7 @@ import {
 } from "@/lib/date";
 import { afterSheetClosed } from "@/lib/history";
 import { planDay, planDuration, planStart } from "@/lib/plan-todo";
-import { TODAY_COLOR, TODAY_RING, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
+import { TONE_STYLES } from "@/lib/tones";
 import { formatDuration, MINUTES_PER_DAY, minutesOfDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useDayExtras } from "@/data/calendar";
@@ -230,16 +230,7 @@ export function PlannerView({
         <h1 className="ui-title col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
           {title}
           {relative && " "}
-          {relative && (
-            <span
-              className={cn(
-                "text-[0.62em] font-medium tracking-normal",
-                relative === "Today" ? TODAY_COLOR : "text-muted",
-              )}
-            >
-              ({relative})
-            </span>
-          )}
+          {relative && <span className="text-[0.62em] font-medium tracking-normal text-muted">({relative})</span>}
         </h1>
         <p className="truncate text-sm text-muted md:col-start-1 md:row-start-2 md:text-[0.95rem]">
           {/* Phones: the short month, so it fits next to the buttons. */}
@@ -250,11 +241,7 @@ export function PlannerView({
         </p>
         <div className="flex items-center gap-1.5 md:col-start-2 md:row-span-2 md:row-start-1 md:gap-2">
           {!isToday && today && (
-            <Button
-              size="sm"
-              className={cn(TODAY_RING, TODAY_TEXT, "border-0 px-3 max-md:h-10")}
-              onClick={() => go(today)}
-            >
+            <Button variant="secondary" size="sm" className="px-3 max-md:h-10" onClick={() => go(today)}>
               Today
             </Button>
           )}

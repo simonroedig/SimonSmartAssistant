@@ -101,7 +101,7 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
       style={style}
       className={cn(
         "ui-pill pointer-events-none absolute rounded-2xl transition-[transform,opacity,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        axis === "x" ? "inset-y-0 left-0" : "inset-x-1.5 top-0",
+        axis === "x" ? "inset-y-0 left-0" : "inset-x-0 top-0",
         tone.soft,
         index < 0 && "opacity-0",
       )}
@@ -110,8 +110,8 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
 }
 
 /** Home: underlined as the app's anchor, in the rail and the tab bar alike. */
-function AnchorLine() {
-  return <span aria-hidden="true" className="absolute bottom-0.5 h-[3px] w-5 rounded-full bg-accent/70" />;
+function AnchorLine({ className = "bottom-0.5" }: { className?: string }) {
+  return <span aria-hidden="true" className={cn("absolute h-[3px] w-5 rounded-full bg-accent/70", className)} />;
 }
 
 function RailLink({
@@ -135,13 +135,16 @@ function RailLink({
         active ? "text-fg" : "text-muted hover:text-fg",
       )}
     >
-      {pill && active && <span className={cn("ui-pill absolute inset-x-1.5 inset-y-0 rounded-2xl", tone.soft)} />}
+      {pill && active && <span className={cn("ui-pill absolute inset-0 rounded-2xl", tone.soft)} />}
       <Icon
         className={cn("relative size-6 transition-opacity", tone.text, !active && "opacity-75 group-hover:opacity-100")}
         strokeWidth={active ? 2.2 : 1.9}
       />
-      <span className="relative">{item.label}</span>
-      {anchor && <AnchorLine />}
+      <span className="relative">
+        {item.label}
+        {/* Right under the word, so it clearly belongs to Home. */}
+        {anchor && <AnchorLine className="-bottom-1.5 left-1/2 -translate-x-1/2" />}
+      </span>
     </AppLink>
   );
 }

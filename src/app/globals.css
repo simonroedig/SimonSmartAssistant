@@ -33,6 +33,7 @@
   --sleep: rgb(15 23 42 / 0.035);
   --sleep-stripe: rgb(15 23 42 / 0.05);
   --now: #f43f5e;
+  --today: #0284c7;
   --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -24px rgb(30 41 82 / 0.28);
   --shadow-pop: 0 30px 80px -20px rgb(15 23 42 / 0.35);
   --blob-1: #c7d2fe;
@@ -75,6 +76,7 @@
   --sleep: rgb(0 0 0 / 0.24);
   --sleep-stripe: rgb(255 255 255 / 0.025);
   --now: #ff5c7a;
+  --today: #7dd3fc;
   --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.05) inset, 0 24px 60px -30px rgb(0 0 0 / 0.75);
   --shadow-pop: 0 40px 100px -20px rgb(0 0 0 / 0.8);
   --blob-1: #3b2f9e;
@@ -148,6 +150,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-now: var(--now);
+  --color-today: var(--today);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --shadow-card: var(--shadow-card);
@@ -250,6 +253,13 @@
 @utility bar {
   background: var(--nav-bg);
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+/* A small sheet lying on a card or the page: notes, the note composer. */
+@utility paper {
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
   box-shadow: var(--shadow-card);
 }
 

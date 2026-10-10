@@ -42,12 +42,7 @@ function NoteCard({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "group relative rounded-2xl border border-line bg-surface-strong shadow-(--shadow-card) transition-colors hover:border-line-strong",
-        className,
-      )}
-    >
+    <div className={cn("group relative rounded-2xl paper transition-colors hover:border-line-strong", className)}>
       <button
         type="button"
         onClick={onOpen}
@@ -317,10 +312,7 @@ function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: b
   return (
     <form
       ref={box}
-      className={cn(
-        "mx-auto w-full max-w-xl rounded-2xl border border-line bg-surface-strong shadow-(--shadow-card)",
-        className,
-      )}
+      className={cn("mx-auto w-full max-w-xl rounded-2xl paper", className)}
       onSubmit={(e) => {
         e.preventDefault();
         commit();
@@ -345,7 +337,7 @@ function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: b
         aria-label="New note"
         maxLength={20000}
         maxRows={14}
-        className="rounded-none border-0 bg-transparent focus:bg-transparent"
+        bare
       />
       {open && (
         <div className="flex items-center gap-2 px-2 pb-2">
@@ -503,7 +495,8 @@ function NoteEditorSheet({
           minRows={6}
           maxRows={20}
           maxLength={20000}
-          className="rounded-none border-0 bg-transparent px-0 focus:bg-transparent"
+          bare
+          className="px-0"
         />
       </div>
     </Sheet>

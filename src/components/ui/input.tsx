@@ -37,8 +37,13 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttrib
 /** Textarea that grows with its content (up to `maxRows`, then it scrolls). */
 export const AutoTextarea = forwardRef<
   HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement> & { minRows?: number; maxRows?: number }
->(function AutoTextarea({ className, minRows = 1, maxRows = 12, value, ...props }, ref) {
+  React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+    minRows?: number;
+    maxRows?: number;
+    /** Plain text inside another surface (a note, a composer): no field of its own. */
+    bare?: boolean;
+  }
+>(function AutoTextarea({ className, minRows = 1, maxRows = 12, bare = false, value, ...props }, ref) {
   const inner = useRef<HTMLTextAreaElement>(null);
   useImperativeHandle(ref, () => inner.current!);
 
@@ -62,7 +67,10 @@ export const AutoTextarea = forwardRef<
       rows={minRows}
       value={value}
       className={cn(
-        "field w-full resize-none rounded-2xl px-4 py-3 text-[0.95rem] leading-6 transition-colors outline-none well placeholder:text-faint focus:border-accent/60 focus:bg-surface-hover",
+        "w-full resize-none px-4 py-3 text-[0.95rem] leading-6 outline-none placeholder:text-faint",
+        bare
+          ? "bg-transparent"
+          : "field rounded-2xl transition-colors well focus:border-accent/60 focus:bg-surface-hover",
         className,
       )}
       {...props}

@@ -53,15 +53,15 @@ export const TONE_STYLES: Record<
   },
 };
 
-/**
- * "Now" / "Today" everywhere: light blue with a blue ring (weather hours and
- * days, the planner's week strip and calendars), and the same blue for the word.
- */
-export const TODAY_RING = "bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50";
-/** Today while it is also the selected day. */
-export const TODAY_RING_STRONG = "bg-sky-500/26 ring-2 ring-sky-500 ring-inset dark:bg-sky-400/28 dark:ring-sky-300";
-/** The blue of "Today" as a word (titles, labels). */
-export const TODAY_COLOR = "text-sky-700 dark:text-sky-300";
-export const TODAY_TEXT = `font-bold ${TODAY_COLOR}`;
-/** A picked day that isn't today: grey like the weather's selected day, with a clear border. */
+/** A picked day: grey with a clear ring – always the most visible day. */
 export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-2 ring-slate-400/55 ring-inset dark:ring-white/40";
+/**
+ * "Now" / "Today" (weather hours and days, the planner's week strip and
+ * calendars): quietly marked with a light tint and its label or number in blue
+ * – each design has its own --today blue. It never outshines the picked day.
+ */
+export const TODAY_RING = "bg-today/10";
+/** Today while it is also the picked day: picked wins, the blue number stays. */
+export const TODAY_RING_STRONG = SELECTED_DAY;
+/** The blue of today's label or number. Words like "Today" in titles stay plain. */
+export const TODAY_TEXT = "font-semibold text-today";

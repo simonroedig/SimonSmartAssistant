@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import type { SleepSchedule } from "@/lib/sleep";
+import { TODAY_RING, TODAY_TEXT } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import type { HourlyPoint } from "@/lib/weather/open-meteo";
 import { HourLabel, sleepForHour } from "./hourly-strip";
@@ -81,7 +82,7 @@ export function HourlyChart({
                 style={{ width: COL }}
                 className={cn(
                   "h-full",
-                  isNow && "rounded-xl bg-sky-500/14 ring-2 ring-sky-500/50 ring-inset dark:ring-sky-300/50",
+                  isNow && cn("rounded-xl", TODAY_RING),
                   !isNow && sleep?.asleep && "sleep-shade",
                 )}
               />
@@ -97,7 +98,7 @@ export function HourlyChart({
                   h={h}
                   sleep={sleepForHour(sleepSchedule, h)}
                   isNow={isNow}
-                  className={cn("text-[0.7rem]", isNow ? "font-bold text-sky-700 dark:text-sky-200" : "text-muted")}
+                  className={cn("text-[0.7rem]", isNow ? TODAY_TEXT : "text-muted")}
                 />
                 <WeatherIcon code={h.code} isDay={h.isDay} className="size-9" />
               </div>

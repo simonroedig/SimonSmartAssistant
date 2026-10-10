@@ -12,7 +12,7 @@ import type { PlanBlock } from "@/data/core";
 import { BLOCK_COLORS, type BlockColor } from "@/data/planner";
 import { useToday } from "@/hooks/use-today";
 import { addDays, type DayKey, formatDayMonth, formatWeekday, fromDayKey, relativeDayLabel } from "@/lib/date";
-import { TODAY_RING, TODAY_TEXT } from "@/lib/tones";
+import { TODAY_TEXT } from "@/lib/tones";
 import { clamp, formatDuration, MINUTES_PER_DAY } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { BLOCK_STYLES, blockStyle } from "./block-colors";
@@ -175,7 +175,7 @@ function EditorForm({
             onClick={() => setPickerOpen((o) => !o)}
             className={cn(
               "flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 text-[0.95rem] font-medium transition-colors well hover:bg-surface-hover",
-              day === today && cn("border-transparent", TODAY_RING, TODAY_TEXT),
+              day === today && TODAY_TEXT,
             )}
           >
             <CalendarDays className="size-4 shrink-0" />

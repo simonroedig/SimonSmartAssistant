@@ -7,6 +7,7 @@
  *   tokens     colours, shadows, shapes, fonts (light and dark)
  *   .glass         cards, side rail          .glass-strong  sheets, menus, toasts
  *   .bar           floating bottom bars      .well          sunken fields, tracks, chips
+ *   .paper         notes and the composer
  *   .field         text fields               .ui-btn(-…)    buttons by variant
  *   .ui-action     solid colour buttons      .ui-badge      icon badges
  *   .ui-title      titles                    .ui-switch / .ui-thumb / .ui-check
@@ -47,6 +48,7 @@
   --text-muted: #6c655c;
   --text-faint: #a0978b;
   --accent: #5e55d6;
+  --today: #2e74b5;
   --accent-soft: rgb(94 85 214 / 0.13);
   --accent-fg: #ffffff;
   --sleep: rgb(120 108 92 / 0.06);
@@ -84,6 +86,7 @@
   --text-muted: #a8a39b;
   --text-faint: #716c65;
   --accent: #9c93ff;
+  --today: #8ec5f0;
   --accent-soft: rgb(156 147 255 / 0.16);
   --accent-fg: #16151f;
   --sleep: rgb(0 0 0 / 0.16);
@@ -123,6 +126,12 @@
     box-shadow:
       var(--neu-in-sm),
       0 0 0 2px var(--accent-soft);
+  }
+  /* Notes rest in shallow hollows of the card (no shadow to cut off at its edge). */
+  .paper {
+    background: var(--surface);
+    border-color: transparent;
+    box-shadow: var(--neu-in-sm);
   }
   /* Buttons stand out and sink in when pressed. */
   .ui-btn {
@@ -201,6 +210,7 @@
   --text-muted: #3f3c37;
   --text-faint: #7a746a;
   --accent: #6d4aff;
+  --today: #1d5fd6;
   --accent-soft: rgb(109 74 255 / 0.16);
   --accent-fg: #ffffff;
   --sleep: rgb(17 17 17 / 0.04);
@@ -233,6 +243,7 @@
   --text-muted: #cfc9bf;
   --text-faint: #958f85;
   --accent: #a593ff;
+  --today: #93b9ff;
   --accent-soft: rgb(165 147 255 / 0.2);
   --accent-fg: #111111;
   --sleep: rgb(0 0 0 / 0.18);
@@ -279,6 +290,11 @@
   }
   :is(.glass, .glass-strong) .well {
     background: var(--bg);
+  }
+  .paper {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink-shadow);
   }
   .field:focus,
   .field:focus-within {
@@ -361,6 +377,7 @@
   --text-muted: #675d86;
   --text-faint: #a199ba;
   --accent: #8b5cf6;
+  --today: #1e8bc9;
   --accent-soft: rgb(139 92 246 / 0.15);
   --accent-fg: #ffffff;
   --sleep: rgb(90 70 140 / 0.05);
@@ -402,6 +419,7 @@
   --text-muted: #c4beaf;
   --text-faint: #8b8678;
   --accent: #c4a7ff;
+  --today: #8fd2f2;
   --accent-soft: rgb(196 167 255 / 0.18);
   --accent-fg: #1f1830;
   --sleep: rgb(0 0 0 / 0.2);
@@ -473,6 +491,12 @@
   }
   .field {
     border-radius: var(--wobble);
+  }
+  .paper {
+    background: var(--nav-bg);
+    border: 2px solid var(--ink-soft);
+    border-radius: var(--wobble-card);
+    box-shadow: 2px 3px 0 rgb(61 51 89 / 0.1);
   }
   .field:focus,
   .field:focus-within {

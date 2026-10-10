@@ -2,6 +2,7 @@ import { Droplets, Moon, Sunrise } from "lucide-react";
 import type { DayKey } from "@/lib/date";
 import { hourSleep, type SleepSchedule } from "@/lib/sleep";
 import { formatMinutes } from "@/lib/time";
+import { TODAY_RING, TODAY_TEXT } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import type { HourlyPoint } from "@/lib/weather/open-meteo";
 import { WeatherIcon } from "./weather-icon";
@@ -64,16 +65,11 @@ export function HourlyStrip({
             key={h.time}
             className={cn(
               "flex w-[3.6rem] shrink-0 snap-start flex-col items-center gap-1 rounded-2xl py-2.5",
-              now && "bg-sky-500/14 ring-2 ring-sky-500/50 dark:ring-sky-300/50",
+              now && TODAY_RING,
               !now && sleep?.asleep && "sleep-shade",
             )}
           >
-            <HourLabel
-              h={h}
-              sleep={sleep}
-              isNow={now}
-              className={now ? "font-bold text-sky-700 dark:text-sky-200" : "text-muted"}
-            />
+            <HourLabel h={h} sleep={sleep} isNow={now} className={now ? TODAY_TEXT : "text-muted"} />
             <WeatherIcon
               code={h.code}
               isDay={h.isDay}

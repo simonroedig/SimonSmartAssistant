@@ -41,7 +41,7 @@ export function WebSearchBar({ className }: { className?: string }) {
         type="submit"
         aria-label="Search in Firefox"
         onMouseDown={(e) => e.preventDefault()}
-        className="ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-[0_8px_24px_-12px_rgb(249_115_22)]"
+        className="ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)"
       >
         <Globe className="size-5" />
       </button>

@@ -128,7 +128,7 @@ export function AppsView() {
                 onClick={searchWeb}
                 className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-surface-strong px-4 py-3 text-left text-sm shadow-(--shadow-card)"
               >
-                <Globe className="size-5 shrink-0 text-orange-500" />
+                <Globe className="size-5 shrink-0 text-fg" />
                 <span className="min-w-0 flex-1 truncate">
                   Search the web for <span className="font-semibold">“{query.trim()}”</span>
                 </span>
@@ -173,7 +173,7 @@ export function AppsView() {
               aria-label="Search the web"
               onMouseDown={(e) => e.preventDefault()}
               className={cn(
-                "ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
+                "ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)",
               )}
             >
               <Globe className="size-5" />

@@ -69,11 +69,7 @@ export function DailyList({
                 className={cn(
                   "flex w-full items-center gap-2 rounded-2xl px-2 transition-colors",
                   dense ? "h-12" : "h-14",
-                  isToday
-                    ? cn(TODAY_RING, isSelected && "ring-sky-500/80")
-                    : isSelected
-                      ? SELECTED_DAY
-                      : "hover:bg-surface-hover/60",
+                  isSelected ? SELECTED_DAY : isToday ? TODAY_RING : "hover:bg-surface-hover/60",
                 )}
               >
                 {content}
