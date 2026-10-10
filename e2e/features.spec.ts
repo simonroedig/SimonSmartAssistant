@@ -464,7 +464,15 @@ test("wall display: a drag in a long note scrolls its text instead of selecting 
   await page.mouse.down();
   for (let i = 1; i <= 10; i++) await page.mouse.move(x, start - i * 25);
   await page.mouse.up();
-  await expect.poll(() => text.evaluate((el: HTMLTextAreaElement) => el.scrollTop)).toBeGreaterThan(150);
+  // The note grows with its text; the sheet around it scrolls.
+  const scrolled = () =>
+    text.evaluate((el) => {
+      for (let p = el.parentElement; p; p = p.parentElement) {
+        if (p.scrollHeight > p.clientHeight + 1 && getComputedStyle(p).overflowY !== "visible") return p.scrollTop;
+      }
+      return 0;
+    });
+  await expect.poll(scrolled).toBeGreaterThan(150);
   // Nothing got selected (or moved), and the note is still open.
   expect(await text.evaluate((el: HTMLTextAreaElement) => el.selectionEnd - el.selectionStart)).toBe(0);
   await expect(text).toHaveValue(body);

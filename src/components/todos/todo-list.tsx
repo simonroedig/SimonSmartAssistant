@@ -111,7 +111,7 @@ function TodoRow({
             className={cn(
               "line-clamp-2 text-[0.98rem] leading-snug break-words",
               // Important: in bold, next to its filled star.
-              todo.starred && !todo.done && "font-semibold",
+              todo.starred && !todo.done && "font-bold",
               todo.done && "line-clamp-1 text-faint line-through decoration-faint/60",
             )}
           >

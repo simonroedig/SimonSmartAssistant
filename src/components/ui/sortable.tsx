@@ -11,6 +11,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import {
+  arrayMove,
   rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
@@ -19,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { createContext, useContext, useRef } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { isKioskDocument, setDragging } from "@/lib/pointer";
 import { cn, vibrate } from "@/lib/utils";
 
@@ -62,12 +63,24 @@ export function SortableList<T extends { id: string }>({
   );
   const lastDrag = useRef(0);
 
+  // On release the list shows its new order right away. Saving updates `items` a
+  // moment later; until then they still hold the old order, and the rows would
+  // jump back and slide over again.
+  const [dropped, setDropped] = useState<{ order: string[]; from: T[] } | null>(null);
+  if (dropped && dropped.from !== items) setDropped(null);
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const shown = dropped ? dropped.order.map((id) => byId.get(id)!).filter(Boolean) : items;
+
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     setDragging(false);
     lastDrag.current = Date.now();
     if (!over || active.id === over.id) return;
-    const index = items.findIndex((i) => i.id === over.id);
-    if (index >= 0) onMove(String(active.id), index);
+    const ids = shown.map((i) => i.id);
+    const from = ids.indexOf(String(active.id));
+    const index = ids.indexOf(String(over.id));
+    if (from < 0 || index < 0) return;
+    setDropped({ order: arrayMove(ids, from, index), from: items });
+    onMove(String(active.id), index);
   };
 
   return (
@@ -84,7 +97,7 @@ export function SortableList<T extends { id: string }>({
       }}
     >
       <SortableContext
-        items={items.map((i) => i.id)}
+        items={shown.map((i) => i.id)}
         strategy={layout === "grid" ? rectSortingStrategy : verticalListSortingStrategy}
       >
         <ul
@@ -97,7 +110,7 @@ export function SortableList<T extends { id: string }>({
             }
           }}
         >
-          {items.map((item) => (
+          {shown.map((item) => (
             <SortableItem key={item.id} id={item.id} withHandle={withHandle}>
               {children(item)}
             </SortableItem>

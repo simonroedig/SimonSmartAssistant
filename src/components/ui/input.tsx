@@ -54,11 +54,18 @@ export const AutoTextarea = forwardRef<
     const line = parseFloat(style.lineHeight) || 24;
     const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
     const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    // Measuring needs height: auto for a moment; the list or sheet around it would
+    // shrink and lose its scroll position (typing at the end of a long note jumped).
+    const scrollers: [Element, number][] = [];
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      if (p.scrollHeight > p.clientHeight) scrollers.push([p, p.scrollTop]);
+    }
     el.style.height = "auto";
     const min = line * minRows + padding + border;
     const max = line * maxRows + padding + border;
     el.style.height = `${Math.min(max, Math.max(min, el.scrollHeight + border))}px`;
     el.style.overflowY = el.scrollHeight + border > max ? "auto" : "hidden";
+    for (const [p, top] of scrollers) p.scrollTop = top;
   }, [value, minRows, maxRows]);
 
   return (

@@ -1,6 +1,17 @@
 "use client";
 
-import { CalendarDays, CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, ListTodo, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarPlus,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  ListTodo,
+  RotateCcw,
+  Timer,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -10,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { TimeField } from "@/components/ui/time-field";
 import type { PlanBlock } from "@/data/core";
 import { BLOCK_COLORS, type BlockColor } from "@/data/planner";
+import { useSwipe } from "@/hooks/use-swipe";
 import { useToday } from "@/hooks/use-today";
 import { addDays, type DayKey, formatDayMonth, formatWeekday, fromDayKey, relativeDayLabel } from "@/lib/date";
 import { FIELD_FOCUS, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
@@ -129,6 +141,30 @@ function EditorForm({
 
   const duration = end - start;
 
+  // A length of your own (not one of the quick picks) gets a chip of its own, so a
+  // quick pick can be tried and the own length picked again.
+  const [custom, setCustom] = useState<number | null>(null);
+  if (duration > 0 && !DURATIONS.includes(duration) && custom !== duration) setCustom(duration);
+
+  // A suggestion fills in title, colour and length – and can be taken back.
+  const [beforeSuggestion, setBeforeSuggestion] = useState<{
+    title: string;
+    color: BlockColor;
+    end: number;
+    picked: string;
+  } | null>(null);
+  const undoSuggestion = () => {
+    if (!beforeSuggestion) return;
+    setTitle(beforeSuggestion.title);
+    setColor(beforeSuggestion.color);
+    setEnd(beforeSuggestion.end);
+    setBeforeSuggestion(null);
+  };
+  const canUndo = beforeSuggestion !== null && title === beforeSuggestion.picked;
+
+  // Phones: a sideways swipe anywhere in the editor moves the block a day.
+  const swipe = useSwipe((direction) => setDay(addDays(day, direction)));
+
   const setStartKeepDuration = (value: number) => {
     const length = end - start;
     const nextStart = clamp(value, 0, MINUTES_PER_DAY - snap);
@@ -161,6 +197,7 @@ function EditorForm({
         e.preventDefault();
         submit();
       }}
+      {...swipe}
     >
       <div>
         <Label>Day</Label>
@@ -214,8 +251,19 @@ function EditorForm({
           autoComplete="off"
           enterKeyHint="done"
         />
-        {suggestions.length > 0 && (
-          <div className="-mx-1 mt-2 no-scrollbar flex gap-1.5 overflow-x-auto px-1 pb-1">
+        {(suggestions.length > 0 || canUndo) && (
+          // Scrolls sideways itself: a swipe here doesn't change the day.
+          <div className="-mx-1 mt-2 no-scrollbar flex gap-1.5 overflow-x-auto px-1 pb-1" data-swipe>
+            {canUndo && (
+              <button
+                type="button"
+                onClick={undoSuggestion}
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium whitespace-nowrap text-muted transition-colors well hover:text-fg"
+              >
+                <RotateCcw className="size-3.5" />
+                Undo
+              </button>
+            )}
             {suggestions.map((s) => {
               const st = blockStyle(s.color);
               return (
@@ -223,6 +271,8 @@ function EditorForm({
                   key={s.id}
                   type="button"
                   onClick={() => {
+                    if (!canUndo) setBeforeSuggestion({ title, color, end, picked: s.title });
+                    else setBeforeSuggestion({ ...beforeSuggestion!, picked: s.title });
                     setTitle(s.title);
                     setColor((s.color as BlockColor) ?? "violet");
                     if (!existing) setEnd(Math.min(MINUTES_PER_DAY, start + (s.end_min - s.start_min)));
@@ -236,6 +286,14 @@ function EditorForm({
             })}
           </div>
         )}
+        <Textarea
+          aria-label="Details"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Optional details"
+          maxLength={4000}
+          className="mt-2 min-h-16"
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -263,19 +321,27 @@ function EditorForm({
       </div>
 
       <div className="-mt-2 flex flex-wrap gap-1.5">
-        {DURATIONS.map((d) => (
+        {[...DURATIONS, ...(custom ? [custom] : [])].map((d, i) => (
           <button
-            key={d}
+            key={i < DURATIONS.length ? d : "custom"}
             type="button"
             disabled={start + d > MINUTES_PER_DAY}
+            aria-label={i < DURATIONS.length ? undefined : `Your own length: ${formatDuration(d)}`}
             onClick={() => setEnd(start + d)}
             className={cn(
-              "h-9 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-30",
+              "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-30",
+              // The picked length in the block's own colour.
               duration === d
-                ? "border-transparent bg-accent text-accent-fg"
+                ? cn(
+                    "border-transparent ring-2 ring-inset",
+                    blockStyle(color).bg,
+                    blockStyle(color).text,
+                    blockStyle(color).ring,
+                  )
                 : "border-line bg-surface-sunken text-muted hover:text-fg",
             )}
           >
+            {i >= DURATIONS.length && <Timer className="size-3.5" />}
             {formatDuration(d)}
           </button>
         ))}
@@ -303,18 +369,6 @@ function EditorForm({
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="block-notes">Notes</Label>
-        <Textarea
-          id="block-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Optional details"
-          maxLength={4000}
-          className="min-h-20"
-        />
-      </div>
-
       {existing && (
         <label className="flex items-center justify-between rounded-2xl bg-surface-sunken px-4 py-3">
           <span className="font-medium">Done</span>
@@ -329,7 +383,8 @@ function EditorForm({
         </p>
       )}
 
-      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-wrap items-center gap-2 border-t border-line bg-surface-strong px-6 py-4">
+      {/* The fields scroll under the buttons: blurred, like the rest of the sheet's surroundings. */}
+      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-wrap items-center gap-2 border-t border-line bg-surface-strong px-6 py-4 backdrop-blur-xl">
         {existing && (
           <>
             <Button

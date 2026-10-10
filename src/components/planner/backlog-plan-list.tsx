@@ -43,7 +43,7 @@ export function BacklogPlanList({
             >
               {todo.starred && <Star className={cn("size-3.5 shrink-0", STAR_ON)} />}
               <span className="min-w-0 flex-1">
-                <span className={cn("block truncate text-sm", todo.starred && "font-semibold", block && "text-muted")}>
+                <span className={cn("block truncate text-sm", todo.starred && "font-bold", block && "text-muted")}>
                   {headline}
                 </span>
                 {block && today ? (

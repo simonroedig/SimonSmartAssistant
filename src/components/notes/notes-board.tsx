@@ -1,6 +1,6 @@
 "use client";
 
-import { Pin, Plus, StickyNote, Trash2 } from "lucide-react";
+import { Copy, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -387,6 +387,17 @@ function NoteEditor({
   );
 }
 
+/** The whole note to the clipboard: title on the first line, then the text. */
+async function copyNote(title: string, body: string) {
+  const text = [title.trim(), body.trim()].filter(Boolean).join("\n\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Note copied");
+  } catch {
+    toast.error("Couldn't copy the note");
+  }
+}
+
 function NoteEditorSheet({
   state,
   open,
@@ -449,6 +460,15 @@ function NoteEditorSheet({
           >
             <Pin className={cn(pinned && "fill-current text-orange-500 dark:text-orange-300")} />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Copy note"
+            disabled={!title.trim() && !body.trim()}
+            onClick={() => void copyNote(title, body)}
+          >
+            <Copy />
+          </Button>
           {note && (
             <Button
               variant="danger"
@@ -463,9 +483,11 @@ function NoteEditorSheet({
               <Trash2 />
             </Button>
           )}
+          {/* Ready once there is a note (a title alone isn't one). */}
           <Button
             variant="primary"
             className={cn("ui-action ml-auto shadow-none", TONE_STYLES.orange.solid)}
+            disabled={!body.trim()}
             onClick={close}
           >
             Done
@@ -489,7 +511,8 @@ function NoteEditorSheet({
           placeholder="Note"
           aria-label="Note"
           minRows={6}
-          maxRows={20}
+          // Grows with the text; the sheet scrolls (one scroll area, the caret stays in view).
+          maxRows={Number.POSITIVE_INFINITY}
           maxLength={20000}
           bare
           className="px-0"
