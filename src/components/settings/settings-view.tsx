@@ -202,13 +202,6 @@ export function SettingsView() {
                 </Row>
               </>
             )}
-            <Row label="Reduce effects" hint="Turns off blur and background animation (faster on a Raspberry Pi)">
-              <Switch
-                checked={device.reduceEffects}
-                onCheckedChange={(reduceEffects) => setDevice({ reduceEffects })}
-                label="Reduce effects"
-              />
-            </Row>
           </Section>
 
           <Section icon={<ShieldCheck />} title="Sign-in & security">

@@ -282,7 +282,7 @@ schaltet die App auf diesem Gerät dauerhaft in den **Wandmodus**:
 - Bildschirm bleibt an (Wake Lock)
 
 Feinjustieren am Pi unter **Settings → This device**: Textgröße (z. B. 110–120 % bei 20 Zoll),
-Nachtmodus „At night/Always/Off", Verzögerung, „Reduce effects" falls die Animationen ruckeln.
+Nachtmodus „At night/Always/Off" und Verzögerung.
 
 Kiosk verlassen: Tastatur anstecken und **Alt+F4**, oder per SSH arbeiten. URL ändern: Skript erneut
 ausführen oder `~/.config/smart-assistant/kiosk.env` bearbeiten und neu starten.

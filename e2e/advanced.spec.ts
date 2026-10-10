@@ -103,6 +103,15 @@ test("planner on a touch screen: press and hold to move, swipe to scroll", async
   await page.waitForTimeout(400);
   expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
   await expect(block).toContainText("09:00 – 10:00");
+  // Let the swipe's momentum scrolling come to rest, then bring the block back into view.
+  await expect
+    .poll(async () => {
+      const top = await scroller.evaluate((el) => el.scrollTop);
+      await page.waitForTimeout(200);
+      return top === (await scroller.evaluate((el) => el.scrollTop));
+    })
+    .toBe(true);
+  await block.scrollIntoViewIfNeeded();
 
   // Press and hold, then drag down by two hours.
   b = (await block.boundingBox())!;

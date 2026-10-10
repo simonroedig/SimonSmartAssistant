@@ -14,8 +14,6 @@ export type DevicePrefs = {
   keyboard: boolean;
   /** UI scale (root font size multiplier). */
   scale: number;
-  /** Disable blur and ambient animations (for weak GPUs). */
-  reduceEffects: boolean;
   /** When the wall display dims to a calm clock. */
   screensaver: ScreensaverMode;
   /** Minutes without interaction before the screensaver starts. */
@@ -27,7 +25,6 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   kiosk: false,
   keyboard: false,
   scale: 1,
-  reduceEffects: false,
   screensaver: "night",
   screensaverDelay: 2,
 };
@@ -88,7 +85,6 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
     const root = document.documentElement;
     root.classList.toggle("dark", dark);
     root.classList.toggle("kiosk", prefs.kiosk === true);
-    root.classList.toggle("reduce-effects", prefs.reduceEffects === true);
     root.dataset.phase = phase;
     const scale = typeof prefs.scale === "number" && prefs.scale >= 0.75 && prefs.scale <= 1.6 ? prefs.scale : 1;
     root.style.fontSize = scale === 1 ? "" : `${16 * scale}px`;

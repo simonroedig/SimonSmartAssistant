@@ -20,8 +20,8 @@ export function useForecast(location: WeatherLocation | null) {
     queryFn: ({ signal }) => fetchForecast(location!, signal),
     enabled: !!location,
     staleTime: 10 * 60_000,
+    // Only while on screen; coming back refreshes it when it is older than 10 minutes.
     refetchInterval: QUARTER_HOUR,
-    refetchIntervalInBackground: true,
     retry: 3,
   });
 

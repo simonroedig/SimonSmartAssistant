@@ -23,6 +23,8 @@ const TABLE_KEYS: Record<SyncedTable, readonly unknown[][]> = {
 
 const TABLES = Object.keys(TABLE_KEYS) as SyncedTable[];
 const RETRY_DELAYS = [1_000, 3_000, 10_000, 30_000];
+/** A quick look at another app keeps the connection; longer away, it is let go. */
+const HIDDEN_GRACE = 60_000;
 
 /**
  * Streams database changes (from any device) into the local cache, so the wall
@@ -40,6 +42,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     let attempt = 0;
     let retryTimer: number | undefined;
+    let pauseTimer: number | undefined;
+    // Off screen for a while (another app in front, screen off): nothing to keep up to date.
+    let paused = false;
 
     const refresh = (table: SyncedTable) => {
       // Our own pending write will refetch when it settles; avoid flicker.
@@ -55,6 +60,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     };
 
     const connect = async () => {
+      if (paused) return;
       if (channel) {
         await supabase.removeChannel(channel);
         channel = null;
@@ -124,12 +130,40 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       attempt = 0;
       void connect();
     };
+    // Hidden for longer than a moment: close the connection (no heartbeats, no
+    // radio wake-ups). Back on screen it reconnects and catches up on what changed –
+    // the cached lists stay visible meanwhile, only the values update.
+    const onVisibility = () => {
+      window.clearTimeout(pauseTimer);
+      if (document.visibilityState === "hidden") {
+        pauseTimer = window.setTimeout(() => {
+          paused = true;
+          wasDisconnected.current = true;
+          window.clearTimeout(retryTimer);
+          const leaving = channel;
+          channel = null;
+          // Close the socket right away (on its own it lingers for another ~50 s).
+          void (leaving ? supabase.removeChannel(leaving) : Promise.resolve()).then(() => {
+            if (paused) void supabase.realtime.disconnect();
+          });
+          setStatus("connecting");
+        }, HIDDEN_GRACE);
+      } else if (paused) {
+        paused = false;
+        attempt = 0;
+        void connect();
+      }
+    };
+
     window.addEventListener("offline", onOffline);
     window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
       window.clearTimeout(retryTimer);
+      window.clearTimeout(pauseTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
       if (channel) void supabase.removeChannel(channel);

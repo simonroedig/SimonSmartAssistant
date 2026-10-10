@@ -212,18 +212,6 @@
   -webkit-user-select: text;
 }
 
-/* Low-power mode for weak GPUs (e.g. a Raspberry Pi driving a large screen). */
-.reduce-effects * {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-.reduce-effects {
-  --surface: rgb(255 255 255 / 0.9);
-}
-.reduce-effects.dark {
-  --surface: rgb(19 23 38 / 0.96);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -241,16 +229,12 @@
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(28px) saturate(1.35);
-  -webkit-backdrop-filter: blur(28px) saturate(1.35);
 }
 
 @utility glass-strong {
   background: var(--surface-strong);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-pop);
-  backdrop-filter: blur(32px) saturate(1.4);
-  -webkit-backdrop-filter: blur(32px) saturate(1.4);
 }
 
 @utility tabular {
@@ -281,6 +265,11 @@
 /* Ambient background                                                         */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * Soft colour glow behind everything; its colours follow the time of day.
+ * Static on purpose: any motion here (or a blur on top of it) makes the browser
+ * redraw the whole screen every frame – a constant drain on phone and Pi.
+ */
 .ambient {
   position: fixed;
   inset: 0;
@@ -298,7 +287,6 @@
   filter: blur(90px);
   opacity: 0.55;
   transition: background-color 3s ease;
-  will-change: transform;
 }
 .ambient::before {
   width: 62vmax;
@@ -306,7 +294,6 @@
   left: -18vmax;
   top: -26vmax;
   background-color: var(--blob-1);
-  animation: drift-a 48s ease-in-out infinite alternate;
 }
 .ambient::after {
   width: 54vmax;
@@ -314,7 +301,6 @@
   right: -20vmax;
   bottom: -24vmax;
   background-color: var(--blob-2);
-  animation: drift-b 56s ease-in-out infinite alternate;
 }
 .ambient > span {
   width: 40vmax;
@@ -323,7 +309,6 @@
   top: -14vmax;
   background-color: var(--blob-3);
   opacity: 0.4;
-  animation: drift-c 64s ease-in-out infinite alternate;
 }
 .dark .ambient::before,
 .dark .ambient::after {
@@ -332,29 +317,6 @@
 .dark .ambient > span {
   opacity: 0.32;
 }
-.reduce-effects .ambient::before,
-.reduce-effects .ambient::after,
-.reduce-effects .ambient > span {
-  animation: none;
-  filter: blur(60px);
-}
-
-@keyframes drift-a {
-  to {
-    transform: translate3d(8vmax, 6vmax, 0) scale(1.08);
-  }
-}
-@keyframes drift-b {
-  to {
-    transform: translate3d(-7vmax, -5vmax, 0) scale(1.05);
-  }
-}
-@keyframes drift-c {
-  to {
-    transform: translate3d(-10vmax, 8vmax, 0) scale(0.92);
-  }
-}
-
 @keyframes shimmer {
   from {
     background-position: -200% 0;

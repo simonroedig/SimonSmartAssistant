@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// The tests work out dates ("tomorrow", "the 15th") in the same time zone as the
+// browser below; otherwise they disagree around midnight.
+process.env.TZ = "Europe/Berlin";
+
 /**
  * End-to-end tests against a local Supabase stack (`npx supabase start`) and a
  * production build (`npm run build`). Weather requests are mocked.
