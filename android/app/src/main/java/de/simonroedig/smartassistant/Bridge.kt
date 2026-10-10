@@ -45,7 +45,7 @@ class Bridge(
                         .put("version", BuildConfig.VERSION_CODE)
                         .put("versionName", BuildConfig.VERSION_NAME)
                         // What this version can do beyond the basics (older ones don't say).
-                        .put("features", JSONArray(listOf("recent", "clearRecent"))),
+                        .put("features", JSONArray(listOf("recent"))),
                 )
             "apps" -> background.execute {
                 val list = runCatching { apps.list() }.getOrNull()
@@ -55,10 +55,6 @@ class Bridge(
                 val allowed = recent.allowed()
                 val list = if (allowed) runCatching { recent.list() }.getOrNull() else null
                 main.post { reply(id, JSONObject().put("allowed", allowed).put("apps", list ?: JSONArray())) }
-            }
-            "clearRecent" -> background.execute {
-                recent.clear()
-                main.post { reply(id, JSONObject().put("ok", true)) }
             }
             "usageAccess" -> {
                 activity.openUsageAccess()

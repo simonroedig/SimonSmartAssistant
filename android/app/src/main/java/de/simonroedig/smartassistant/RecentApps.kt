@@ -6,7 +6,6 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.os.Process
-import androidx.core.content.edit
 import org.json.JSONArray
 
 /**
@@ -18,18 +17,16 @@ import org.json.JSONArray
 class RecentApps(private val context: Context) {
     private val usage: UsageStatsManager = context.getSystemService(UsageStatsManager::class.java)
     private val appOps: AppOpsManager = context.getSystemService(AppOpsManager::class.java)
-    private val prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
 
     fun allowed(): Boolean =
         appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName) ==
             AppOpsManager.MODE_ALLOWED
 
-    /** Package names, newest first: the apps that came to the front in the last days (since the last clearing). */
+    /** Package names, newest first: the apps that came to the front in the last days. */
     fun list(limit: Int = 24): JSONArray {
         val now = System.currentTimeMillis()
-        val since = maxOf(now - WINDOW_MS, prefs.getLong(CLEARED_KEY, 0L))
         val last = HashMap<String, Long>()
-        val events = usage.queryEvents(since, now) ?: return JSONArray()
+        val events = usage.queryEvents(now - WINDOW_MS, now) ?: return JSONArray()
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
@@ -41,14 +38,6 @@ class RecentApps(private val context: Context) {
         return JSONArray(last.entries.sortedByDescending { it.value }.take(limit).map { it.key })
     }
 
-    /**
-     * Starts the list afresh: only apps used from now on. (Closing other apps
-     * themselves is reserved for the system since Android 14.)
-     */
-    fun clear() {
-        prefs.edit { putLong(CLEARED_KEY, System.currentTimeMillis()) }
-    }
-
     private fun homeApps(): List<String> =
         runCatching {
             context.packageManager
@@ -58,6 +47,5 @@ class RecentApps(private val context: Context) {
 
     private companion object {
         const val WINDOW_MS = 3L * 24 * 60 * 60 * 1000
-        const val CLEARED_KEY = "recentClearedAt"
     }
 }

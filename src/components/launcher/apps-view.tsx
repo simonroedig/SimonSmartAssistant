@@ -7,14 +7,7 @@ import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/pa
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useLongPress } from "@/hooks/use-long-press";
-import {
-  clearRecent,
-  type LauncherApp,
-  launcher,
-  refreshRecent,
-  useIsLauncher,
-  useLauncherState,
-} from "@/lib/launcher";
+import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
@@ -79,21 +72,10 @@ function readRecentOpen() {
 /**
  * The apps used last, in a tray above the search (inside the same panel, so it
  * reads as what the button opened): the newest on the right, older ones further
- * left, and at the right end a button that clears the list. Tapping an app brings
- * it back as you left it. (Previews and closing apps stay with the system's own
- * recents screen.)
+ * left. Tapping one brings it back as you left it. (Previews and closing apps stay
+ * with the system's own recents screen – a launcher can't close other apps.)
  */
-function RecentTray({
-  apps,
-  open,
-  canClear,
-  onOpen,
-}: {
-  apps: LauncherApp[];
-  open: boolean;
-  canClear: boolean;
-  onOpen: () => void;
-}) {
+function RecentTray({ apps, open, onOpen }: { apps: LauncherApp[]; open: boolean; onOpen: () => void }) {
   const { recent } = useLauncherState();
 
   // Asked when it opens and whenever the launcher comes back – an app has just been used.
@@ -125,12 +107,8 @@ function RecentTray({
       <div className="min-h-0 overflow-hidden">
         {/* Swiping sideways scrolls the tray instead of switching the section. */}
         <section aria-label="Recent apps" data-swipe className="mb-2 rounded-2xl well">
-          <h2 className="flex items-center gap-1.5 px-3 pt-2 text-[0.68rem] font-semibold tracking-wide text-muted uppercase">
-            <History className="size-3" strokeWidth={2.5} />
-            Recent
-          </h2>
           {recent === null ? (
-            <div className="flex h-[4.75rem] flex-row-reverse gap-1 overflow-hidden px-1.5 pb-1">
+            <div className="flex h-[4.75rem] flex-row-reverse gap-1 overflow-hidden p-1.5">
               {Array.from({ length: 5 }, (_, i) => (
                 <span key={i} className="flex w-[4.25rem] shrink-0 flex-col items-center gap-1 py-1.5">
                   <span className="skeleton size-11 rounded-2xl" />
@@ -139,7 +117,7 @@ function RecentTray({
               ))}
             </div>
           ) : !recent.allowed ? (
-            <div className="flex items-center gap-3 pt-1 pr-2 pb-2.5 pl-3">
+            <div className="flex items-center gap-3 py-2.5 pr-2.5 pl-3.5">
               <p className="min-w-0 flex-1 text-sm leading-snug text-muted">
                 To see the apps you used last, allow usage access for Smart Assistant.
               </p>
@@ -148,33 +126,17 @@ function RecentTray({
               </Button>
             </div>
           ) : shown.length === 0 ? (
-            <p className="px-3 pt-2 pb-5 text-center text-sm text-muted">The apps you open show up here.</p>
+            <p className="px-3 py-5 text-center text-sm text-muted">The apps you open show up here.</p>
           ) : (
-            <div className="flex items-stretch">
-              <ul
-                aria-label="Recent apps"
-                // Fades out on the left: older apps are further that way.
-                className="flex min-w-0 flex-1 [scrollbar-width:none] flex-row-reverse gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1.5rem)] px-1.5 pb-1"
-              >
-                {shown.map((app) => (
-                  <AppTile key={app.id} app={app} onOpen={onOpen} compact className="w-[4.25rem] shrink-0" />
-                ))}
-              </ul>
-              {canClear && (
-                <button
-                  type="button"
-                  aria-label="Clear recent apps"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => void clearRecent()}
-                  className="my-2 mr-1.5 flex w-14 shrink-0 flex-col items-center justify-center gap-1 border-l border-line pl-1.5 text-muted transition-transform select-none active:scale-95"
-                >
-                  <span className="grid size-9 place-items-center rounded-full border border-line bg-surface-strong">
-                    <X className="size-4" strokeWidth={2.5} />
-                  </span>
-                  <span className="text-[0.68rem] leading-tight font-medium">Clear</span>
-                </button>
-              )}
-            </div>
+            <ul
+              aria-label="Recent apps"
+              // Fades out on the left: older apps are further that way.
+              className="flex [scrollbar-width:none] flex-row-reverse gap-1 overflow-x-auto overscroll-x-contain [mask-image:linear-gradient(to_right,transparent,black_1.5rem)] p-1.5"
+            >
+              {shown.map((app) => (
+                <AppTile key={app.id} app={app} onOpen={onOpen} compact className="w-[4.25rem] shrink-0" />
+              ))}
+            </ul>
           )}
         </section>
       </div>
@@ -300,7 +262,6 @@ export function AppsView() {
                 apps={apps}
                 // Out of the way while searching.
                 open={recentOpen && !term}
-                canClear={features.includes("clearRecent")}
                 onOpen={opened}
               />
             )}
@@ -353,16 +314,13 @@ export function AppsView() {
                   aria-pressed={recentOpen}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={toggleRecent}
-                  // Pressed in like the tray it opened (and marked like the open tab); raised while closed.
+                  // Pressed in like the tray it opened; raised while closed.
                   className={cn(
-                    "relative grid size-12 shrink-0 place-items-center rounded-2xl transition-colors",
+                    "grid size-12 shrink-0 place-items-center rounded-2xl transition-colors",
                     recentOpen ? "text-fg well" : "bg-surface-strong text-muted shadow-(--shadow-card)",
                   )}
                 >
                   <History className="size-5" />
-                  {recentOpen && (
-                    <span aria-hidden="true" className="absolute bottom-1.5 h-[3px] w-4 rounded-full bg-fg/70" />
-                  )}
                 </button>
               )}
             </form>

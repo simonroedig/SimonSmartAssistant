@@ -19,13 +19,12 @@ async function fakeLauncher(page: Page) {
       postMessage(raw: string) {
         const message = JSON.parse(raw);
         sent.push(message);
-        if (message.type === "clearRecent") w.__cleared = true;
         const answer =
           message.type === "hello"
-            ? { version: 3, versionName: "1.3", features: ["recent", "clearRecent"] }
+            ? { version: 3, versionName: "1.3", features: ["recent"] }
             : message.type === "recent"
               ? w.__usageAllowed
-                ? { allowed: true, apps: w.__cleared ? [] : ["com.whatsapp", "de.bank", "com.android.systemui"] }
+                ? { allowed: true, apps: ["com.whatsapp", "de.bank", "com.android.systemui"] }
                 : { allowed: false, apps: [] }
               : message.type === "apps"
                 ? {
@@ -178,16 +177,6 @@ test("launcher: the apps used last, in a strip above the search", async ({ page 
   await page.reload();
   await expect(page.getByRole("button", { name: "Recent apps" })).toHaveAttribute("aria-pressed", "true");
   await expect(strip).toBeVisible();
-
-  // Clear: the list starts afresh.
-  await page.evaluate(() => {
-    (window as unknown as { __usageAllowed: boolean }).__usageAllowed = true;
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await expect(strip.getByRole("list", { name: "Recent apps" }).getByRole("button")).toHaveText(["WhatsApp", "Bank"]);
-  await strip.getByRole("button", { name: "Clear recent apps" }).click();
-  await expect(strip.getByText("The apps you open show up here.")).toBeVisible();
-  await expect.poll(async () => (await sent(page)).some((m) => m.type === "clearRecent")).toBe(true);
 
   // Closed again: the tray folds away.
   await page.getByRole("button", { name: "Recent apps" }).click();
