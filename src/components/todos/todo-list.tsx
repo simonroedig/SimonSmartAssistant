@@ -250,7 +250,10 @@ export function TodoList({
             disabled={!draft.trim()}
             // Keep the focus (and the phone's keyboard) in the field: adding needs one tap.
             onMouseDown={(e) => e.preventDefault()}
-            className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]", TONE_STYLES.yellow.solid)}
+            className={cn(
+              "ui-action size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]",
+              TONE_STYLES.yellow.solid,
+            )}
           >
             <Plus className="!size-5" />
           </Button>

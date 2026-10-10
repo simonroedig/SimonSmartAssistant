@@ -90,7 +90,7 @@ export function Sheet({
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild forceMount>
               <motion.div
-                className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+                className="ui-overlay fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -120,9 +120,9 @@ export function Sheet({
                   className={cn(
                     "pointer-events-auto flex max-h-[min(88dvh,100%)] w-full flex-col overflow-hidden glass-strong outline-none",
                     isPhone
-                      ? "rounded-t-[1.75rem] border-b-0 pb-[env(safe-area-inset-bottom)]"
+                      ? "rounded-t-(--radius-card) border-b-0 pb-[env(safe-area-inset-bottom)]"
                       : cn(
-                          "rounded-[1.75rem]",
+                          "rounded-(--radius-card)",
                           size === "sm" && "max-w-md",
                           size === "md" && "max-w-lg",
                           size === "lg" && "max-w-2xl",
@@ -150,7 +150,7 @@ export function Sheet({
                   )}
                   <div className="flex shrink-0 items-start gap-3 px-6 pt-4 pb-2 md:pt-6">
                     <div className="min-w-0 flex-1">
-                      <Dialog.Title className="text-lg font-semibold tracking-tight">{title}</Dialog.Title>
+                      <Dialog.Title className="ui-title text-lg font-semibold tracking-tight">{title}</Dialog.Title>
                       {description ? (
                         <Dialog.Description className="mt-1 text-sm text-muted">{description}</Dialog.Description>
                       ) : (

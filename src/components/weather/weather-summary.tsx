@@ -34,7 +34,7 @@ export function WeatherSummary({ className }: { className?: string }) {
   }
 
   if (!data || !now) {
-    return <div className={cn("skeleton h-[9.5rem] rounded-[1.75rem]", className)} aria-hidden="true" />;
+    return <div className={cn("skeleton h-[9.5rem] rounded-(--radius-card)", className)} aria-hidden="true" />;
   }
 
   const today = toDayKey(now);
@@ -48,7 +48,7 @@ export function WeatherSummary({ className }: { className?: string }) {
         <WeatherIcon code={data.current.code} isDay={data.current.isDay} className="-my-1 -ml-1 size-16 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-[2.6rem] leading-none font-light tracking-tight tabular">
+            <span className="ui-display text-[2.6rem] leading-none font-light tracking-tight tabular">
               {Math.round(data.current.temperature)}°
             </span>
             <span className="truncate text-sm font-medium">{info.label}</span>

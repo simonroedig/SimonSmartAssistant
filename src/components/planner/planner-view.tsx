@@ -227,7 +227,7 @@ export function PlannerView({
     <div className="flex h-[calc(100dvh-var(--page-bottom))] flex-col md:h-dvh" {...swipe}>
       {/* On phones the title gets its own line, so a long weekday never wraps. */}
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 md:items-end md:px-8 md:pt-7">
-        <h1 className="col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
+        <h1 className="ui-title col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
           {title}
           {relative && " "}
           {relative && (
@@ -290,7 +290,7 @@ export function PlannerView({
             size="icon-lg"
             aria-label="Add block"
             onClick={() => planner.createAtNextFree()}
-            className={cn("absolute right-4 bottom-4 z-30 rounded-full shadow-pop md:hidden", rose.solid)}
+            className={cn("ui-action absolute right-4 bottom-4 z-30 rounded-full shadow-pop md:hidden", rose.solid)}
           >
             <Plus className="!size-6" />
           </Button>
@@ -333,7 +333,7 @@ export function PlannerView({
         </Card>
 
         {/* On short screens the column scrolls rather than squeezing the backlog away. */}
-        <aside className="hidden min-h-0 flex-col gap-4 overflow-y-auto lg:flex">
+        <aside className="-m-3 hidden min-h-0 flex-col gap-4 overflow-y-auto p-3 lg:flex">
           <Card className="shrink-0 p-4">
             <MonthCalendar selected={day} today={today} onSelect={go} />
           </Card>

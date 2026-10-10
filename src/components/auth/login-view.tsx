@@ -167,11 +167,11 @@ export function LoginView({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
-        className="w-full max-w-[26rem] rounded-[2rem] p-7 glass md:p-9"
+        className="w-full max-w-[26rem] rounded-(--radius-card) p-7 glass md:p-9"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon.svg" alt="" className="mb-6 size-14 rounded-2xl shadow-[0_12px_40px_-12px_var(--accent)]" />
-        <h1 className="text-2xl font-semibold tracking-tight">Smart Assistant</h1>
+        <h1 className="ui-title text-2xl font-semibold tracking-tight">Smart Assistant</h1>
         <p className="mt-1 text-muted">Sign in to your private dashboard.</p>
 
         <AnimatePresence mode="wait" initial={false}>

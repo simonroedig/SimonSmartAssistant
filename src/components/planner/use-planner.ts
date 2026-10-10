@@ -152,7 +152,8 @@ export type NowNext = {
 export function nowAndNext(blocks: PlanBlock[], minute: number): NowNext {
   const sorted = [...blocks].sort((a, b) => a.start_min - b.start_min);
   const current = sorted.find((b) => b.start_min <= minute && minute < b.end_min && !b.done) ?? null;
-  const next = sorted.find((b) => b.start_min > minute) ?? null;
+  // Ticked off ahead of time: nothing left to look forward to.
+  const next = sorted.find((b) => b.start_min > minute && !b.done) ?? null;
   return { current, next, freeUntil: current ? null : (next?.start_min ?? null) };
 }
 

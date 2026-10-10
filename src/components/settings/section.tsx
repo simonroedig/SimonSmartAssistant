@@ -14,11 +14,11 @@ export function Section({
   return (
     <Card className="p-5 md:p-6">
       <div className="mb-4 flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent [&_svg]:size-[18px]">
+        <span className="ui-badge grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent [&_svg]:size-[18px]">
           {icon}
         </span>
         <div>
-          <h2 className="text-[1.02rem] font-semibold tracking-tight">{title}</h2>
+          <h2 className="ui-title text-[1.02rem] font-semibold tracking-tight">{title}</h2>
           {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
         </div>
       </div>

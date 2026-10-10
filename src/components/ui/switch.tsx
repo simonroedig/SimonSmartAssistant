@@ -26,11 +26,11 @@ export function Switch({
       onCheckedChange={onCheckedChange}
       aria-label={label}
       className={cn(
-        "relative h-7 w-12 shrink-0 rounded-full border border-line bg-surface-sunken transition-colors disabled:opacity-60 data-[state=checked]:border-transparent data-[state=checked]:bg-accent",
+        "ui-switch relative h-7 w-12 shrink-0 rounded-full border border-line bg-surface-sunken transition-colors disabled:opacity-60 data-[state=checked]:border-transparent data-[state=checked]:bg-accent",
         className,
       )}
     >
-      <RadixSwitch.Thumb className="block size-6 translate-x-0.5 rounded-full bg-white shadow-md transition-transform duration-200 data-[state=checked]:translate-x-[1.3rem]" />
+      <RadixSwitch.Thumb className="ui-thumb block size-6 translate-x-0.5 rounded-full bg-white shadow-md transition-transform duration-200 data-[state=checked]:translate-x-[1.3rem]" />
     </RadixSwitch.Root>
   );
 }

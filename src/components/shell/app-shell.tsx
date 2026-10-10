@@ -100,7 +100,7 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
       aria-hidden="true"
       style={style}
       className={cn(
-        "pointer-events-none absolute rounded-2xl transition-[transform,opacity,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "ui-pill pointer-events-none absolute rounded-2xl transition-[transform,opacity,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
         axis === "x" ? "inset-y-0 left-0" : "inset-x-1.5 top-0",
         tone.soft,
         index < 0 && "opacity-0",
@@ -135,7 +135,7 @@ function RailLink({
         active ? "text-fg" : "text-muted hover:text-fg",
       )}
     >
-      {pill && active && <span className={cn("absolute inset-x-1.5 inset-y-0 rounded-2xl", tone.soft)} />}
+      {pill && active && <span className={cn("ui-pill absolute inset-x-1.5 inset-y-0 rounded-2xl", tone.soft)} />}
       <Icon
         className={cn("relative size-6 transition-opacity", tone.text, !active && "opacity-75 group-hover:opacity-100")}
         strokeWidth={active ? 2.2 : 1.9}
@@ -161,7 +161,7 @@ function NavRail({
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-y-3 left-3 z-40 hidden w-[4.75rem] flex-col items-center rounded-[1.75rem] px-1.5 py-4 glass md:flex"
+      className="fixed inset-y-3 left-3 z-40 hidden w-[4.75rem] flex-col items-center rounded-(--radius-card) px-1.5 py-4 glass md:flex"
     >
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
         <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="y" />
@@ -233,7 +233,7 @@ function BottomNav({
     <nav
       aria-label="Main"
       data-tabbar
-      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-[1.6rem] border border-line bg-(--nav-bg) p-1.5 shadow-(--shadow-card) md:hidden"
+      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex rounded-(--radius-bar) p-1.5 bar md:hidden"
     >
       <div className="relative flex flex-1">
         <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="x" />

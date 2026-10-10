@@ -47,7 +47,7 @@ function Tile({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-3xl border border-line bg-surface-sunken p-4", className)}>
+    <div className={cn("rounded-3xl p-4 well", className)}>
       <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted uppercase [&_svg]:size-3.5">
         {icon}
         {label}
@@ -186,7 +186,7 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
             <div className="flex items-center gap-4">
               <WeatherIcon code={data.current.code} isDay={data.current.isDay} className="-m-3 size-32" />
               <div>
-                <div className="text-7xl leading-none font-extralight tracking-tight tabular">
+                <div className="ui-display text-7xl leading-none font-extralight tracking-tight tabular">
                   {Math.round(data.current.temperature)}°
                 </div>
                 <div className="mt-2 text-lg font-medium">{info.label}</div>

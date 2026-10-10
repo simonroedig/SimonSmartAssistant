@@ -189,7 +189,10 @@ export function ShoppingList({
             disabled={!draft.trim()}
             // Keep the focus (and the phone's keyboard) in the field: adding needs one tap, and the next item can follow.
             onMouseDown={(e) => e.preventDefault()}
-            className={cn("size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]", TONE_STYLES.emerald.solid)}
+            className={cn(
+              "ui-action size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]",
+              TONE_STYLES.emerald.solid,
+            )}
           >
             <Plus className="!size-5" />
           </Button>
@@ -340,7 +343,7 @@ function SuggestionChip({ name, onAdd, onForget }: { name: string; onAdd: () => 
         if (longPress.wasLongPress()) return;
         onAdd();
       }}
-      className="flex h-9 shrink-0 items-center gap-1 rounded-full border border-line bg-surface-sunken pr-3.5 pl-2.5 text-sm font-medium transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10 active:scale-95"
+      className="flex h-9 shrink-0 items-center gap-1 rounded-full pr-3.5 pl-2.5 text-sm font-medium transition-colors well hover:border-emerald-500/40 hover:bg-emerald-500/10 active:scale-95"
     >
       <Plus className="size-3.5 text-emerald-500" />
       {name}

@@ -239,7 +239,7 @@ export function OnScreenKeyboard() {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", stiffness: 520, damping: 44 }}
-          className="fixed inset-x-0 bottom-0 z-[100] rounded-t-[1.75rem] border-b-0 px-3 pt-3 pb-4 glass-strong select-none"
+          className="fixed inset-x-0 bottom-0 z-[100] rounded-t-(--radius-card) border-b-0 px-3 pt-3 pb-4 glass-strong select-none"
           style={{ pointerEvents: "auto" }}
           onPointerDown={(e) => e.preventDefault()}
         >

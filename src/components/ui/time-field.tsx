@@ -55,7 +55,7 @@ export function TimeField({
           <button
             type="button"
             aria-label={label ? `${label}: ${label24}` : label24}
-            className="relative h-11 min-w-24 flex-1 rounded-2xl border border-line bg-surface-sunken px-3 text-lg font-semibold tracking-tight tabular transition-colors hover:bg-surface-hover"
+            className="field relative h-11 min-w-24 flex-1 rounded-2xl px-3 text-lg font-semibold tracking-tight tabular transition-colors well hover:bg-surface-hover"
           >
             {label24}
             {nextDay && allowsNextDay && (

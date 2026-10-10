@@ -10,7 +10,7 @@ export function Card({
   ...props
 }: React.HTMLAttributes<HTMLElement> & { as?: "section" | "div" | "article" }) {
   return (
-    <Tag className={cn("relative flex min-w-0 flex-col rounded-[1.75rem] glass", className)} {...props}>
+    <Tag className={cn("relative flex min-w-0 flex-col rounded-(--radius-card) glass", className)} {...props}>
       {children}
     </Tag>
   );
@@ -45,7 +45,7 @@ export function CardHeader({
     <>
       <span
         className={cn(
-          "grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]",
+          "ui-badge grid size-9 shrink-0 place-items-center rounded-xl [&_svg]:size-[18px]",
           styles.soft,
           styles.text,
         )}
@@ -53,7 +53,9 @@ export function CardHeader({
         {icon}
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className={cn("truncate text-[0.95rem] leading-tight font-semibold tracking-tight", titleClassName)}>
+        <span
+          className={cn("ui-title truncate text-[0.95rem] leading-tight font-semibold tracking-tight", titleClassName)}
+        >
           {title}
         </span>
         {subtitle && <span className="truncate text-xs leading-tight text-muted tabular">{subtitle}</span>}
@@ -87,7 +89,7 @@ export function CardMoreLink({ href, tone, children }: { href: string; tone: Ton
     <AppLink
       href={href}
       className={cn(
-        "mt-2 flex h-11 items-center justify-center gap-1 rounded-2xl bg-surface-sunken text-sm font-semibold transition-colors hover:bg-surface-hover active:bg-surface-hover",
+        "mt-2 flex h-11 items-center justify-center gap-1 rounded-2xl text-sm font-semibold transition-colors well hover:bg-surface-hover active:bg-surface-hover",
         TONE_STYLES[tone].text,
       )}
     >

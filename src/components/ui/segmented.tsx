@@ -19,10 +19,7 @@ export function Segmented<T extends string | number>({
 }) {
   const id = useId();
   return (
-    <div
-      role="radiogroup"
-      className={cn("inline-flex rounded-2xl border border-line bg-surface-sunken p-1", className)}
-    >
+    <div role="radiogroup" className={cn("inline-flex rounded-2xl p-1 well", className)}>
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -41,7 +38,7 @@ export function Segmented<T extends string | number>({
             {active && (
               <motion.span
                 layoutId={`seg-${id}`}
-                className="absolute inset-0 rounded-xl bg-surface-strong shadow-sm ring-1 ring-line"
+                className="ui-thumb absolute inset-0 rounded-xl bg-surface-strong shadow-sm ring-1 ring-line"
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
               />
             )}

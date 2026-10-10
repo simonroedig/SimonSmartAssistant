@@ -39,10 +39,7 @@ function SwapPicker({
     <div
       role="group"
       aria-label={label}
-      className={cn(
-        "flex rounded-2xl border border-line bg-surface-sunken p-1",
-        axis === "x" ? "w-full" : "w-[5.25rem] flex-col",
-      )}
+      className={cn("flex rounded-2xl p-1 well", axis === "x" ? "w-full" : "w-[5.25rem] flex-col")}
     >
       {items.map((id) => {
         const item = navItem(id);

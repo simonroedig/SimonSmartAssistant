@@ -38,7 +38,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={asChild ? undefined : (type ?? "button")}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap transition-[background-color,color,filter,transform,box-shadow] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-[1.15em] [&_svg]:shrink-0",
+        "ui-btn inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap transition-[background-color,color,filter,transform,box-shadow] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-[1.15em] [&_svg]:shrink-0",
+        `ui-btn-${variant}`,
         variants[variant],
         sizes[size],
         className,

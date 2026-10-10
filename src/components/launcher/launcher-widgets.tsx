@@ -34,14 +34,14 @@ export function WebSearchBar({ className }: { className?: string }) {
           aria-label="Search the web"
           enterKeyHint="search"
           autoComplete="off"
-          className="h-12 w-full rounded-2xl border border-line bg-surface-strong pr-4 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-accent/60"
+          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-4 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-accent/60"
         />
       </label>
       <button
         type="submit"
         aria-label="Search in Firefox"
         onMouseDown={(e) => e.preventDefault()}
-        className="grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-[0_8px_24px_-12px_rgb(249_115_22)]"
+        className="ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-[0_8px_24px_-12px_rgb(249_115_22)]"
       >
         <Globe className="size-5" />
       </button>

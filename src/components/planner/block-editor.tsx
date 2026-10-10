@@ -174,7 +174,7 @@ function EditorForm({
             aria-label="Pick the day"
             onClick={() => setPickerOpen((o) => !o)}
             className={cn(
-              "flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border border-line bg-surface-sunken px-3 text-[0.95rem] font-medium transition-colors hover:bg-surface-hover",
+              "flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 text-[0.95rem] font-medium transition-colors well hover:bg-surface-hover",
               day === today && cn("border-transparent", TODAY_RING, TODAY_TEXT),
             )}
           >
@@ -227,7 +227,7 @@ function EditorForm({
                     setColor((s.color as BlockColor) ?? "violet");
                     if (!existing) setEnd(Math.min(MINUTES_PER_DAY, start + (s.end_min - s.start_min)));
                   }}
-                  className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-line bg-surface-sunken px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-surface-hover"
+                  className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors well hover:bg-surface-hover"
                 >
                   <span className={cn("size-2.5 rounded-full", st.swatch)} />
                   {s.title}

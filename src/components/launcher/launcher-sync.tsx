@@ -40,7 +40,7 @@ export function LauncherSync() {
     if (!isLauncher) return;
     void connectLauncher();
 
-    // The status bar follows the theme (light/dark, background colour).
+    // The status bar follows the look (design, light/dark: the background colour).
     const root = document.documentElement;
     const postTheme = () => {
       const color = getComputedStyle(root).getPropertyValue("--bg").trim();
@@ -48,7 +48,7 @@ export function LauncherSync() {
     };
     postTheme();
     const observer = new MutationObserver(postTheme);
-    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    observer.observe(root, { attributes: true, attributeFilter: ["class", "data-design"] });
 
     const stop = onLauncherEvent((event) => {
       if (event.type === "home") {

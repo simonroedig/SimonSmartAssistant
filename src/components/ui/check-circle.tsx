@@ -18,7 +18,7 @@ export function CheckCircle({
     <span
       aria-hidden="true"
       className={cn(
-        "relative grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors duration-200",
+        "ui-check relative grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors duration-200",
         checked ? fill : "border-line-strong",
         className,
       )}

@@ -19,7 +19,7 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-[1.75rem] leading-tight font-semibold tracking-tight md:text-[2rem]">{title}</h1>
+        <h1 className="ui-title text-[1.75rem] leading-tight font-semibold tracking-tight md:text-[2rem]">{title}</h1>
         {subtitle && <p className="mt-0.5 text-[0.95rem] text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}

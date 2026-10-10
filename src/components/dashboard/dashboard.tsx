@@ -46,7 +46,7 @@ export function Dashboard() {
       {today ? (
         <TodayCard today={today} fit={wide} className="md:row-span-1 xl:h-full xl:min-h-0" />
       ) : (
-        <div className="skeleton min-h-[24rem] rounded-[1.75rem]" />
+        <div className="skeleton min-h-[24rem] rounded-(--radius-card)" />
       )}
 
       {/* Column 3: lists and notes */}

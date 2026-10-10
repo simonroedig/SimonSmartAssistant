@@ -29,7 +29,7 @@ function DayRow({
 }) {
   const sleep = MINUTES_PER_DAY - (value.bed - value.wake);
   return (
-    <div className={cn("rounded-3xl border border-line bg-surface-sunken p-4", className)}>
+    <div className={cn("rounded-3xl p-4 well", className)}>
       <div className="mb-3 flex items-baseline justify-between">
         <span className="font-semibold">{label}</span>
         <span className="text-xs text-muted tabular">{formatDuration(sleep)} sleep</span>

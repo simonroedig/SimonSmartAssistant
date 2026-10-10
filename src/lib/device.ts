@@ -4,10 +4,13 @@
  */
 export type ThemeMode = "auto" | "system" | "dark" | "light";
 export type ScreensaverMode = "off" | "night" | "always";
+/** The design system (see src/lib/designs.ts and src/app/designs.css). */
+export type DesignId = "aurora" | "tactile" | "block" | "doodle";
 
 export type DevicePrefs = {
   /** auto = dark between sunset and sunrise */
   theme: ThemeMode;
+  design: DesignId;
   /** Wall display mode: hidden cursor, screensaver, on-screen keyboard, auto-update. */
   kiosk: boolean;
   /** Built-in on-screen keyboard for touch screens without a system keyboard. */
@@ -22,6 +25,7 @@ export type DevicePrefs = {
 
 export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   theme: "auto",
+  design: "aurora",
   kiosk: false,
   keyboard: false,
   scale: 1,
@@ -82,15 +86,25 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
     else if (minutes < sunrise + 75) phase = "dawn";
     else if (minutes >= sunset - 75) phase = "dusk";
 
+    // Background of each design, light and dark (also the browser's/status bar's colour).
+    const backgrounds: Record<string, [string, string]> = {
+      aurora: ["#eceff7", "#060913"],
+      tactile: ["#e9e6e1", "#2a2c31"],
+      block: ["#fff4e0", "#2b2933"],
+      doodle: ["#fffaf0", "#1f2622"],
+    };
+    const design = typeof prefs.design === "string" && prefs.design in backgrounds ? prefs.design : "aurora";
+
     const root = document.documentElement;
     root.classList.toggle("dark", dark);
+    root.dataset.design = design;
     root.classList.toggle("kiosk", prefs.kiosk === true);
     root.dataset.phase = phase;
     const scale = typeof prefs.scale === "number" && prefs.scale >= 0.75 && prefs.scale <= 1.6 ? prefs.scale : 1;
     root.style.fontSize = scale === 1 ? "" : `${16 * scale}px`;
 
     const meta = document.querySelector('meta[name="theme-color"]:not([media])');
-    if (meta) meta.setAttribute("content", dark ? "#060913" : "#eceff7");
+    if (meta) meta.setAttribute("content", backgrounds[design][dark ? 1 : 0]);
   } catch {
     // Never block rendering because of storage problems.
   }

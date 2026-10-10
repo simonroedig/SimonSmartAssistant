@@ -1,0 +1,548 @@
+/*
+ * Design systems. <html data-design="…"> picks one (Settings → This device →
+ * Design); "aurora" is the base look in globals.css and needs nothing here.
+ *
+ * Every design restyles the same parts, so the layout, the section colours and
+ * what stands out stay the same:
+ *   tokens     colours, shadows, shapes, fonts (light and dark)
+ *   .glass         cards, side rail          .glass-strong  sheets, menus, toasts
+ *   .bar           floating bottom bars      .well          sunken fields, tracks, chips
+ *   .field         text fields               .ui-btn(-…)    buttons by variant
+ *   .ui-action     solid colour buttons      .ui-badge      icon badges
+ *   .ui-title      titles                    .ui-switch / .ui-thumb / .ui-check
+ *   .ui-pill       active navigation item    .ui-overlay    dimmer behind sheets
+ *   .ui-display    big numbers (clock, temperatures)
+ *
+ * Tokens come in pairs – `:root[data-design]` for the page and `[data-design]`
+ * for the small samples in Settings – and the parts are styled in
+ * `@scope (design) to ([data-design])`, so a sample of one design can sit inside
+ * another. Rules here are unlayered: they win over Tailwind's utilities without
+ * !important.
+ */
+
+/* The samples in Settings: each with its design's background. */
+.design-preview {
+  background:
+    radial-gradient(circle at 12% 0%, var(--blob-1), transparent 62%),
+    radial-gradient(circle at 100% 100%, var(--blob-2), transparent 58%), var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+/* ========================================================================== */
+/* Tactile – neumorphism: everything is moulded from one warm material        */
+/* ========================================================================== */
+
+:root[data-design="tactile"],
+[data-design="tactile"] {
+  --bg: #e9e6e1;
+  --surface: #e9e6e1;
+  --nav-bg: #e9e6e1;
+  --surface-strong: #ece9e4;
+  --surface-sunken: rgb(120 108 92 / 0.05);
+  --surface-hover: rgb(120 108 92 / 0.08);
+  --line: rgb(120 108 92 / 0.13);
+  --line-strong: rgb(120 108 92 / 0.26);
+  --text: #2d2a26;
+  --text-muted: #6c655c;
+  --text-faint: #a0978b;
+  --accent: #5e55d6;
+  --accent-soft: rgb(94 85 214 / 0.13);
+  --accent-fg: #ffffff;
+  --sleep: rgb(120 108 92 / 0.06);
+  --sleep-stripe: rgb(120 108 92 / 0.07);
+  --neu-dark: rgb(166 155 140 / 0.6);
+  --neu-light: rgb(255 255 255 / 0.9);
+  --neu-out: 7px 7px 16px var(--neu-dark), -7px -7px 16px var(--neu-light);
+  --neu-out-sm: 3px 3px 7px var(--neu-dark), -3px -3px 7px var(--neu-light);
+  --neu-in: inset 4px 4px 9px var(--neu-dark), inset -4px -4px 9px var(--neu-light);
+  --neu-in-sm: inset 2px 2px 5px var(--neu-dark), inset -2px -2px 5px var(--neu-light);
+  --neu-knob: #f3f1ed;
+  --shadow-card: var(--neu-out);
+  --shadow-pop: 14px 14px 32px var(--neu-dark), -10px -10px 26px var(--neu-light);
+  --radius-card: 1.6rem;
+  --radius-bar: 1.6rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light;
+}
+
+:root.dark[data-design="tactile"],
+.dark [data-design="tactile"] {
+  --bg: #2a2c31;
+  --surface: #2a2c31;
+  --nav-bg: #2a2c31;
+  --surface-strong: #2e3036;
+  --surface-sunken: rgb(0 0 0 / 0.12);
+  --surface-hover: rgb(255 255 255 / 0.05);
+  --line: rgb(255 255 255 / 0.07);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --text: #e9e6e1;
+  --text-muted: #a8a39b;
+  --text-faint: #716c65;
+  --accent: #9c93ff;
+  --accent-soft: rgb(156 147 255 / 0.16);
+  --accent-fg: #16151f;
+  --sleep: rgb(0 0 0 / 0.16);
+  --sleep-stripe: rgb(255 255 255 / 0.03);
+  --neu-dark: rgb(0 0 0 / 0.5);
+  --neu-light: rgb(255 255 255 / 0.055);
+  --neu-knob: #3a3c42;
+  --shadow-card: var(--neu-out);
+  --shadow-pop: 14px 14px 32px var(--neu-dark), -10px -10px 26px var(--neu-light);
+  color-scheme: dark;
+}
+
+[data-design="tactile"] .ambient {
+  display: none;
+}
+
+@scope ([data-design="tactile"]) to ([data-design]) {
+  /* Surfaces rise out of the material … */
+  :is(.glass, .bar) {
+    background: var(--surface);
+    border-color: transparent;
+    box-shadow: var(--neu-out);
+  }
+  .glass-strong {
+    background: var(--surface-strong);
+    border-color: transparent;
+    box-shadow: var(--shadow-pop);
+  }
+  /* … fields and tracks are pressed into it. */
+  .well {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: var(--neu-in-sm);
+  }
+  .field:focus,
+  .field:focus-within {
+    box-shadow:
+      var(--neu-in-sm),
+      0 0 0 2px var(--accent-soft);
+  }
+  /* Buttons stand out and sink in when pressed. */
+  .ui-btn {
+    border-color: transparent;
+    box-shadow: var(--neu-out-sm);
+  }
+  :is(.ui-btn-secondary, .ui-btn-danger):not(.ui-action) {
+    background: var(--surface);
+  }
+  .ui-btn-primary:not(.ui-action) {
+    background: linear-gradient(145deg, color-mix(in oklab, var(--accent) 88%, white), var(--accent));
+  }
+  .ui-btn-ghost {
+    box-shadow: none;
+  }
+  .ui-btn-ghost:hover {
+    background: transparent;
+    box-shadow: var(--neu-out-sm);
+  }
+  :is(.ui-btn, .ui-action):active {
+    box-shadow: var(--neu-in-sm);
+    transform: none;
+  }
+  .ui-action {
+    background-image: linear-gradient(145deg, rgb(255 255 255 / 0.22), rgb(0 0 0 / 0.06));
+    box-shadow: var(--neu-out-sm);
+  }
+  /* Raised icons: the badge is a little button of the same material. */
+  .ui-badge {
+    background: var(--surface);
+    box-shadow: var(--neu-out-sm);
+  }
+  .ui-switch {
+    border-color: transparent;
+    box-shadow: var(--neu-in-sm);
+  }
+  .ui-switch:not([data-state="checked"]) {
+    background: transparent;
+  }
+  .ui-thumb {
+    background: var(--neu-knob);
+    box-shadow: var(--neu-out-sm);
+  }
+  .ui-check:not(.bg-accent, .bg-emerald-500) {
+    border-color: transparent;
+    box-shadow: var(--neu-in-sm);
+  }
+  /* The open section is pressed in. */
+  .ui-pill {
+    background: transparent;
+    box-shadow: var(--neu-in);
+  }
+  .ui-overlay {
+    background: rgb(60 52 42 / 0.22);
+  }
+  .ui-title {
+    letter-spacing: -0.015em;
+  }
+}
+
+/* ========================================================================== */
+/* Block – gentle neo-brutalism: ink outlines, hard shadows, flat colour      */
+/* ========================================================================== */
+
+:root[data-design="block"],
+[data-design="block"] {
+  --bg: #fff4e0;
+  --surface: #ffffff;
+  --nav-bg: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-sunken: rgb(17 17 17 / 0.04);
+  --surface-hover: rgb(17 17 17 / 0.06);
+  --line: rgb(17 17 17 / 0.16);
+  --line-strong: rgb(17 17 17 / 0.6);
+  --text: #111111;
+  --text-muted: #3f3c37;
+  --text-faint: #7a746a;
+  --accent: #6d4aff;
+  --accent-soft: rgb(109 74 255 / 0.16);
+  --accent-fg: #ffffff;
+  --sleep: rgb(17 17 17 / 0.04);
+  --sleep-stripe: rgb(17 17 17 / 0.07);
+  --ink: #111111;
+  --ink-shadow: #111111;
+  --shadow-card: 4px 4px 0 var(--ink-shadow);
+  --shadow-pop: 6px 6px 0 var(--ink-shadow);
+  --radius-card: 0.9rem;
+  --radius-bar: 0.9rem;
+  --radius-lg: 0.4rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.65rem;
+  --radius-3xl: 0.8rem;
+  --font-sans: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light;
+}
+
+:root.dark[data-design="block"],
+.dark [data-design="block"] {
+  --bg: #2b2933;
+  --surface: #36343f;
+  --nav-bg: #36343f;
+  --surface-strong: #3b3945;
+  --surface-sunken: rgb(0 0 0 / 0.16);
+  --surface-hover: rgb(255 255 255 / 0.07);
+  --line: rgb(244 241 234 / 0.16);
+  --line-strong: rgb(244 241 234 / 0.6);
+  --text: #f4f1ea;
+  --text-muted: #cfc9bf;
+  --text-faint: #958f85;
+  --accent: #a593ff;
+  --accent-soft: rgb(165 147 255 / 0.2);
+  --accent-fg: #111111;
+  --sleep: rgb(0 0 0 / 0.18);
+  --sleep-stripe: rgb(255 255 255 / 0.04);
+  --ink: #f4f1ea;
+  --ink-shadow: #0d0c10;
+  --shadow-card: 4px 4px 0 var(--ink-shadow);
+  --shadow-pop: 6px 6px 0 var(--ink-shadow);
+  color-scheme: dark;
+}
+
+/* Dotted paper instead of the glow. */
+[data-design="block"] .ambient {
+  background:
+    radial-gradient(circle, rgb(17 17 17 / 0.13) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    var(--bg);
+}
+:root.dark[data-design="block"] .ambient {
+  background:
+    radial-gradient(circle, rgb(244 241 234 / 0.1) 1px, transparent 1.4px) 0 0 / 22px 22px,
+    var(--bg);
+}
+[data-design="block"] .ambient::before,
+[data-design="block"] .ambient::after,
+[data-design="block"] .ambient > span {
+  display: none;
+}
+
+@scope ([data-design="block"]) to ([data-design]) {
+  :is(.glass, .glass-strong, .bar) {
+    border: 2px solid var(--ink);
+  }
+  :is(.glass, .bar) {
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+  }
+  .glass-strong {
+    background: var(--surface-strong);
+    box-shadow: var(--shadow-pop);
+  }
+  .well {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+  }
+  :is(.glass, .glass-strong) .well {
+    background: var(--bg);
+  }
+  .field:focus,
+  .field:focus-within {
+    border-color: var(--ink);
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+  :is(.ui-btn, .ui-action) {
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink-shadow);
+    font-weight: 700;
+  }
+  .ui-btn-secondary:not(.ui-action) {
+    background: var(--surface);
+  }
+  .ui-btn-danger:not(.ui-action) {
+    background: color-mix(in oklab, var(--danger) 16%, var(--surface));
+  }
+  .ui-btn-ghost {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .ui-btn-ghost:hover {
+    border-color: var(--ink);
+  }
+  /* Pressed: the button slides onto its shadow. */
+  :is(.ui-btn, .ui-action):not(.ui-btn-ghost):active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink-shadow);
+  }
+  .ui-badge {
+    border: 2px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--ink-shadow);
+  }
+  .ui-switch {
+    border-color: transparent;
+    box-shadow: 0 0 0 2px var(--ink);
+  }
+  .ui-switch:not([data-state="checked"]) {
+    background: var(--surface);
+  }
+  .ui-thumb {
+    box-shadow: 0 0 0 2px var(--ink);
+  }
+  .ui-check {
+    border-color: var(--ink);
+    border-radius: 0.4rem;
+  }
+  .ui-pill {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .ui-overlay {
+    background: rgb(17 17 17 / 0.35);
+    backdrop-filter: none;
+  }
+  .ui-title {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .ui-display {
+    font-weight: 500;
+    letter-spacing: -0.04em;
+  }
+}
+
+/* ========================================================================== */
+/* Doodle – playful paper: wobbly ink lines, colour splashes, handwriting     */
+/* ========================================================================== */
+
+:root[data-design="doodle"],
+[data-design="doodle"] {
+  --bg: #fffaf0;
+  --surface: rgb(255 255 255 / 0.8);
+  --nav-bg: #fffdf8;
+  --surface-strong: #fffdf8;
+  --surface-sunken: rgb(90 70 140 / 0.05);
+  --surface-hover: rgb(90 70 140 / 0.08);
+  --line: rgb(61 51 89 / 0.15);
+  --line-strong: rgb(61 51 89 / 0.38);
+  --text: #2e2645;
+  --text-muted: #675d86;
+  --text-faint: #a199ba;
+  --accent: #8b5cf6;
+  --accent-soft: rgb(139 92 246 / 0.15);
+  --accent-fg: #ffffff;
+  --sleep: rgb(90 70 140 / 0.05);
+  --sleep-stripe: rgb(90 70 140 / 0.07);
+  --ink: rgb(61 51 89 / 0.78);
+  --ink-soft: rgb(61 51 89 / 0.3);
+  --shadow-card: 3px 4px 0 rgb(61 51 89 / 0.12);
+  --shadow-pop: 5px 7px 0 rgb(61 51 89 / 0.16);
+  /* Hand-drawn corners: never quite the same twice. */
+  --wobble: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  --wobble-card: 2rem 1.3rem 2.3rem 1.1rem / 1.2rem 2.2rem 1.3rem 2.1rem;
+  --wobble-round: 52% 48% 55% 45% / 47% 55% 45% 53%;
+  --splash-1: #ffd166;
+  --splash-2: #ff8fab;
+  --splash-3: #5ed3f3;
+  --radius-card: 1.6rem;
+  --radius-bar: 1.6rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --font-sans: "Nunito Variable", ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  --font-hand: "Shantell Sans Variable", "Nunito Variable", ui-rounded, sans-serif;
+  color-scheme: light;
+}
+
+/* Dark: a chalkboard. */
+:root.dark[data-design="doodle"],
+.dark [data-design="doodle"] {
+  --bg: #1f2622;
+  --surface: rgb(255 255 255 / 0.045);
+  --nav-bg: #263029;
+  --surface-strong: #29332c;
+  --surface-sunken: rgb(0 0 0 / 0.18);
+  --surface-hover: rgb(255 255 255 / 0.06);
+  --line: rgb(236 230 214 / 0.14);
+  --line-strong: rgb(236 230 214 / 0.38);
+  --text: #f1ece0;
+  --text-muted: #c4beaf;
+  --text-faint: #8b8678;
+  --accent: #c4a7ff;
+  --accent-soft: rgb(196 167 255 / 0.18);
+  --accent-fg: #1f1830;
+  --sleep: rgb(0 0 0 / 0.2);
+  --sleep-stripe: rgb(255 255 255 / 0.04);
+  --ink: rgb(236 230 214 / 0.72);
+  --ink-soft: rgb(236 230 214 / 0.28);
+  --shadow-card: 3px 4px 0 rgb(0 0 0 / 0.3);
+  --shadow-pop: 5px 7px 0 rgb(0 0 0 / 0.4);
+  --splash-1: #7a6a2a;
+  --splash-2: #7a3550;
+  --splash-3: #22607a;
+  color-scheme: dark;
+}
+
+/* Colour splashes on the paper (static, like the glow). */
+[data-design="doodle"] .ambient::before,
+[data-design="doodle"] .ambient::after,
+[data-design="doodle"] .ambient > span {
+  filter: blur(18px);
+  opacity: 0.42;
+}
+[data-design="doodle"] .ambient::before {
+  background-color: var(--splash-1);
+  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  width: 34vmax;
+  height: 28vmax;
+  left: -9vmax;
+  top: -8vmax;
+}
+[data-design="doodle"] .ambient::after {
+  background-color: var(--splash-2);
+  border-radius: 63% 37% 41% 59% / 55% 62% 38% 45%;
+  width: 30vmax;
+  height: 32vmax;
+  right: -10vmax;
+  bottom: -9vmax;
+}
+[data-design="doodle"] .ambient > span {
+  background-color: var(--splash-3);
+  border-radius: 38% 62% 45% 55% / 60% 40% 60% 40%;
+  width: 18vmax;
+  height: 15vmax;
+  top: 30vh;
+  right: -5vmax;
+  opacity: 0.36;
+}
+:root.dark[data-design="doodle"] .ambient::before,
+:root.dark[data-design="doodle"] .ambient::after,
+:root.dark[data-design="doodle"] .ambient > span {
+  opacity: 0.3;
+}
+
+@scope ([data-design="doodle"]) to ([data-design]) {
+  :is(.glass, .glass-strong, .bar) {
+    border: 2px solid var(--ink);
+    border-radius: var(--wobble-card);
+  }
+  :is(.glass, .bar) {
+    box-shadow: var(--shadow-card);
+  }
+  :is(.bar, .glass-strong) {
+    background: var(--nav-bg);
+  }
+  .glass-strong {
+    box-shadow: var(--shadow-pop);
+  }
+  .well {
+    border: 2px dashed var(--ink-soft);
+  }
+  .field {
+    border-radius: var(--wobble);
+  }
+  .field:focus,
+  .field:focus-within {
+    border-style: solid;
+    border-color: var(--accent);
+  }
+  :is(.ui-btn, .ui-action) {
+    border: 2px solid var(--ink);
+    border-radius: var(--wobble);
+    box-shadow: 2px 3px 0 rgb(61 51 89 / 0.18);
+  }
+  .ui-action.rounded-full {
+    border-radius: var(--wobble-round);
+  }
+  .ui-btn-ghost {
+    border-color: transparent;
+    box-shadow: none;
+  }
+  :is(.ui-btn, .ui-action):not(.ui-btn-ghost):active {
+    transform: translate(1px, 2px) rotate(-0.6deg);
+    box-shadow: none;
+  }
+  /* Little stickers, slightly askew. */
+  .ui-badge {
+    border: 2px solid var(--ink);
+    border-radius: var(--wobble);
+    transform: rotate(-5deg);
+  }
+  .ui-switch {
+    border: 2px solid var(--ink);
+  }
+  .ui-check {
+    border-color: var(--ink);
+    border-radius: var(--wobble-round);
+  }
+  .ui-thumb {
+    border-radius: var(--wobble);
+  }
+  .ui-switch .ui-thumb {
+    border-radius: var(--wobble-round);
+  }
+  .ui-pill {
+    border-radius: var(--wobble);
+    box-shadow: inset 0 0 0 2px var(--ink-soft);
+  }
+  .ui-title {
+    font-family: var(--font-hand);
+    font-weight: 650;
+    letter-spacing: 0;
+  }
+  /* Big numbers (clock, temperatures) in the same hand. */
+  .ui-display {
+    font-family: var(--font-hand);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Samples */
+[data-design="tactile"].design-preview {
+  background: var(--bg);
+}
+[data-design="block"].design-preview {
+  background:
+    radial-gradient(circle, rgb(17 17 17 / 0.13) 1px, transparent 1.4px) 0 0 / 14px 14px,
+    var(--bg);
+}
+[data-design="doodle"].design-preview {
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 10%, color-mix(in oklab, var(--splash-1) 45%, transparent), transparent),
+    radial-gradient(ellipse 50% 60% at 95% 90%, color-mix(in oklab, var(--splash-2) 40%, transparent), transparent),
+    var(--bg);
+}

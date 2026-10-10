@@ -260,19 +260,19 @@ export function NotesBoard({
         )}
       </div>
       {/* Phones: "Take a note" waits at the bottom, where the thumb is. */}
-      <div className="rounded-[1.4rem] border border-line bg-(--nav-bg) p-2 shadow-(--shadow-card) md:hidden">
+      <div className="rounded-(--radius-bar) p-2 bar md:hidden">
         <button
           type="button"
           onClick={() => setEditor({ mode: "create" })}
           className="flex w-full items-center gap-2 text-left"
         >
-          <span className="flex h-12 flex-1 items-center rounded-2xl border border-line bg-surface-sunken px-4 text-[0.95rem] text-faint">
+          <span className="field flex h-12 flex-1 items-center rounded-2xl px-4 text-[0.95rem] text-faint well">
             Take a note…
           </span>
           <span
             aria-hidden="true"
             className={cn(
-              "grid size-12 shrink-0 place-items-center rounded-2xl shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
+              "ui-action grid size-12 shrink-0 place-items-center rounded-2xl shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
               TONE_STYLES.orange.solid,
             )}
           >

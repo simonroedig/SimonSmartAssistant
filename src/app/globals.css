@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* The other design systems (Aurora, the base look, is defined below). */
+@import "./designs.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant kiosk (&:where(.kiosk, .kiosk *));
@@ -7,7 +9,9 @@
 /* Design tokens                                                              */
 /* -------------------------------------------------------------------------- */
 
-:root {
+/* Aurora, the base design (also for its preview inside another design). */
+:root,
+[data-design="aurora"] {
   --bg: #eceff7;
   --surface: rgb(255 255 255 / 0.66);
   /* Opaque so the phone tab bar stays legible over scrolling content. */
@@ -34,6 +38,14 @@
   --blob-1: #c7d2fe;
   --blob-2: #fbcfe8;
   --blob-3: #bae6fd;
+  /* Shapes (designs change them; Tailwind's rounded-* scale follows too). */
+  --radius-card: 1.75rem;
+  --radius-bar: 1.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --osk-height: 0px;
   /* Phones: room kept free at the bottom of every page – the floating tab bar
      (0.75rem from the edge, 4.375rem tall) plus the usual 1rem gap between cards. */
@@ -41,7 +53,8 @@
   color-scheme: light;
 }
 
-:root.dark {
+:root.dark,
+.dark [data-design="aurora"] {
   --bg: #060913;
   --surface: rgb(255 255 255 / 0.05);
   --nav-bg: #121726;
@@ -155,7 +168,9 @@
   }
 
   body {
-    background: var(--bg);
+    /* Transparent: the colour glow (.ambient, z-index -1) sits between <html>'s
+       background and the page – an opaque body would paint over it. */
+    background: transparent;
     color: var(--text);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
@@ -229,6 +244,19 @@
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-card);
+}
+
+/* Floating bars (phone tab bar, bottom search/add bars): opaque over scrolling content. */
+@utility bar {
+  background: var(--nav-bg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+/* A sunken well: text fields, switch and segment tracks, chips, quiet boxes. */
+@utility well {
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
 }
 
 @utility glass-strong {

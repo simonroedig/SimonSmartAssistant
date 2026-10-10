@@ -23,7 +23,7 @@ export function ClockHero({ className, compact = false }: { className?: string; 
       <time
         dateTime={now.toISOString()}
         className={cn(
-          "block leading-[0.9] font-extralight tracking-[-0.045em] tabular",
+          "ui-display block leading-[0.9] font-extralight tracking-[-0.045em] tabular",
           compact ? "text-[3.6rem] sm:text-[4.25rem]" : "text-[clamp(5rem,7.4vw,8.75rem)]",
         )}
       >

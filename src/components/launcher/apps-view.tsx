@@ -143,7 +143,7 @@ export function AppsView() {
               e.preventDefault();
               searchWeb();
             }}
-            className="flex items-center gap-2 rounded-[1.4rem] border border-line bg-(--nav-bg) p-2 shadow-(--shadow-card)"
+            className="flex items-center gap-2 rounded-(--radius-bar) p-2 bar"
           >
             <label className="relative flex min-w-0 flex-1 items-center">
               <Search className="pointer-events-none absolute left-4 size-[18px] text-faint" />
@@ -154,7 +154,7 @@ export function AppsView() {
                 aria-label="Search apps or the web"
                 enterKeyHint="search"
                 autoComplete="off"
-                className="h-12 w-full rounded-2xl border border-line bg-surface-sunken pr-10 pl-11 text-[0.95rem] outline-none placeholder:text-faint focus:border-accent/60"
+                className="field h-12 w-full rounded-2xl pr-10 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-accent/60"
               />
               {query && (
                 <button
@@ -173,7 +173,7 @@ export function AppsView() {
               aria-label="Search the web"
               onMouseDown={(e) => e.preventDefault()}
               className={cn(
-                "grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
+                "ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-500 text-white shadow-[0_8px_24px_-12px_rgb(249_115_22)]",
               )}
             >
               <Globe className="size-5" />

@@ -4,6 +4,11 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Providers } from "@/components/providers/providers";
 import { deviceInitScript } from "@/lib/device";
+// Fonts of the other designs (self-hosted; a browser only downloads the one in use).
+import "@fontsource-variable/manrope";
+import "@fontsource-variable/nunito";
+import "@fontsource-variable/shantell-sans";
+import "@fontsource-variable/space-grotesk";
 import "./globals.css";
 
 export const metadata: Metadata = {
