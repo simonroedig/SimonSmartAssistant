@@ -384,7 +384,7 @@ function EditorForm({
       )}
 
       {/* The fields scroll under the buttons: blurred, like the rest of the sheet's surroundings. */}
-      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-wrap items-center gap-2 border-t border-line bg-surface-strong px-6 py-4 backdrop-blur-xl">
+      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-wrap items-center gap-2 border-t border-line bg-surface-strong px-6 py-4 [backdrop-filter:var(--overlay-blur)]">
         {existing && (
           <>
             <Button

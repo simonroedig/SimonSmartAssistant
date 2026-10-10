@@ -16,6 +16,7 @@
   --surface: rgb(255 255 255 / 0.66);
   /* Opaque so the phone tab bar stays legible over scrolling content. */
   --nav-bg: #fbfcfe;
+  --overlay-blur: blur(24px);
   --surface-strong: rgb(255 255 255 / 0.92);
   --surface-sunken: rgb(15 23 42 / 0.045);
   --surface-hover: rgb(15 23 42 / 0.05);
@@ -297,10 +298,15 @@
   background: var(--surface-sunken);
 }
 
+/* Whatever lies over the page (sheets, menus, toasts): one blur for all, so the
+   page behind reads the same everywhere (only visible where the surface is
+   see-through – Aurora). */
 @utility glass-strong {
   background: var(--surface-strong);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-pop);
+  -webkit-backdrop-filter: var(--overlay-blur);
+  backdrop-filter: var(--overlay-blur);
 }
 
 @utility tabular {
