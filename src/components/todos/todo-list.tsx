@@ -99,7 +99,7 @@ function TodoRow({
           }}
           className="grid size-12 shrink-0 place-items-center"
         >
-          <CheckCircle checked={todo.done} />
+          <CheckCircle checked={todo.done} tone="yellow" />
         </button>
         <button
           type="button"
@@ -561,6 +561,7 @@ function TodoForm({
         </Button>
         <CheckButton
           checked={todo.done}
+          tone="yellow"
           label={todo.done ? "Mark as open" : "Complete"}
           onClick={() => {
             // Edits made here are kept.

@@ -191,7 +191,7 @@ nav[data-attached]:not([data-tabbar]) {
     background: var(--neu-knob);
     box-shadow: var(--neu-out-sm);
   }
-  .ui-check:not(.bg-accent, .bg-emerald-500) {
+  .ui-check:not(.bg-accent, .bg-emerald-500, .bg-yellow-400) {
     border-color: transparent;
     box-shadow: var(--neu-in-sm);
   }

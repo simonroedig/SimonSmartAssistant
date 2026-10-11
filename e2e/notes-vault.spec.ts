@@ -228,6 +228,15 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   for (const category of categories) {
     await swipe(-160);
     await pressed(category);
+    // The picked chip keeps the page's margin from the screen's edges.
+    await expect
+      .poll(() =>
+        row.getByRole("button", { name: category, exact: true }).evaluate((chip) => {
+          const box = chip.getBoundingClientRect();
+          return box.left >= 15 && box.right <= window.innerWidth - 15;
+        }),
+      )
+      .toBe(true);
   }
   await expect.poll(scrolled).toEqual({ start: false, end: true });
   await expect(row.getByRole("button", { name: "New category" })).toBeInViewport();
@@ -240,6 +249,8 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
     await swipe(160);
     await pressed(category);
   }
+  // Back at All, the row is back at its start, as when the page opens.
+  await expect.poll(scrolled).toEqual({ start: true, end: false });
   await swipe(160);
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("PIN", { exact: true }).fill(PIN);
