@@ -443,7 +443,7 @@ function EditItemForm({
         <CheckButton
           checked={item.checked}
           tone="emerald"
-          label={item.checked ? "Back on the list" : "In the cart"}
+          label={item.checked ? "Back on list" : "In the cart"}
           onClick={() => {
             if (changed && name.trim()) onSave({ name: name.trim(), note: note.trim() || null });
             vibrate(6);

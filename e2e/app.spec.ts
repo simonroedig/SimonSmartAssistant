@@ -119,7 +119,7 @@ test("shopping and backlog: tick an item off from its sheet – next to Delete, 
   await expect(page.getByText(/In the cart · /)).toBeVisible();
   // And back on the list the same way.
   await item.getByRole("button", { name, exact: true }).click({ delay: 700 });
-  await sheet.getByRole("button", { name: "Back on the list" }).click();
+  await sheet.getByRole("button", { name: "Back on list" }).click();
   await expect(page.locator("li", { hasText: name })).toHaveCount(1);
 
   // Backlog: tap an item, then complete it from its sheet (an edit made there is kept).
@@ -132,7 +132,7 @@ test("shopping and backlog: tick an item off from its sheet – next to Delete, 
   await page.getByRole("button", { name: title, exact: true }).click();
   await expect(sheet.getByRole("button", { name: "Delete" })).toBeVisible();
   await sheet.getByLabel("Text").fill(`${title} done`);
-  await sheet.getByRole("button", { name: "Complete", exact: true }).click();
+  await sheet.getByRole("button", { name: "Done", exact: true }).click();
   await expect(sheet).toBeHidden();
   await expect(page.getByText(`Done: ${title}`)).toBeVisible();
   await expect(page.getByRole("button", { name: `Complete "${title} done"` })).toHaveCount(0);

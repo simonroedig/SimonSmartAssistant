@@ -547,7 +547,7 @@ function TodoForm({
         Created {formatNumericDate(new Date(todo.created_at))}
         {todo.done_at ? ` · done ${formatNumericDate(new Date(todo.done_at))}` : ""}
       </p>
-      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-wrap items-center gap-2 border-t border-line bg-surface-strong px-6 py-4">
+      <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 flex flex-wrap items-center gap-1.5 border-t border-line bg-surface-strong px-6 py-4">
         <Button
           variant="danger"
           size="icon"
@@ -562,7 +562,7 @@ function TodoForm({
         <CheckButton
           checked={todo.done}
           tone="yellow"
-          label={todo.done ? "Mark as open" : "Complete"}
+          label={todo.done ? "Reopen" : "Done"}
           onClick={() => {
             // Edits made here are kept.
             if (title.trim() && (title.trim() !== todo.title || due !== todo.due_date || starred !== todo.starred)) {
@@ -575,11 +575,11 @@ function TodoForm({
         />
         {!todo.done &&
           (planned ? (
-            <Button variant="secondary" onClick={openInPlanner}>
+            <Button variant="secondary" className="px-3.5" onClick={openInPlanner}>
               <CalendarCheck /> Show in planner
             </Button>
           ) : (
-            <Button variant="secondary" onClick={openInPlanner}>
+            <Button variant="secondary" className="px-3.5" onClick={openInPlanner}>
               <CalendarPlus /> Plan it
             </Button>
           ))}

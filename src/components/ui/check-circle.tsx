@@ -14,19 +14,6 @@ const FILL: Record<CheckTone, string> = {
   yellow: "bg-yellow-400 border-yellow-400 text-yellow-950 dark:bg-yellow-300 dark:border-yellow-300",
 };
 
-/** Unticked but in colour (as a button in a sheet, it should look like one). */
-const OUTLINE: Record<CheckTone, { border: string; tick: string }> = {
-  accent: { border: "border-accent", tick: "text-accent" },
-  emerald: { border: "border-emerald-500", tick: "text-emerald-600 dark:text-emerald-300" },
-  yellow: { border: "border-yellow-500 dark:border-yellow-300", tick: "text-yellow-600 dark:text-yellow-300" },
-};
-
-const BUTTON: Record<CheckTone, string> = {
-  accent: "bg-accent-soft hover:bg-accent/20",
-  emerald: "bg-emerald-500/12 hover:bg-emerald-500/20",
-  yellow: "bg-yellow-400/18 hover:bg-yellow-400/28 dark:bg-yellow-300/14 dark:hover:bg-yellow-300/22",
-};
-
 /**
  * Round, animated checkbox used in lists. Unticked it shows a faint tick, so
  * it reads as "tap to tick off".
@@ -35,22 +22,21 @@ export function CheckCircle({
   checked,
   className,
   tone = "accent",
-  vivid = false,
+  strong = false,
 }: {
   checked: boolean;
   className?: string;
   tone?: CheckTone;
-  /** Unticked in the section's colour instead of grey. */
-  vivid?: boolean;
+  /** Unticked, but with a clear grey tick (on a button rather than in a list). */
+  strong?: boolean;
 }) {
   const fill = FILL[tone];
   return (
     <span
       aria-hidden="true"
-      data-vivid={vivid || undefined}
       className={cn(
         "ui-check relative grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors duration-200",
-        checked ? fill : vivid ? OUTLINE[tone].border : "border-line-strong",
+        checked ? fill : strong ? "border-muted/70" : "border-line-strong",
         className,
       )}
     >
@@ -64,8 +50,8 @@ export function CheckCircle({
           strokeLinejoin="round"
           className={cn(
             "transition-opacity duration-200",
-            vivid ? OUTLINE[tone].tick : "text-faint",
-            checked ? "opacity-0" : vivid ? "opacity-100" : "opacity-45",
+            strong ? "text-muted" : "text-faint",
+            checked ? "opacity-0" : strong ? "opacity-100" : "opacity-45",
           )}
         />
         <motion.path
@@ -85,8 +71,9 @@ export function CheckCircle({
 }
 
 /**
- * Tick off (or back on) from an item's sheet: the list's circle as a button,
- * next to Delete – so finishing and deleting are never mixed up.
+ * Tick off (or back on) from an item's sheet, next to Delete – so finishing
+ * and deleting are never mixed up. A plain button with the list's circle:
+ * grey while open, filled in the section's colour once done (as in the list).
  */
 export function CheckButton({
   checked,
@@ -100,15 +87,9 @@ export function CheckButton({
   tone?: CheckTone;
 }) {
   return (
-    <Button
-      size="icon"
-      variant="soft"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={cn("[&_svg]:size-3.5", BUTTON[tone ?? "accent"])}
-    >
-      <CheckCircle checked={checked} tone={tone} vivid />
+    <Button variant="secondary" onClick={onClick} className="gap-2 pr-3.5 pl-3 [&_svg]:size-3">
+      <CheckCircle checked={checked} tone={tone} strong className="size-5" />
+      {label}
     </Button>
   );
 }
