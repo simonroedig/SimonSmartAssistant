@@ -103,22 +103,30 @@ test("planner on a touch screen: press and hold to move, swipe to scroll", async
   await page.waitForTimeout(400);
   expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
   await expect(block).toContainText("09:00 – 10:00");
-  // Let the swipe's momentum scrolling come to rest, then bring the block back into view.
-  await expect
-    .poll(async () => {
-      const top = await scroller.evaluate((el) => el.scrollTop);
-      await page.waitForTimeout(200);
-      return top === (await scroller.evaluate((el) => el.scrollTop));
-    })
-    .toBe(true);
-  await block.scrollIntoViewIfNeeded();
+  // Let the swipe's momentum scrolling come to rest, then bring the block back to the middle (away from
+  // the edges, where holding it would scroll the timeline), and let that settle too.
+  const settle = () =>
+    expect
+      .poll(async () => {
+        const top = await scroller.evaluate((el) => el.scrollTop);
+        await page.waitForTimeout(200);
+        return top === (await scroller.evaluate((el) => el.scrollTop));
+      })
+      .toBe(true);
+  await settle();
+  await block.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await settle();
 
-  // Press and hold, then drag down by two hours.
+  // Press and hold until the block is picked up, then drag down by two hours.
   b = (await block.boundingBox())!;
+  const held = page.locator("[data-dragging]", { has: block });
   await touch("touchStart", b.x + 60, b.y + 20);
-  await page.waitForTimeout(450);
+  await expect(held).toHaveCount(1);
   for (let i = 1; i <= 16; i++) await touch("touchMove", b.x + 60, b.y + 20 + i * 8);
+  // Still held: the block shows where it would land; letting go puts it there.
+  await expect(block).toContainText("11:00 – 12:00");
   await touch("touchEnd", 0, 0);
+  await expect(held).toHaveCount(0);
   await expect(block).toContainText("11:00 – 12:00");
   await context.close();
 });

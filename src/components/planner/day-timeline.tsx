@@ -363,6 +363,7 @@ export function DayTimeline({
           return (
             <div
               key={block.id}
+              data-dragging={active ? "" : undefined}
               className={cn(
                 "group absolute z-10 [touch-action:pan-y] select-none [-webkit-touch-callout:none]",
                 active && "z-30",
