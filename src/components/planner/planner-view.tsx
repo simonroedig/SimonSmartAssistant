@@ -408,10 +408,9 @@ export function PlannerView({
           selected={day}
           today={today}
           listFirst
-          onSelect={(target) => {
-            go(target);
-            setCalendarOpen(false);
-          }}
+          // Stays open: the planner behind it shows the picked day, and a look at
+          // another day's birthdays doesn't mean losing the month. Closing is up to you.
+          onSelect={go}
         />
       </Sheet>
 

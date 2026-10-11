@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useToday } from "@/hooks/use-today";
 import { type DayKey, isDayKey } from "@/lib/date";
 import { PlannerView } from "./planner-view";
@@ -15,12 +15,24 @@ export function PlannerClient({ requestedDay, planTodoId }: { requestedDay?: str
   const [picked, setPicked] = useState<DayKey | null>(isDayKey(requestedDay) ? requestedDay : null);
   const day = picked ?? today;
 
+  // Picked in a sheet (the month calendar stays open for more picks): the URL
+  // follows once the sheet has given up its history entry – with the last pick.
+  const pendingUrl = useRef<string | null>(null);
   const go = (target: DayKey) => {
     setPicked(target === today ? null : target);
     const url = target === today ? "/planner" : `/planner?day=${target}`;
-    // Picked in a sheet: update the URL once the sheet has given up its history entry.
     if (window.history.state?.sheet) {
-      window.addEventListener("popstate", () => window.history.replaceState(null, "", url), { once: true });
+      if (pendingUrl.current === null) {
+        window.addEventListener(
+          "popstate",
+          () => {
+            if (pendingUrl.current) window.history.replaceState(null, "", pendingUrl.current);
+            pendingUrl.current = null;
+          },
+          { once: true },
+        );
+      }
+      pendingUrl.current = url;
     } else {
       window.history.replaceState(null, "", url);
     }
