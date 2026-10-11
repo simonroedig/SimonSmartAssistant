@@ -2,6 +2,7 @@
 
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { Copy, Lock, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ import {
   useVaultNotes,
 } from "@/data/notes";
 import { useVaultStatus } from "@/data/vault";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useSwipe } from "@/hooks/use-swipe";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
@@ -126,6 +129,8 @@ function useVaultGuard() {
 
   useEffect(() => () => lockVault(), []);
 }
+
+const filterKey = (filter: NoteFilter) => (typeof filter === "object" ? filter.category : filter);
 
 /** Notes in a Google Keep-like board (page) or as a scrollable list (home card). */
 export function NotesBoard({
@@ -235,6 +240,28 @@ export function NotesBoard({
     setFilter(next);
   };
 
+  // In the order of the chips: the vault, All, the categories.
+  const order = ["vault", "all", ...categoryList.map((c) => c.id)];
+  const key = filterKey(filter);
+
+  // The notes slide in from the side the picked filter is on.
+  const [shownKey, setShownKey] = useState({ key, direction: 1 });
+  if (shownKey.key !== key) {
+    setShownKey({ key, direction: order.indexOf(key) < order.indexOf(shownKey.key) ? -1 : 1 });
+  }
+
+  // Phones: swipe sideways through All and the categories. The vault isn't in
+  // that round – it opens with a tap (and asks for the PIN).
+  const phone = useMediaQuery("(max-width: 767px)");
+  const swipe = useSwipe(
+    (direction) => {
+      const next = order[order.indexOf(key) + direction];
+      if (!next || next === "vault") return;
+      changeFilter(next === "all" ? "all" : { category: next });
+    },
+    variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null,
+  );
+
   const editorSheet = (
     <NoteEditor
       state={editor}
@@ -342,7 +369,8 @@ export function NotesBoard({
         : "No notes yet. Codes, ideas, gift lists – anything goes.";
 
   return (
-    <div className={cn("flex flex-col", className)}>
+    // Sideways moves are the page's (swipes), up and down scroll.
+    <div className={cn("flex [touch-action:pan-y] flex-col", className)} {...swipe}>
       <NoteFilters
         filter={filter}
         categories={categoryList}
@@ -355,52 +383,59 @@ export function NotesBoard({
       />
       <Composer onCreate={(draft, pin) => create(draft, pin)} className="max-md:hidden" />
       {/* Phones: only this part scrolls; "Take a note" stays below it. */}
-      <div className="max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-3">
-        {inVault && (
-          <div
-            className={cn(
-              "mt-2 flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm md:mt-6",
-              VAULT_TONE.soft,
-              VAULT_TONE.text,
-            )}
-          >
-            <Lock className="size-4 shrink-0" />
-            <span className="min-w-0 flex-1">The vault is open – it locks when you leave it.</span>
-            <Button variant="ghost" size="sm" onClick={() => changeFilter("all")}>
-              Lock
-            </Button>
-          </div>
-        )}
-        {loading ? (
-          <div className={cn(grid, "mt-2 md:mt-6")}>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="skeleton h-28 rounded-2xl" />
-            ))}
-          </div>
-        ) : all.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
-            {inVault ? <Lock className="size-10 text-faint" /> : <StickyNote className="size-10 text-faint" />}
-            <p className="text-sm">{emptyText}</p>
-          </div>
-        ) : (
-          <div className={cn("flex flex-col gap-6", inVault ? "mt-4" : "mt-2 md:mt-6")}>
-            {pinned.length > 0 && (
-              <section>
-                <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
-                {sortable(pinned)}
-              </section>
-            )}
-            {others.length > 0 && (
-              <section>
-                {pinned.length > 0 && (
-                  <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Others</h2>
-                )}
-                {sortable(others)}
-              </section>
-            )}
-            <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
-          </div>
-        )}
+      <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-3">
+        <motion.div
+          key={key}
+          initial={{ opacity: 0, x: shownKey.direction * 28 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+        >
+          {inVault && (
+            <div
+              className={cn(
+                "mt-2 flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm md:mt-6",
+                VAULT_TONE.soft,
+                VAULT_TONE.text,
+              )}
+            >
+              <Lock className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1">The vault is open – it locks when you leave it.</span>
+              <Button variant="ghost" size="sm" onClick={() => changeFilter("all")}>
+                Lock
+              </Button>
+            </div>
+          )}
+          {loading ? (
+            <div className={cn(grid, "mt-2 md:mt-6")}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skeleton h-28 rounded-2xl" />
+              ))}
+            </div>
+          ) : all.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
+              {inVault ? <Lock className="size-10 text-faint" /> : <StickyNote className="size-10 text-faint" />}
+              <p className="text-sm">{emptyText}</p>
+            </div>
+          ) : (
+            <div className={cn("flex flex-col gap-6", inVault ? "mt-4" : "mt-2 md:mt-6")}>
+              {pinned.length > 0 && (
+                <section>
+                  <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
+                  {sortable(pinned)}
+                </section>
+              )}
+              {others.length > 0 && (
+                <section>
+                  {pinned.length > 0 && (
+                    <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Others</h2>
+                  )}
+                  {sortable(others)}
+                </section>
+              )}
+              <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
+            </div>
+          )}
+        </motion.div>
       </div>
       {/* Phones: "Take a note" waits at the bottom, where the thumb is. */}
       <div className="rounded-(--radius-bar) p-2 bar md:hidden">

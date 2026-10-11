@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { isFingerLike } from "@/lib/pointer";
+import { isDragging, isFingerLike } from "@/lib/pointer";
 
 const MIN_DISTANCE = 60;
 const MAX_DURATION = 1500;
@@ -11,7 +11,8 @@ const MAX_DURATION = 1500;
  * `onSwipe(1)` for a swipe to the left (next), `onSwipe(-1)` to the right
  * (previous). The tap that ends a swipe is swallowed. Spread the returned
  * handlers on the element; events from portals (sheets) are ignored, and so
- * are swipes on a nested element with its own swipe (marked `data-swipe`).
+ * are swipes on a nested element with its own swipe (marked `data-swipe`) and
+ * moves that dragged something (a note, a block).
  */
 export function useSwipe(onSwipe: (direction: 1 | -1) => void, enabled = true) {
   const start = useRef<{ id: number; x: number; y: number; t: number } | null>(null);
@@ -26,10 +27,13 @@ export function useSwipe(onSwipe: (direction: 1 | -1) => void, enabled = true) {
           ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp }
           : null;
     },
+    onPointerMoveCapture: (e: React.PointerEvent) => {
+      if (start.current?.id === e.pointerId && isDragging()) start.current = null;
+    },
     onPointerUpCapture: (e: React.PointerEvent) => {
       const s = start.current;
       start.current = null;
-      if (!s || s.id !== e.pointerId) return;
+      if (!s || s.id !== e.pointerId || isDragging()) return;
       const dx = e.clientX - s.x;
       const dy = e.clientY - s.y;
       if (Math.abs(dx) < MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.5 || e.timeStamp - s.t > MAX_DURATION) return;

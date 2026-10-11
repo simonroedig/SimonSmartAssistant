@@ -177,3 +177,63 @@ test("settings: change the vault PIN, or reset it with a code from the e-mail", 
   await dialog.getByLabel("Repeat the new PIN").fill(PIN);
   await expect(page.getByText("Vault PIN changed")).toBeVisible();
 });
+
+test("notes on a phone: swipe sideways through All and the categories, never into the vault", async ({ browser }) => {
+  const context = await browser.newContext({
+    storageState: "e2e/.auth/user.json",
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await mockWeather(page);
+  await page.goto("/notes");
+
+  // A category to swipe to.
+  const name = `Ideas ${Date.now() % 100000}`;
+  await filters(page).getByRole("button", { name: "New category" }).click();
+  await page.getByRole("dialog").getByLabel("Category name").fill(name);
+  await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await filters(page).getByRole("button", { name: "All", exact: true }).click();
+
+  // The vault comes first, then All, then the categories.
+  const chips = await filters(page).getByRole("button").allTextContents();
+  expect(chips.slice(0, 2).map((c) => c.trim())).toEqual(["Vault", "All"]);
+  const firstCategory = chips[2].trim();
+
+  const cdp = await context.newCDPSession(page);
+  const swipe = async (dx: number) => {
+    const [x, y] = [195, 520];
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y, id: 1 }] });
+    for (let i = 1; i <= 8; i++) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x: x + (dx * i) / 8, y, id: 1 }],
+      });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  };
+  const pressed = (label: string) =>
+    expect(filters(page).getByRole("button", { name: label, exact: true })).toHaveAttribute("aria-pressed", "true");
+
+  // To the left: the next category.
+  await swipe(-160);
+  await pressed(firstCategory);
+  // To the right: back to All – and from there not on into the vault.
+  await swipe(160);
+  await pressed("All");
+  await swipe(160);
+  await pressed("All");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // Clean up the category (a moment after the swipe – the tap that ends one is swallowed).
+  await page.waitForTimeout(150);
+  await filters(page).getByRole("button", { name, exact: true }).click();
+  await pressed(name);
+  await filters(page)
+    .getByRole("button", { name: `Edit ${name}` })
+    .click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete category" }).click();
+  await context.close();
+});

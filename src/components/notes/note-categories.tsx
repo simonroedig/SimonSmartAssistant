@@ -80,7 +80,7 @@ function CategoryChip({
   );
 }
 
-/** The filters above the notes: All, the vault, the categories, and + for a new one. */
+/** The filters above the notes: the vault, All, the categories, and + for a new one. */
 export function NoteFilters({
   filter,
   categories,
@@ -117,17 +117,6 @@ export function NoteFilters({
     >
       <button
         type="button"
-        aria-pressed={filter === "all"}
-        onClick={() => onChange("all")}
-        className={cn(
-          CHIP,
-          filter === "all" ? cn(TONE_STYLES.orange.soft, TONE_STYLES.orange.text, CHIP_ON) : CHIP_IDLE,
-        )}
-      >
-        All
-      </button>
-      <button
-        type="button"
         aria-pressed={filter === "vault"}
         aria-label={vaultOpen ? "Vault (open)" : "Vault"}
         onClick={onVault}
@@ -136,6 +125,17 @@ export function NoteFilters({
       >
         <Lock className="size-3.5" strokeWidth={2.4} />
         Vault
+      </button>
+      <button
+        type="button"
+        aria-pressed={filter === "all"}
+        onClick={() => onChange("all")}
+        className={cn(
+          CHIP,
+          filter === "all" ? cn(TONE_STYLES.orange.soft, TONE_STYLES.orange.text, CHIP_ON) : CHIP_IDLE,
+        )}
+      >
+        All
       </button>
       {categories.map((category) => (
         <CategoryChip
