@@ -14,6 +14,13 @@ const FILL: Record<CheckTone, string> = {
   yellow: "bg-yellow-400 border-yellow-400 text-yellow-950 dark:bg-yellow-300 dark:border-yellow-300",
 };
 
+/** Unticked but in colour (as a button in a sheet, it should look like one). */
+const OUTLINE: Record<CheckTone, { border: string; tick: string }> = {
+  accent: { border: "border-accent", tick: "text-accent" },
+  emerald: { border: "border-emerald-500", tick: "text-emerald-600 dark:text-emerald-300" },
+  yellow: { border: "border-yellow-500 dark:border-yellow-300", tick: "text-yellow-600 dark:text-yellow-300" },
+};
+
 const BUTTON: Record<CheckTone, string> = {
   accent: "bg-accent-soft hover:bg-accent/20",
   emerald: "bg-emerald-500/12 hover:bg-emerald-500/20",
@@ -28,18 +35,22 @@ export function CheckCircle({
   checked,
   className,
   tone = "accent",
+  vivid = false,
 }: {
   checked: boolean;
   className?: string;
   tone?: CheckTone;
+  /** Unticked in the section's colour instead of grey. */
+  vivid?: boolean;
 }) {
   const fill = FILL[tone];
   return (
     <span
       aria-hidden="true"
+      data-vivid={vivid || undefined}
       className={cn(
         "ui-check relative grid size-6 shrink-0 place-items-center rounded-full border-2 transition-colors duration-200",
-        checked ? fill : "border-line-strong",
+        checked ? fill : vivid ? OUTLINE[tone].border : "border-line-strong",
         className,
       )}
     >
@@ -51,7 +62,11 @@ export function CheckCircle({
           strokeWidth={3.2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={cn("text-faint transition-opacity duration-200", checked ? "opacity-0" : "opacity-45")}
+          className={cn(
+            "transition-opacity duration-200",
+            vivid ? OUTLINE[tone].tick : "text-faint",
+            checked ? "opacity-0" : vivid ? "opacity-100" : "opacity-45",
+          )}
         />
         <motion.path
           d="M5 12.5l4.2 4.2L19 7"
@@ -93,7 +108,7 @@ export function CheckButton({
       onClick={onClick}
       className={cn("[&_svg]:size-3.5", BUTTON[tone ?? "accent"])}
     >
-      <CheckCircle checked={checked} tone={tone} />
+      <CheckCircle checked={checked} tone={tone} vivid />
     </Button>
   );
 }
