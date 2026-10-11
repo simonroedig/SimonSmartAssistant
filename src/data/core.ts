@@ -23,11 +23,20 @@ export type DayNote = Tables<"day_notes">;
 export type Note = Tables<"notes">;
 export type Birthday = Tables<"birthdays">;
 export type BlockedApp = Tables<"blocked_apps">;
+export type NoteCategory = Tables<"note_categories">;
 export type UserSettingsRow = Tables<"user_settings">;
 
 /** Tables whose changes are streamed through Supabase Realtime. */
 export type SyncedTable =
-  "user_settings" | "shopping_items" | "todos" | "plan_blocks" | "day_notes" | "notes" | "birthdays" | "blocked_apps";
+  | "user_settings"
+  | "shopping_items"
+  | "todos"
+  | "plan_blocks"
+  | "day_notes"
+  | "notes"
+  | "birthdays"
+  | "blocked_apps"
+  | "note_categories";
 
 export const queryKeys = {
   settings: ["user_settings"] as const,
@@ -39,6 +48,10 @@ export const queryKeys = {
   dayNotes: ["day_notes"] as const,
   dayNoteRange: (from: DayKey, to: DayKey) => ["day_notes", from, to] as const,
   notes: ["notes"] as const,
+  /** Notes in the vault – only fetched while it's open, never stored on the device. */
+  vaultNotes: ["notes", "vault"] as const,
+  noteCategories: ["note_categories"] as const,
+  vaultStatus: ["vault_status"] as const,
   birthdays: ["birthdays"] as const,
   blockedApps: ["blocked_apps"] as const,
   weather: (lat: number, lon: number) => ["weather", lat.toFixed(3), lon.toFixed(3)] as const,

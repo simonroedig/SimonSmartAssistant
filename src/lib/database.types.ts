@@ -84,9 +84,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      note_categories: {
+        Row: {
+          color: string;
+          created_at: string;
+          id: string;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          color?: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          color?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       notes: {
         Row: {
           body: string;
+          category_id: string | null;
           created_at: string;
           deleted_at: string | null;
           id: string;
@@ -95,10 +124,12 @@ export type Database = {
           title: string | null;
           updated_at: string;
           user_id: string;
+          vault: boolean;
         };
         ComputedFields: never;
         Insert: {
           body?: string;
+          category_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           id?: string;
@@ -107,9 +138,11 @@ export type Database = {
           title?: string | null;
           updated_at?: string;
           user_id?: string;
+          vault?: boolean;
         };
         Update: {
           body?: string;
+          category_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           id?: string;
@@ -118,8 +151,17 @@ export type Database = {
           title?: string | null;
           updated_at?: string;
           user_id?: string;
+          vault?: boolean;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "notes_category_fk";
+            columns: ["category_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "note_categories";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
       };
       plan_blocks: {
         Row: {
@@ -315,6 +357,9 @@ export type Database = {
     Functions: {
       hook_before_user_created: { Args: { event: Json }; Returns: Json };
       keepalive: { Args: Record<PropertyKey, never>; Returns: boolean };
+      vault_set_pin: { Args: { current_pin?: string; new_pin: string }; Returns: Json };
+      vault_status: { Args: Record<PropertyKey, never>; Returns: Json };
+      vault_unlock: { Args: { pin: string }; Returns: Json };
     };
     Enums: {
       [_ in never]: never;

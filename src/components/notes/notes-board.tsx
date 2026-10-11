@@ -1,6 +1,7 @@
 "use client";
 
-import { Copy, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
+import { useIsMutating, useQueryClient } from "@tanstack/react-query";
+import { Copy, Lock, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,19 +9,34 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
-import type { Note } from "@/data/core";
+import { type Note, type NoteCategory, queryKeys } from "@/data/core";
+import { useNoteCategories } from "@/data/note-categories";
 import {
   isNoteEmpty,
   type NoteDraft,
+  type NotePatch,
   prepareNote,
   useAddNote,
   useNotes,
   useTrashNotes,
   useUpdateNote,
+  useVaultNotes,
 } from "@/data/notes";
+import { useVaultStatus } from "@/data/vault";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
+import { lockVault, useVaultOpen } from "@/lib/vault";
+import {
+  CategoryPicker,
+  CategorySheet,
+  type CategorySheetState,
+  CategoryTag,
+  type NoteFilter,
+  NoteFilters,
+  VAULT_TONE,
+} from "./note-categories";
+import { VaultPinSheet, type VaultPinMode } from "./vault-pin-sheet";
 
 export function noteLabel(note: Pick<Note, "title" | "body">): string {
   const text = note.title?.trim() || note.body.trim().split("\n")[0];
@@ -30,12 +46,15 @@ export function noteLabel(note: Pick<Note, "title" | "body">): string {
 /** A note as a card: optional title in bold, then the text. */
 function NoteCard({
   note,
+  category,
   onOpen,
   onTogglePin,
   lines = 8,
   className,
 }: {
   note: Note;
+  /** Its category, shown as a small tag (left out where the page already filters by it). */
+  category?: NoteCategory;
   onOpen: () => void;
   onTogglePin?: () => void;
   lines?: 3 | 8;
@@ -61,6 +80,7 @@ function NoteCard({
             {note.body}
           </span>
         )}
+        {category && <CategoryTag category={category} className="mt-2.5" />}
       </button>
       {onTogglePin ? (
         <button
@@ -86,7 +106,51 @@ function NoteCard({
   );
 }
 
-type EditorState = { mode: "create"; pinned?: boolean } | { mode: "edit"; note: Note } | null;
+/** Where a note goes: a category (or none), or the vault. */
+type Placement = { categoryId: string | null; vault: boolean };
+
+type EditorState = { mode: "create"; placement: Placement } | { mode: "edit"; note: Note } | null;
+
+/** Leaving the vault open this long without touching anything locks it again. */
+const VAULT_IDLE_MS = 3 * 60_000;
+
+/**
+ * Keeps the vault shut whenever it isn't in use: when the page is left or goes
+ * into the background, and after a few idle minutes. Locking also drops the
+ * vault's notes from memory.
+ */
+function useVaultGuard(inVault: boolean) {
+  const open = useVaultOpen();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!open) queryClient.removeQueries({ queryKey: queryKeys.vaultNotes, exact: true });
+  }, [open, queryClient]);
+
+  useEffect(() => {
+    const onHidden = () => document.visibilityState === "hidden" && lockVault();
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", onHidden);
+      lockVault();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open || !inVault) return;
+    let timer = window.setTimeout(lockVault, VAULT_IDLE_MS);
+    const touch = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(lockVault, VAULT_IDLE_MS);
+    };
+    const events = ["pointerdown", "keydown", "wheel"] as const;
+    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    return () => {
+      window.clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, touch));
+    };
+  }, [open, inVault]);
+}
 
 /** Notes in a Google Keep-like board (page) or as a scrollable list (home card). */
 export function NotesBoard({
@@ -100,18 +164,52 @@ export function NotesBoard({
   className?: string;
 }) {
   const notes = useNotes();
+  const vaultNotes = useVaultNotes();
+  const categories = useNoteCategories();
+  const vaultStatus = useVaultStatus();
+  const vaultOpen = useVaultOpen();
   const add = useAddNote();
   const update = useUpdateNote();
   const trash = useTrashNotes();
   const [editor, setEditor] = useState<EditorState>(null);
+  // Every visit starts with all notes.
+  const [filter, setFilter] = useState<NoteFilter>("all");
+  const [categorySheet, setCategorySheet] = useState<CategorySheetState>(null);
+  const [pinSheet, setPinSheet] = useState<VaultPinMode | null>(null);
 
-  const all = useMemo(() => notes.data ?? [], [notes.data]);
+  const inVault = variant === "page" && filter === "vault";
+  if (filter === "vault" && !vaultOpen) setFilter("all"); // Locked meanwhile (idle, another tab…).
+  useVaultGuard(inVault);
+
+  const categoryList = useMemo(() => categories.data ?? [], [categories.data]);
+  const byId = useMemo(() => new Map(categoryList.map((c) => [c.id, c])), [categoryList]);
+  const board = useMemo(() => notes.data ?? [], [notes.data]);
+  const vaultList = useMemo(() => (vaultOpen ? (vaultNotes.data ?? []) : []), [vaultOpen, vaultNotes.data]);
+  const filteredCategory = typeof filter === "object" ? filter.category : null;
+  // A category deleted meanwhile (on another device) shows everything again – not one just being added.
+  const savingCategory = useIsMutating({ mutationKey: ["note_categories"] }) > 0;
+  if (filteredCategory && categories.data && !savingCategory && !byId.has(filteredCategory)) setFilter("all");
+
+  const all = useMemo(() => {
+    if (variant === "card") return board;
+    if (filter === "vault") return vaultList;
+    if (filteredCategory) return board.filter((n) => n.category_id === filteredCategory);
+    return board;
+  }, [variant, filter, filteredCategory, board, vaultList]);
   const pinned = all.filter((n) => n.pinned);
   const others = all.filter((n) => !n.pinned);
 
-  const create = (draft: NoteDraft, pin = false) => {
+  // New notes land where the page is: in the vault, or in the category it shows.
+  const here: Placement = { categoryId: filteredCategory, vault: filter === "vault" };
+
+  /** The list a note belongs to (positions are counted there). */
+  const listOf = (vault: boolean) => (vault ? vaultList : board);
+
+  const create = (draft: NoteDraft, pin = false, placement: Placement = here) => {
     if (isNoteEmpty(draft)) return;
-    add.mutate(prepareNote({ ...draft, pinned: pin, position: positionAtStart(pin ? pinned : others) }));
+    const group = listOf(placement.vault).filter((n) => n.pinned === pin);
+    add.mutate(prepareNote({ ...draft, ...placement, pinned: pin, position: positionAtStart(group) }));
+    if (placement.vault && !vaultOpen) toast("Added to the vault", { icon: <Lock className="size-4" /> });
   };
 
   // Deleting moves a note to the trash (see NotesTrashButton); undo brings it right back.
@@ -125,32 +223,59 @@ export function NotesBoard({
   };
 
   const togglePin = (note: Note) => {
-    const group = note.pinned ? others : pinned;
+    const group = listOf(note.vault).filter((n) => n.pinned !== note.pinned);
     update.mutate({ id: note.id, patch: { pinned: !note.pinned, position: positionAtStart(group) } });
   };
 
-  const save = (note: Note, draft: NoteDraft) => {
+  const save = (note: Note, draft: NoteDraft, placement: Placement) => {
     if (isNoteEmpty(draft)) {
       deleteWithUndo(note);
       return;
     }
+    const patch: NotePatch = {};
     const title = draft.title.trim() || null;
     const body = draft.body.replace(/\s+$/, "");
-    if (title !== note.title || body !== note.body) update.mutate({ id: note.id, patch: { title, body } });
+    if (title !== note.title) patch.title = title;
+    if (body !== note.body) patch.body = body;
+    const categoryId = placement.vault ? null : placement.categoryId;
+    if (categoryId !== (note.category_id ?? null)) patch.category_id = categoryId;
+    if (placement.vault !== note.vault) {
+      patch.vault = placement.vault;
+      // At the top of where it goes.
+      patch.position = positionAtStart(listOf(placement.vault).filter((n) => n.pinned === note.pinned));
+    }
+    if (Object.keys(patch).length > 0) update.mutate({ id: note.id, patch });
+    if (patch.vault === true && !inVault) toast("Moved to the vault", { icon: <Lock className="size-4" /> });
+  };
+
+  const openVault = () => {
+    if (filter === "vault") setFilter("all");
+    else if (vaultOpen) setFilter("vault");
+    else setPinSheet(vaultStatus.data?.hasPin === false ? "setup" : "unlock");
+  };
+
+  // Leaving the vault locks it.
+  const changeFilter = (next: NoteFilter) => {
+    if (filter === "vault" && next !== "vault") lockVault();
+    setFilter(next);
   };
 
   const editorSheet = (
     <NoteEditor
       state={editor}
+      categories={categoryList}
+      vaultAvailable={vaultStatus.data?.hasPin === true}
       onClose={() => setEditor(null)}
-      onCreate={(draft, pin) => create(draft, pin)}
+      onCreate={create}
       onSave={save}
       onDelete={deleteWithUndo}
       onTogglePin={togglePin}
     />
   );
 
-  const loading = notes.isLoading && all.length === 0;
+  const loading = (inVault ? vaultNotes.isLoading : notes.isLoading) && all.length === 0;
+  const tagFor = (note: Note) =>
+    note.category_id && note.category_id !== filteredCategory ? byId.get(note.category_id) : undefined;
 
   if (variant === "card") {
     return (
@@ -162,7 +287,12 @@ export function NotesBoard({
           count={all.length}
           href="/notes"
           actions={
-            <Button variant="ghost" size="icon-sm" aria-label="New note" onClick={() => setEditor({ mode: "create" })}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="New note"
+              onClick={() => setEditor({ mode: "create", placement: { categoryId: null, vault: false } })}
+            >
               <Plus />
             </Button>
           }
@@ -176,7 +306,7 @@ export function NotesBoard({
           ) : all.length === 0 ? (
             <button
               type="button"
-              onClick={() => setEditor({ mode: "create" })}
+              onClick={() => setEditor({ mode: "create", placement: { categoryId: null, vault: false } })}
               className="flex w-full flex-col items-center gap-2 py-6 text-center text-muted"
             >
               <StickyNote className="size-8 text-faint" />
@@ -187,7 +317,12 @@ export function NotesBoard({
               <ul className="flex flex-col gap-2">
                 {(limit ? all.slice(0, limit) : all).map((note) => (
                   <li key={note.id}>
-                    <NoteCard note={note} lines={3} onOpen={() => setEditor({ mode: "edit", note })} />
+                    <NoteCard
+                      note={note}
+                      category={tagFor(note)}
+                      lines={3}
+                      onOpen={() => setEditor({ mode: "edit", note })}
+                    />
                   </li>
                 ))}
               </ul>
@@ -214,16 +349,53 @@ export function NotesBoard({
       onMove={(id, index) => update.mutate({ id, patch: { position: positionForMove(items, id, index) } })}
     >
       {(note) => (
-        <NoteCard note={note} onOpen={() => setEditor({ mode: "edit", note })} onTogglePin={() => togglePin(note)} />
+        <NoteCard
+          note={note}
+          category={tagFor(note)}
+          onOpen={() => setEditor({ mode: "edit", note })}
+          onTogglePin={() => togglePin(note)}
+        />
       )}
     </SortableList>
   );
 
+  const emptyText =
+    filter === "vault"
+      ? "Nothing in the vault yet. Notes here only open with your PIN."
+      : filteredCategory
+        ? `No notes in ${byId.get(filteredCategory)?.name ?? "this category"} yet.`
+        : "No notes yet. Codes, ideas, gift lists – anything goes.";
+
   return (
     <div className={cn("flex flex-col", className)}>
-      <Composer onCreate={create} className="max-md:hidden" />
+      <NoteFilters
+        filter={filter}
+        categories={categoryList}
+        vaultOpen={vaultOpen}
+        onChange={changeFilter}
+        onVault={openVault}
+        onAdd={() => setCategorySheet({ mode: "create" })}
+        onEdit={(category) => setCategorySheet({ mode: "edit", category })}
+        className="mb-2 md:mb-4"
+      />
+      <Composer onCreate={(draft, pin) => create(draft, pin)} className="max-md:hidden" />
       {/* Phones: only this part scrolls; "Take a note" stays below it. */}
       <div className="max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-3">
+        {inVault && (
+          <div
+            className={cn(
+              "mt-2 flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm md:mt-6",
+              VAULT_TONE.soft,
+              VAULT_TONE.text,
+            )}
+          >
+            <Lock className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1">The vault is open – it locks when you leave.</span>
+            <Button variant="ghost" size="sm" onClick={() => changeFilter("all")}>
+              Lock
+            </Button>
+          </div>
+        )}
         {loading ? (
           <div className={cn(grid, "mt-2 md:mt-6")}>
             {[0, 1, 2].map((i) => (
@@ -232,11 +404,11 @@ export function NotesBoard({
           </div>
         ) : all.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
-            <StickyNote className="size-10 text-faint" />
-            <p className="text-sm">No notes yet. Codes, ideas, gift lists – anything goes.</p>
+            {inVault ? <Lock className="size-10 text-faint" /> : <StickyNote className="size-10 text-faint" />}
+            <p className="text-sm">{emptyText}</p>
           </div>
         ) : (
-          <div className="mt-2 flex flex-col gap-6 md:mt-6">
+          <div className={cn("flex flex-col gap-6", inVault ? "mt-4" : "mt-2 md:mt-6")}>
             {pinned.length > 0 && (
               <section>
                 <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
@@ -259,15 +431,28 @@ export function NotesBoard({
       <div className="rounded-(--radius-bar) p-2 bar md:hidden">
         <button
           type="button"
-          onClick={() => setEditor({ mode: "create" })}
+          onClick={() => setEditor({ mode: "create", placement: here })}
           className="flex w-full items-center text-left"
         >
           <span className="field flex h-12 flex-1 items-center rounded-2xl px-4 text-[0.95rem] text-faint well">
-            Take a note…
+            {inVault ? "Take a note for the vault…" : "Take a note…"}
           </span>
         </button>
       </div>
       {editorSheet}
+      <CategorySheet
+        state={categorySheet}
+        onClose={() => setCategorySheet(null)}
+        onCreated={(id) => setFilter({ category: id })}
+        onDeleted={(id) => filteredCategory === id && setFilter("all")}
+      />
+      <VaultPinSheet
+        open={pinSheet !== null}
+        mode={pinSheet ?? "unlock"}
+        unlockAfter
+        onClose={() => setPinSheet(null)}
+        onDone={() => setFilter("vault")}
+      />
     </div>
   );
 }
@@ -362,6 +547,8 @@ function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: b
 
 function NoteEditor({
   state,
+  categories,
+  vaultAvailable,
   onClose,
   onCreate,
   onSave,
@@ -369,9 +556,11 @@ function NoteEditor({
   onTogglePin,
 }: {
   state: EditorState;
+  categories: NoteCategory[];
+  vaultAvailable: boolean;
   onClose: () => void;
-  onCreate: (draft: NoteDraft, pin: boolean) => void;
-  onSave: (note: Note, draft: NoteDraft) => void;
+  onCreate: (draft: NoteDraft, pin: boolean, placement: Placement) => void;
+  onSave: (note: Note, draft: NoteDraft, placement: Placement) => void;
   onDelete: (note: Note) => void;
   onTogglePin: (note: Note) => void;
 }) {
@@ -383,7 +572,7 @@ function NoteEditor({
       key={shown.count}
       state={shown.state}
       open={state !== null}
-      {...{ onClose, onCreate, onSave, onDelete, onTogglePin }}
+      {...{ categories, vaultAvailable, onClose, onCreate, onSave, onDelete, onTogglePin }}
     />
   );
 }
@@ -402,6 +591,8 @@ async function copyNote(title: string, body: string) {
 function NoteEditorSheet({
   state,
   open,
+  categories,
+  vaultAvailable,
   onClose,
   onCreate,
   onSave,
@@ -410,9 +601,11 @@ function NoteEditorSheet({
 }: {
   state: EditorState;
   open: boolean;
+  categories: NoteCategory[];
+  vaultAvailable: boolean;
   onClose: () => void;
-  onCreate: (draft: NoteDraft, pin: boolean) => void;
-  onSave: (note: Note, draft: NoteDraft) => void;
+  onCreate: (draft: NoteDraft, pin: boolean, placement: Placement) => void;
+  onSave: (note: Note, draft: NoteDraft, placement: Placement) => void;
   onDelete: (note: Note) => void;
   onTogglePin: (note: Note) => void;
 }) {
@@ -420,6 +613,13 @@ function NoteEditorSheet({
   const [title, setTitle] = useState(note?.title ?? "");
   const [body, setBody] = useState(note?.body ?? "");
   const [pinned, setPinned] = useState(note?.pinned ?? false);
+  const [placement, setPlacement] = useState<Placement>(
+    note
+      ? { categoryId: note.category_id ?? null, vault: note.vault ?? false }
+      : state?.mode === "create"
+        ? state.placement
+        : { categoryId: null, vault: false },
+  );
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const deleted = useRef(false);
 
@@ -435,10 +635,10 @@ function NoteEditorSheet({
     if (!open) return;
     if (!deleted.current) {
       if (note) {
-        onSave(note, { title, body });
+        onSave(note, { title, body }, placement);
         if (pinned !== note.pinned) onTogglePin(note);
       } else {
-        onCreate({ title, body }, pinned);
+        onCreate({ title, body }, pinned, placement);
       }
     }
     onClose();
@@ -448,7 +648,7 @@ function NoteEditorSheet({
     <Sheet
       open={open}
       onOpenChange={(o) => !o && close()}
-      title={note ? "Note" : "New note"}
+      title={note ? "Note" : placement.vault ? "New note in the vault" : "New note"}
       className={FIELD_FOCUS.orange}
       footer={
         <>
@@ -497,6 +697,13 @@ function NoteEditorSheet({
       }
     >
       <div className="flex flex-col gap-2">
+        <CategoryPicker
+          categoryId={placement.categoryId}
+          vault={placement.vault}
+          categories={categories}
+          vaultAvailable={vaultAvailable}
+          onChange={setPlacement}
+        />
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}

@@ -29,13 +29,31 @@ const TABLES = [
   "notes",
   "birthdays",
   "blocked_apps",
+  "note_categories",
 ] as const;
 
-function newClient(): Client {
+/** The PIN the tests leave the vault of the e2e user (dev@example.com) with. */
+const VAULT_PIN = "2468";
+
+function newClient(headers: Record<string, string> = {}): Client {
   return createClient<Database>(SUPABASE_URL, PUBLISHABLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers },
   });
 }
+
+/** The same user's session, sending an unlock of the vault along. */
+async function withVaultToken(client: Client, token: string): Promise<Client> {
+  const { data } = await client.auth.getSession();
+  const unlocked = newClient({ "x-vault-token": token });
+  await unlocked.auth.setSession({
+    access_token: data.session!.access_token,
+    refresh_token: data.session!.refresh_token,
+  });
+  return unlocked;
+}
+
+type VaultResult = { ok: boolean; reason?: string; token?: string; locked_until?: string | null };
 
 async function latestCodeFor(email: string, after: number): Promise<string> {
   for (let attempt = 0; attempt < 40; attempt++) {
@@ -99,6 +117,8 @@ describe("database security", () => {
     }
     const { error: insertError } = await anon.from("todos").insert({ title: "nope" });
     expect(insertError?.code).toBe("42501");
+    const { error: rpcError } = await anon.rpc("vault_unlock", { pin: "0000" });
+    expect(rpcError?.code).toBe("42501");
   });
 
   it("does not let clients call the auth hook directly", async () => {
@@ -354,6 +374,107 @@ describe("database security", () => {
     expect(duplicate?.code).toBe("23505");
     const { error: invalid } = await alice.client.from("blocked_apps").insert({ package: "not a package" });
     expect(invalid?.code).toBe("23514");
+  });
+
+  it("keeps note categories private and only links notes to the user's own", async () => {
+    const { data: work, error } = await alice.client
+      .from("note_categories")
+      .insert({ name: "Work", color: "sky" })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(work!.user_id).toBe(alice.userId);
+
+    const { data: seenByBob } = await bob.client.from("note_categories").select("*");
+    expect(seenByBob).toEqual([]);
+    const { data: changedByBob } = await bob.client
+      .from("note_categories")
+      .update({ name: "x" })
+      .eq("id", work!.id)
+      .select();
+    expect(changedByBob).toEqual([]);
+    const { error: spoofError } = await bob.client
+      .from("note_categories")
+      .insert({ name: "spoof", user_id: alice.userId });
+    expect(spoofError?.code).toBe("42501");
+    const invalidCategories: { name: string; color?: string }[] = [{ name: " " }, { name: "Colour", color: "neon" }];
+    for (const bad of invalidCategories) {
+      const { error: invalid } = await alice.client.from("note_categories").insert(bad);
+      expect(invalid?.code, bad.name).toBe("23514");
+    }
+
+    // Notes point to own categories only; deleting a category keeps its notes.
+    const { data: note } = await alice.client
+      .from("notes")
+      .insert({ body: "Quarterly report", category_id: work!.id })
+      .select()
+      .single();
+    expect(note!.category_id).toBe(work!.id);
+    const { error: foreign } = await bob.client.from("notes").insert({ body: "sneaky", category_id: work!.id });
+    expect(foreign?.code).toBe("23503");
+    await alice.client.from("note_categories").delete().eq("id", work!.id);
+    const { data: kept } = await alice.client.from("notes").select("category_id").eq("id", note!.id).single();
+    expect(kept).toEqual({ category_id: null });
+  });
+
+  it("keeps vault notes behind the PIN", async () => {
+    // Just signed in with a code, so the PIN can be (re)set without the old one.
+    const { data: set } = await alice.client.rpc("vault_set_pin", { new_pin: VAULT_PIN });
+    expect(set).toEqual({ ok: true });
+    const { data: status } = await alice.client.rpc("vault_status");
+    expect(status).toMatchObject({ has_pin: true });
+
+    // A note goes into the vault without opening it – and is gone from sight.
+    const id = crypto.randomUUID();
+    const { error } = await alice.client.from("notes").insert({ id, body: "Safe code 1234", vault: true });
+    expect(error).toBeNull();
+    const { data: hidden } = await alice.client.from("notes").select("*").eq("id", id);
+    expect(hidden).toEqual([]);
+    await alice.client.from("notes").update({ body: "changed" }).eq("id", id);
+
+    const { data: wrong } = await alice.client.rpc("vault_unlock", { pin: "0000" });
+    expect((wrong as VaultResult).ok).toBe(false);
+    expect((wrong as VaultResult).reason).toBe("wrong");
+
+    const { data: open } = await alice.client.rpc("vault_unlock", { pin: VAULT_PIN });
+    const token = (open as VaultResult).token!;
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
+    const unlocked = await withVaultToken(alice.client, token);
+    const { data: seen } = await unlocked.from("notes").select("body").eq("id", id);
+    expect(seen).toEqual([{ body: "Safe code 1234" }]);
+    const { error: editError } = await unlocked.from("notes").update({ body: "Safe code 5678" }).eq("id", id);
+    expect(editError).toBeNull();
+
+    // The token is only good for its own user, and made-up ones open nothing.
+    const bobWithToken = await withVaultToken(bob.client, token);
+    const { data: seenByBob } = await bobWithToken.from("notes").select("*").eq("id", id);
+    expect(seenByBob).toEqual([]);
+    const guessed = await withVaultToken(alice.client, "0".repeat(64));
+    const { data: seenByGuess } = await guessed.from("notes").select("*").eq("id", id);
+    expect(seenByGuess).toEqual([]);
+
+    // Changing the PIN needs the current one (when not just signed in, see above).
+    const { data: badChange } = await alice.client.rpc("vault_set_pin", { new_pin: "1111", current_pin: "9999" });
+    expect((badChange as VaultResult).reason).toBe("wrong");
+    const { data: change } = await alice.client.rpc("vault_set_pin", { new_pin: VAULT_PIN, current_pin: VAULT_PIN });
+    expect(change).toEqual({ ok: true });
+    // …and locks the vault everywhere.
+    const { data: afterChange } = await unlocked.from("notes").select("*").eq("id", id);
+    expect(afterChange).toEqual([]);
+  });
+
+  it("locks the vault for a while after five wrong PINs", async () => {
+    await bob.client.rpc("vault_set_pin", { new_pin: "1357" });
+    let last: VaultResult | null = null;
+    for (let i = 0; i < 5; i++) {
+      const { data } = await bob.client.rpc("vault_unlock", { pin: "0000" });
+      last = data as VaultResult;
+    }
+    expect(last!.locked_until).toBeTruthy();
+    const { data: locked } = await bob.client.rpc("vault_unlock", { pin: "1357" });
+    expect((locked as VaultResult).reason).toBe("locked");
+    const { data: tooShort } = await bob.client.rpc("vault_set_pin", { new_pin: "12" });
+    expect((tooShort as VaultResult).reason).toBe("invalid");
   });
 
   it("keeps birthdays private and only accepts real dates", async () => {

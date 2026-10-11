@@ -21,6 +21,7 @@ const TABLE_KEYS: Record<SyncedTable, readonly unknown[][]> = {
   birthdays: [[...queryKeys.birthdays]],
   // Unblocking happens in the Supabase dashboard; the launcher follows right away.
   blocked_apps: [[...queryKeys.blockedApps]],
+  note_categories: [[...queryKeys.noteCategories], [...queryKeys.notes]],
 };
 
 const TABLES = Object.keys(TABLE_KEYS) as SyncedTable[];

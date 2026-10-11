@@ -563,7 +563,7 @@ test("weather: the forecast comes first, the details of right now after it", asy
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/settings");
   await page.waitForLoadState("networkidle");
-  const change = page.getByRole("button", { name: "Change" });
+  const change = page.getByRole("button", { name: "Change", exact: true });
   const search = page.getByLabel("Search location");
   await expect(change.or(search)).toBeVisible();
   if (await change.isVisible()) await change.click();

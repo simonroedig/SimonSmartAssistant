@@ -199,7 +199,7 @@ test("wall display: built-in keyboard types into fields", async ({ page }) => {
 test("weather: pick a city, then a day to see its hours", async ({ page }) => {
   await page.goto("/settings");
   await page.waitForLoadState("networkidle");
-  const change = page.getByRole("button", { name: "Change" });
+  const change = page.getByRole("button", { name: "Change", exact: true });
   const search = page.getByLabel("Search location");
   await expect(change.or(search)).toBeVisible();
   if (await change.isVisible()) await change.click();
