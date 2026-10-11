@@ -75,6 +75,7 @@ export function MonthCalendar({
         }}
         tone="rose"
         quietSelection
+        todayPicks
       />
       {events.length > 0 && (
         <ul

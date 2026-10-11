@@ -158,10 +158,19 @@ test("planner: back gesture closes the editor; swipe and month calendar change t
   await expect(dialog.getByText("February 2030")).toBeVisible();
   await dialog.getByRole("button", { name: "Saturday, 16 February" }).click();
   await expect(page.locator("h1", { hasText: "Saturday" })).toBeAttached();
-  await dialog.getByRole("button", { name: "Close" }).click();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { name: "Saturday" })).toBeVisible();
   await expect(page).toHaveURL(/day=2030-02-16/);
+
+  // "Today" in the calendar picks today, too (not just its month).
+  await page.getByRole("button", { name: "Pick a day" }).click();
+  await dialog.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(page.locator("h1", { hasText: "(Today)" })).toBeAttached();
+  await expect(dialog.getByRole("button", { name: "Today", exact: true })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(/\/planner$/);
   await context.close();
 });
 
@@ -692,5 +701,5 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
   await expect(dialog.getByRole("heading", { name: "New note" })).toBeVisible();
   await page.waitForTimeout(400);
   await expect(dialog.getByLabel("Note", { exact: true })).toBeFocused();
-  await dialog.getByRole("button", { name: "Close" }).click();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
 });

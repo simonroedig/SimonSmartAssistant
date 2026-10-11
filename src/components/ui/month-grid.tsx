@@ -48,6 +48,7 @@ export function MonthGrid({
   dots,
   tone = "accent",
   quietSelection = false,
+  todayPicks = false,
   decorate,
   className,
 }: {
@@ -61,6 +62,12 @@ export function MonthGrid({
   tone?: Tone;
   /** Mark the selected day in quiet grey (browsing) instead of the tone (picking a value). */
   quietSelection?: boolean;
+  /**
+   * "Today" picks today (browsing a calendar, like the planner's) instead of
+   * only showing its month (picking a value, like a due date) – and shows
+   * whenever another day is picked.
+   */
+  todayPicks?: boolean;
   /** Extra marks for a day: a colour for its number, a small marker and a label (e.g. holidays). */
   decorate?: (day: DayKey) => DayDecoration | null;
   className?: string;
@@ -89,10 +96,13 @@ export function MonthGrid({
         <h3 className="min-w-0 flex-1 truncate pl-1 text-[0.98rem] font-semibold tracking-tight whitespace-nowrap">
           {formatMonthYear(fromDayKey(month))}
         </h3>
-        {today && monthOf(today) !== month && (
+        {today && (monthOf(today) !== month || (todayPicks && selected !== today)) && (
           <button
             type="button"
-            onClick={() => setMonth(monthOf(today))}
+            onClick={() => {
+              setMonth(monthOf(today));
+              if (todayPicks) onSelect(today);
+            }}
             className="h-8 shrink-0 rounded-xl px-2.5 text-xs font-semibold whitespace-nowrap text-today transition-colors well"
           >
             Today
