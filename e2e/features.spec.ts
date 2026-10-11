@@ -152,16 +152,9 @@ test("planner: back gesture closes the editor; swipe and month calendar change t
   await dialog.getByRole("button", { name: "Next month" }).click();
   await expect(dialog.getByText("February 2030")).toBeVisible();
   await dialog.getByRole("button", { name: "Friday, 15 February" }).click();
-  // The planner moves to that day (behind the sheet, so out of reach for roles); the calendar
-  // stays open for another look until it is closed.
-  await expect(page.locator("h1", { hasText: "Friday" })).toBeAttached();
-  await expect(dialog.getByText("February 2030")).toBeVisible();
-  await dialog.getByRole("button", { name: "Saturday, 16 February" }).click();
-  await expect(page.locator("h1", { hasText: "Saturday" })).toBeAttached();
-  await dialog.getByRole("button", { name: "Close" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Saturday" })).toBeVisible();
-  await expect(page).toHaveURL(/day=2030-02-16/);
+  await expect(page.getByRole("heading", { name: "Friday" })).toBeVisible();
+  await expect(page).toHaveURL(/day=2030-02-15/);
   await context.close();
 });
 
