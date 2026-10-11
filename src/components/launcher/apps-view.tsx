@@ -292,20 +292,6 @@ export function AppsView() {
                 ))}
               </ul>
             )}
-            {term && (
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={searchWeb}
-                className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-surface-strong px-4 py-3 text-left text-sm shadow-(--shadow-card)"
-              >
-                <Globe className="size-5 shrink-0 text-fg" />
-                <span className="min-w-0 flex-1 truncate">
-                  Search the web for <span className="font-semibold">“{query.trim()}”</span>
-                </span>
-                <span className="text-xs text-faint">Firefox</span>
-              </button>
-            )}
           </div>
           {/* Search at the bottom, near the thumb – apps first, Enter searches the web. */}
           <div className="rounded-(--radius-bar) p-2 bar">
