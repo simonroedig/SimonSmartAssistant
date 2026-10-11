@@ -178,7 +178,7 @@ test("settings: change the vault PIN, or reset it with a code from the e-mail", 
   await expect(page.getByText("Vault PIN changed")).toBeVisible();
 });
 
-test("notes on a phone: swipe sideways through All and the categories, never into the vault", async ({ browser }) => {
+test("notes on a phone: swipe sideways through the vault, All and the categories", async ({ browser }) => {
   const context = await browser.newContext({
     storageState: "e2e/.auth/user.json",
     hasTouch: true,
@@ -189,18 +189,21 @@ test("notes on a phone: swipe sideways through All and the categories, never int
   await mockWeather(page);
   await page.goto("/notes");
 
-  // A category to swipe to.
-  const name = `Ideas ${Date.now() % 100000}`;
-  await filters(page).getByRole("button", { name: "New category" }).click();
-  await page.getByRole("dialog").getByLabel("Category name").fill(name);
-  await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
+  // Categories to swipe to – more than fit across the screen.
+  const stamp = Date.now() % 100000;
+  const added = [`Ideas ${stamp}`, `Plans ${stamp}`, `Recipes ${stamp}`];
+  for (const name of added) {
+    await filters(page).getByRole("button", { name: "New category" }).click();
+    await page.getByRole("dialog").getByLabel("Category name").fill(name);
+    await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  }
   await filters(page).getByRole("button", { name: "All", exact: true }).click();
 
   // The vault comes first, then All, then the categories.
   const chips = await filters(page).getByRole("button").allTextContents();
   expect(chips.slice(0, 2).map((c) => c.trim())).toEqual(["Vault", "All"]);
-  const firstCategory = chips[2].trim();
+  const categories = chips.slice(2, -1).map((c) => c.trim()); // (the last one is +)
 
   const cdp = await context.newCDPSession(page);
   const swipe = async (dx: number) => {
@@ -217,23 +220,47 @@ test("notes on a phone: swipe sideways through All and the categories, never int
   const pressed = (label: string) =>
     expect(filters(page).getByRole("button", { name: label, exact: true })).toHaveAttribute("aria-pressed", "true");
 
-  // To the left: the next category.
-  await swipe(-160);
-  await pressed(firstCategory);
-  // To the right: back to All – and from there not on into the vault.
-  await swipe(160);
-  await pressed("All");
-  await swipe(160);
-  await pressed("All");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const row = filters(page);
+  const scrolled = () =>
+    row.evaluate((el) => ({ start: el.scrollLeft <= 1, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 }));
 
-  // Clean up the category (a moment after the swipe – the tap that ends one is swallowed).
+  // To the left: the next category, and on to the last one – the row then shows its very end (+).
+  for (const category of categories) {
+    await swipe(-160);
+    await pressed(category);
+  }
+  await expect.poll(scrolled).toEqual({ start: false, end: true });
+  await expect(row.getByRole("button", { name: "New category" })).toBeInViewport();
+  // No further: it doesn't wrap round.
+  await swipe(-160);
+  await pressed(categories.at(-1)!);
+
+  // To the right: back to All, then on into the vault – with the PIN.
+  for (const category of [...categories.slice(0, -1).reverse(), "All"]) {
+    await swipe(160);
+    await pressed(category);
+  }
+  await swipe(160);
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("PIN", { exact: true }).fill(PIN);
+  await expect(dialog).toBeHidden();
+  await expect(row.getByRole("button", { name: "Vault (open)" })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(scrolled).toEqual({ start: true, end: false });
+  // Swiping out of it locks it again.
+  await swipe(-160);
+  await pressed("All");
+  await expect(row.getByRole("button", { name: "Vault", exact: true })).toHaveAttribute("aria-pressed", "false");
+
+  // Clean up the categories (a moment after the swipe – the tap that ends one is swallowed).
   await page.waitForTimeout(150);
-  await filters(page).getByRole("button", { name, exact: true }).click();
-  await pressed(name);
-  await filters(page)
-    .getByRole("button", { name: `Edit ${name}` })
-    .click();
-  await page.getByRole("dialog").getByRole("button", { name: "Delete category" }).click();
+  for (const name of added) {
+    await filters(page).getByRole("button", { name, exact: true }).click();
+    await pressed(name);
+    await filters(page)
+      .getByRole("button", { name: `Edit ${name}` })
+      .click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete category" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  }
   await context.close();
 });

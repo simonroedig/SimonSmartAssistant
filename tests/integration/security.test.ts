@@ -397,7 +397,13 @@ describe("database security", () => {
       .from("note_categories")
       .insert({ name: "spoof", user_id: alice.userId });
     expect(spoofError?.code).toBe("42501");
-    const invalidCategories: { name: string; color?: string }[] = [{ name: " " }, { name: "Colour", color: "neon" }];
+    // Only the shared palette's colours (the old "accent" and "amber" are gone).
+    const invalidCategories: { name: string; color?: string }[] = [
+      { name: " " },
+      { name: "Colour", color: "neon" },
+      { name: "Old violet", color: "accent" },
+      { name: "Old amber", color: "amber" },
+    ];
     for (const bad of invalidCategories) {
       const { error: invalid } = await alice.client.from("note_categories").insert(bad);
       expect(invalid?.code, bad.name).toBe("23514");

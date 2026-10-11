@@ -1,12 +1,12 @@
 "use client";
 
-import { Check, Eraser, Plus, ShoppingBasket, Sparkles, X } from "lucide-react";
+import { Check, Eraser, Plus, ShoppingBasket, Sparkles, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
-import { CheckCircle } from "@/components/ui/check-circle";
+import { CheckButton, CheckCircle } from "@/components/ui/check-circle";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
@@ -317,6 +317,13 @@ export function ShoppingList({
         onClose={() => setEditing(null)}
         onSave={(patch) => editing && update.mutate({ id: editing.id, patch })}
         onDelete={() => editing && deleteWithUndo([editing], `Deleted "${editing.name}"`)}
+        onToggle={() =>
+          editing &&
+          update.mutate({
+            id: editing.id,
+            patch: editing.checked ? { checked: false, position: positionAtStart(open) } : { checked: true },
+          })
+        }
       />
     </>
   );
@@ -357,15 +364,26 @@ function EditItemSheet({
   onClose,
   onSave,
   onDelete,
+  onToggle,
 }: {
   item: ShoppingItem | null;
   onClose: () => void;
   onSave: (patch: { name: string; note: string | null }) => void;
   onDelete: () => void;
+  onToggle: () => void;
 }) {
   return (
     <Sheet open={!!item} onOpenChange={(o) => !o && onClose()} title="Edit item" size="sm">
-      {item && <EditItemForm key={item.id} item={item} onClose={onClose} onSave={onSave} onDelete={onDelete} />}
+      {item && (
+        <EditItemForm
+          key={item.id}
+          item={item}
+          onClose={onClose}
+          onSave={onSave}
+          onDelete={onDelete}
+          onToggle={onToggle}
+        />
+      )}
     </Sheet>
   );
 }
@@ -375,14 +393,17 @@ function EditItemForm({
   onClose,
   onSave,
   onDelete,
+  onToggle,
 }: {
   item: ShoppingItem;
   onClose: () => void;
   onSave: (patch: { name: string; note: string | null }) => void;
   onDelete: () => void;
+  onToggle: () => void;
 }) {
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note ?? "");
+  const changed = name.trim() !== item.name || (note.trim() || null) !== (item.note ?? null);
   return (
     <form
       className={cn("flex flex-col gap-4", FIELD_FOCUS.emerald)}
@@ -407,16 +428,29 @@ function EditItemForm({
           maxLength={120}
         />
       </div>
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex items-center gap-2">
         <Button
           variant="danger"
+          size="icon"
+          aria-label="Delete"
           onClick={() => {
             onDelete();
             onClose();
           }}
         >
-          Delete
+          <Trash2 />
         </Button>
+        <CheckButton
+          checked={item.checked}
+          tone="emerald"
+          label={item.checked ? "Back on the list" : "In the cart"}
+          onClick={() => {
+            if (changed && name.trim()) onSave({ name: name.trim(), note: note.trim() || null });
+            vibrate(6);
+            onToggle();
+            onClose();
+          }}
+        />
         <Button
           type="submit"
           variant="primary"

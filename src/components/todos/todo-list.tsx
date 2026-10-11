@@ -17,7 +17,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
-import { CheckCircle } from "@/components/ui/check-circle";
+import { CheckButton, CheckCircle } from "@/components/ui/check-circle";
 import { AutoTextarea, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
@@ -359,6 +359,7 @@ export function TodoList({
         onClose={() => setEditing(null)}
         onSave={(patch) => editing && update.mutate({ id: editing.id, patch })}
         onDelete={() => editing && deleteWithUndo([editing], `Deleted "${todoHeadline(editing.title, 60)}"`)}
+        onToggle={() => editing && toggle(editing)}
       />
     </>
   );
@@ -381,6 +382,7 @@ function TodoEditor({
   onClose,
   onSave,
   onDelete,
+  onToggle,
 }: {
   todo: Todo | null;
   today: DayKey | null;
@@ -388,6 +390,7 @@ function TodoEditor({
   onClose: () => void;
   onSave: (patch: TodoPatch) => void;
   onDelete: () => void;
+  onToggle: () => void;
 }) {
   return (
     <Sheet open={!!todo} onOpenChange={(o) => !o && onClose()} title="Backlog item">
@@ -400,6 +403,7 @@ function TodoEditor({
           onClose={onClose}
           onSave={onSave}
           onDelete={onDelete}
+          onToggle={onToggle}
         />
       )}
     </Sheet>
@@ -413,6 +417,7 @@ function TodoForm({
   onClose,
   onSave,
   onDelete,
+  onToggle,
 }: {
   todo: Todo;
   today: DayKey;
@@ -420,6 +425,7 @@ function TodoForm({
   onClose: () => void;
   onSave: (patch: TodoPatch) => void;
   onDelete: () => void;
+  onToggle: () => void;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(todo.title);
@@ -553,6 +559,19 @@ function TodoForm({
         >
           <Trash2 />
         </Button>
+        <CheckButton
+          checked={todo.done}
+          label={todo.done ? "Mark as open" : "Complete"}
+          onClick={() => {
+            // Edits made here are kept.
+            if (title.trim() && (title.trim() !== todo.title || due !== todo.due_date || starred !== todo.starred)) {
+              onSave({ title: title.trim(), due_date: due, starred });
+            }
+            vibrate(8);
+            onToggle();
+            onClose();
+          }}
+        />
         {!todo.done &&
           (planned ? (
             <Button variant="secondary" onClick={openInPlanner}>

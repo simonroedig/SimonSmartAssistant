@@ -354,7 +354,8 @@ function EditorForm({
             <button
               key={c}
               type="button"
-              aria-label={c}
+              aria-label={BLOCK_STYLES[c].label}
+              title={BLOCK_STYLES[c].label}
               aria-pressed={color === c}
               onClick={() => setColor(c)}
               className={cn(
@@ -363,7 +364,7 @@ function EditorForm({
                 color === c && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--surface-strong)]",
               )}
             >
-              {color === c && <Check className="size-4 text-white" strokeWidth={3} />}
+              {color === c && <Check className={cn("size-4", BLOCK_STYLES[c].onSwatch)} strokeWidth={3} />}
             </button>
           ))}
         </div>

@@ -1,23 +1,12 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { Tone } from "@/lib/tones";
+import { isPaletteColor, type PaletteColor } from "@/lib/palette";
 import { type NoteCategory, nowIso, queryKeys, useAppQuery, useOptimisticMutation } from "./core";
 
-/** The colours a category can have (the section tones), with names for screen readers. */
-export const CATEGORY_COLORS: { tone: Tone; label: string }[] = [
-  { tone: "sky", label: "Blue" },
-  { tone: "emerald", label: "Green" },
-  { tone: "yellow", label: "Yellow" },
-  { tone: "amber", label: "Amber" },
-  { tone: "orange", label: "Orange" },
-  { tone: "rose", label: "Red" },
-  { tone: "accent", label: "Violet" },
-  { tone: "slate", label: "Grey" },
-];
-
-export function categoryTone(category: Pick<NoteCategory, "color">): Tone {
-  return CATEGORY_COLORS.some((c) => c.tone === category.color) ? (category.color as Tone) : "sky";
+/** A category's colour (one of the planner's); an unknown one shows as light blue. */
+export function categoryColor(category: Pick<NoteCategory, "color">): PaletteColor {
+  return isPaletteColor(category.color) ? category.color : "sky";
 }
 
 /** The user's note categories, oldest first. */
@@ -33,7 +22,7 @@ export function useNoteCategories() {
   });
 }
 
-export type CategoryInput = { id: string; name: string; color: Tone; isNew: boolean };
+export type CategoryInput = { id: string; name: string; color: PaletteColor; isNew: boolean };
 
 export function useSaveCategory() {
   return useOptimisticMutation<CategoryInput>({

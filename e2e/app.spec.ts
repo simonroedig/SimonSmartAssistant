@@ -104,6 +104,42 @@ test("backlog: Undo in the backlog's yellow, below the status bar; the whole Com
   await page.getByRole("button", { name: `Mark "${title}" as open` }).click();
 });
 
+test("shopping and backlog: tick an item off from its sheet – next to Delete, not instead of it", async ({ page }) => {
+  // Shopping: press and hold an item, then tick it off there.
+  await page.goto("/shopping");
+  const name = `Sheet cheese ${Date.now() % 10000}`;
+  await page.getByLabel("New shopping item").fill(name);
+  await page.getByRole("button", { name: "Add item" }).click();
+  const item = page.locator("li", { hasText: name });
+  await item.getByRole("button", { name, exact: true }).click({ delay: 700 });
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("button", { name: "Delete" })).toBeVisible();
+  await sheet.getByRole("button", { name: "In the cart" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText(/In the cart · /)).toBeVisible();
+  // And back on the list the same way.
+  await item.getByRole("button", { name, exact: true }).click({ delay: 700 });
+  await sheet.getByRole("button", { name: "Back on the list" }).click();
+  await expect(page.locator("li", { hasText: name })).toHaveCount(1);
+
+  // Backlog: tap an item, then complete it from its sheet (an edit made there is kept).
+  // (Through the navigation: a closing sheet steps back in the history, which a page.goto would race.)
+  await page.getByRole("link", { name: "Backlog" }).first().click();
+  await expect(page).toHaveURL(/\/todos$/);
+  const title = `Sheet todo ${Date.now() % 10000}`;
+  await page.getByLabel("New todo").fill(title);
+  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: title, exact: true }).click();
+  await expect(sheet.getByRole("button", { name: "Delete" })).toBeVisible();
+  await sheet.getByLabel("Text").fill(`${title} done`);
+  await sheet.getByRole("button", { name: "Complete", exact: true }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByText(`Done: ${title}`)).toBeVisible();
+  await expect(page.getByRole("button", { name: `Complete "${title} done"` })).toHaveCount(0);
+  await page.getByRole("button", { name: /^Completed/ }).click();
+  await expect(page.getByRole("button", { name: `Mark "${title} done" as open` })).toBeVisible();
+});
+
 test("planner: tap to create, drag to move, resize and complete", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/planner?day=2030-01-07"); // a quiet Monday far in the future

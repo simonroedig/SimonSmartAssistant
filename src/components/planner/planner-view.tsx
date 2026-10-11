@@ -136,7 +136,7 @@ export function PlannerView({
       end: Math.min(MINUTES_PER_DAY, start + duration),
       title: todoHeadline(todo.title),
       todoId: todo.id,
-      color: "amber",
+      color: "yellow",
     });
   };
 

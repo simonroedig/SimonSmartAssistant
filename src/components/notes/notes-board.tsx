@@ -250,14 +250,15 @@ export function NotesBoard({
     setShownKey({ key, direction: order.indexOf(key) < order.indexOf(shownKey.key) ? -1 : 1 });
   }
 
-  // Phones: swipe sideways through All and the categories. The vault isn't in
-  // that round – it opens with a tap (and asks for the PIN).
+  // Phones: swipe sideways through the filters, in the order of the chips. The
+  // vault is the first (it asks for the PIN when locked); there's no wrapping round.
   const phone = useMediaQuery("(max-width: 767px)");
   const swipe = useSwipe(
     (direction) => {
       const next = order[order.indexOf(key) + direction];
-      if (!next || next === "vault") return;
-      changeFilter(next === "all" ? "all" : { category: next });
+      if (!next) return;
+      if (next === "vault") openVault();
+      else changeFilter(next === "all" ? "all" : { category: next });
     },
     variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null,
   );

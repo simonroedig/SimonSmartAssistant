@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { newId, type NoteCategory } from "@/data/core";
-import { CATEGORY_COLORS, categoryTone, useDeleteCategory, useSaveCategory } from "@/data/note-categories";
+import { categoryColor, useDeleteCategory, useSaveCategory } from "@/data/note-categories";
 import { useLongPress } from "@/hooks/use-long-press";
-import { FIELD_FOCUS, type Tone, TONE_STYLES } from "@/lib/tones";
+import { PALETTE, PALETTE_COLORS, type PaletteColor } from "@/lib/palette";
+import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 /** What the notes page shows: everything (but the vault), the vault, or one category. */
@@ -21,25 +22,35 @@ const CHIP_IDLE = "text-muted well hover:text-fg";
 // Picked: tinted, with a thin ring in its colour – clear even for a grey category on a light page.
 const CHIP_ON = "font-semibold ring-[1.5px] ring-current/45 ring-inset";
 
-/** Keeps the picked chip of a sideways-scrolling row in view. */
+/**
+ * Keeps the picked chip of a sideways-scrolling row in view. The first and the
+ * last chip scroll the row all the way to its end, so it's clear there's no more
+ * (and + and the pencil show up after the last one).
+ */
 function useScrollToPressed(key: unknown) {
   const row = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const pressed = row.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
-    pressed?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const el = row.current;
+    if (!el) return;
+    const chips = [...el.querySelectorAll<HTMLElement>("[aria-pressed]")];
+    const index = chips.findIndex((c) => c.getAttribute("aria-pressed") === "true");
+    if (index < 0) return;
+    if (index === 0) el.scrollTo({ left: 0, behavior: "smooth" });
+    else if (index === chips.length - 1) el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+    else chips[index].scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   }, [key]);
   return row;
 }
 
 /** A note's category, small and in its colour. */
 export function CategoryTag({ category, className }: { category: NoteCategory; className?: string }) {
-  const tone = TONE_STYLES[categoryTone(category)];
+  const style = PALETTE[categoryColor(category)];
   return (
     <span
       className={cn(
         "inline-flex max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.72rem] font-medium",
-        tone.soft,
-        tone.text,
+        style.bg,
+        style.ink,
         className,
       )}
     >
@@ -62,7 +73,7 @@ function CategoryChip({
 }) {
   // Press and hold (or right-click): rename, recolour, delete.
   const longPress = useLongPress(onEdit, 500);
-  const tone = TONE_STYLES[categoryTone(category)];
+  const style = PALETTE[categoryColor(category)];
   return (
     <button
       type="button"
@@ -72,9 +83,9 @@ function CategoryChip({
       onClick={() => {
         if (!longPress.wasLongPress()) onSelect();
       }}
-      className={cn(CHIP, active ? cn(tone.soft, tone.text, CHIP_ON) : CHIP_IDLE)}
+      className={cn(CHIP, active ? cn(style.bg, style.ink, CHIP_ON) : CHIP_IDLE)}
     >
-      <span className={cn("size-2 rounded-full bg-current", tone.text)} />
+      <span className={cn("size-2 rounded-full bg-current", style.ink)} />
       {category.name}
     </button>
   );
@@ -132,7 +143,8 @@ export function NoteFilters({
         onClick={() => onChange("all")}
         className={cn(
           CHIP,
-          filter === "all" ? cn(TONE_STYLES.orange.soft, TONE_STYLES.orange.text, CHIP_ON) : CHIP_IDLE,
+          // Neutral, so it never looks like one of the categories.
+          filter === "all" ? cn("bg-fg/8 text-fg", CHIP_ON) : CHIP_IDLE,
         )}
       >
         All
@@ -206,7 +218,7 @@ export function CategoryPicker({
         </button>
       )}
       {categories.map((category) => {
-        const tone = TONE_STYLES[categoryTone(category)];
+        const style = PALETTE[categoryColor(category)];
         const active = !vault && categoryId === category.id;
         return (
           <button
@@ -214,9 +226,9 @@ export function CategoryPicker({
             type="button"
             aria-pressed={active}
             onClick={() => onChange({ categoryId: active ? null : category.id, vault: false })}
-            className={cn(CHIP, small, active ? cn(tone.soft, tone.text, CHIP_ON) : CHIP_IDLE)}
+            className={cn(CHIP, small, active ? cn(style.bg, style.ink, CHIP_ON) : CHIP_IDLE)}
           >
-            <span className={cn("size-1.5 rounded-full bg-current", tone.text)} />
+            <span className={cn("size-1.5 rounded-full bg-current", style.ink)} />
             {category.name}
           </button>
         );
@@ -269,7 +281,7 @@ function CategoryForm({
 }) {
   const editing = state?.mode === "edit" ? state.category : null;
   const [name, setName] = useState(editing?.name ?? "");
-  const [color, setColor] = useState<Tone>(editing ? categoryTone(editing) : "sky");
+  const [color, setColor] = useState<PaletteColor>(editing ? categoryColor(editing) : "sky");
   const save = useSaveCategory();
   const remove = useDeleteCategory();
   const nameRef = useRef<HTMLInputElement>(null);
@@ -341,21 +353,23 @@ function CategoryForm({
           className="field h-11 w-full rounded-2xl px-4 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
         />
         <div role="radiogroup" aria-label="Colour" className="flex flex-wrap gap-2.5">
-          {CATEGORY_COLORS.map(({ tone, label }) => (
+          {PALETTE_COLORS.map((c) => (
             <button
-              key={tone}
+              key={c}
               type="button"
               role="radio"
-              aria-checked={color === tone}
-              aria-label={label}
-              onClick={() => setColor(tone)}
+              aria-checked={color === c}
+              aria-label={PALETTE[c].label}
+              title={PALETTE[c].label}
+              onClick={() => setColor(c)}
               className={cn(
                 "grid size-9 place-items-center rounded-full transition-transform active:scale-95",
-                TONE_STYLES[tone].solid,
-                color === tone && "ring-2 ring-fg/70 ring-offset-2 ring-offset-(--surface-strong)",
+                PALETTE[c].swatch,
+                PALETTE[c].onSwatch,
+                color === c && "ring-2 ring-fg/70 ring-offset-2 ring-offset-(--surface-strong)",
               )}
             >
-              {color === tone && <Check className="size-4" strokeWidth={3} />}
+              {color === c && <Check className="size-4" strokeWidth={3} />}
             </button>
           ))}
         </div>

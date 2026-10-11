@@ -2,22 +2,12 @@
 
 import { type QueryKey } from "@tanstack/react-query";
 import { type DayKey } from "@/lib/date";
+import { PALETTE_COLORS } from "@/lib/palette";
 import { createClient } from "@/lib/supabase/client";
 import { type DayNote, newId, nowIso, type PlanBlock, queryKeys, useOptimisticMutation, useAppQuery } from "./core";
 
-export const BLOCK_COLORS = [
-  "violet",
-  "indigo",
-  "sky",
-  "teal",
-  "emerald",
-  "lime",
-  "amber",
-  "orange",
-  "rose",
-  "pink",
-  "slate",
-] as const;
+/** The colours a block can have – the shared palette. */
+export const BLOCK_COLORS = PALETTE_COLORS;
 export type BlockColor = (typeof BLOCK_COLORS)[number];
 
 export async function fetchBlocks(from: DayKey, to: DayKey): Promise<PlanBlock[]> {
