@@ -40,15 +40,15 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await expect(chip).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText(`No notes in ${name} yet.`)).toBeVisible();
 
-  // A note written here goes into it; no tag needed while the page shows only this category.
+  // A note written here goes into it and carries its tag.
   const text = `Quarterly report ${Date.now() % 100000}`;
   await page.getByLabel("New note").fill(text);
   await page.getByRole("button", { name: "Add note" }).click();
   const card = page.getByRole("button", { name: `Open note "${text}"` });
   await expect(card).toBeVisible();
-  await expect(card.getByText(name)).toHaveCount(0);
+  await expect(card.getByText(name)).toBeVisible();
 
-  // Under All it carries the category as a tag.
+  // Under All, too.
   await filters(page).getByRole("button", { name: "All", exact: true }).click();
   await expect(card.getByText(name)).toBeVisible();
 
@@ -92,6 +92,15 @@ test("notes: the vault – only with the PIN, locked again on leaving, never kep
   const card = page.getByRole("button", { name: `Open note "${secret}"` });
   await expect(card).toBeVisible();
 
+  // Switching to another window or app keeps it open.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(card).toBeVisible();
+
   // Lock: back to all notes, and the vault's notes are gone from sight and from the device.
   await page.getByRole("button", { name: "Lock", exact: true }).click();
   await expect(filters(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -118,6 +127,25 @@ test("notes: the vault – only with the PIN, locked again on leaving, never kep
     "false",
   );
   await expect(page.getByText(secret)).toHaveCount(0);
+});
+
+test("notes: a note moves into the vault from its editor, even while the vault is locked", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/notes");
+  const text = `Wi-Fi code ${Date.now() % 100000}`;
+  await page.getByLabel("New note").fill(text);
+  await page.getByRole("button", { name: "Add note" }).click();
+  const card = page.getByRole("button", { name: `Open note "${text}"` });
+  await card.click();
+  const editor = page.getByRole("dialog");
+  await editor.getByRole("group", { name: "Category" }).getByRole("button", { name: "Vault" }).click();
+  await editor.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Moved to the vault")).toBeVisible();
+  await expect(card).toHaveCount(0);
+  // Not a failed save: it's there once the vault is open.
+  await expect(page.getByText(/Couldn't update/)).toHaveCount(0);
+  await openVault(page);
+  await expect(card).toBeVisible();
 });
 
 test("settings: change the vault PIN, or reset it with a code from the e-mail", async ({ page }) => {

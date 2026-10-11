@@ -463,6 +463,20 @@ describe("database security", () => {
     expect(afterChange).toEqual([]);
   });
 
+  it("moves a note into the locked vault only through move_note_to_vault", async () => {
+    const { data: note } = await alice.client.from("notes").insert({ body: "Wi-Fi code" }).select().single();
+    // A plain update would hide the row from its own user while locked – refused.
+    const { error: plain } = await alice.client.from("notes").update({ vault: true }).eq("id", note!.id);
+    expect(plain?.code).toBe("42501");
+    // Somebody else can't move it; its owner can.
+    const { data: byBob } = await bob.client.rpc("move_note_to_vault", { note_id: note!.id });
+    expect(byBob).toBe(false);
+    const { data: moved } = await alice.client.rpc("move_note_to_vault", { note_id: note!.id });
+    expect(moved).toBe(true);
+    const { data: gone } = await alice.client.from("notes").select("*").eq("id", note!.id);
+    expect(gone).toEqual([]);
+  });
+
   it("locks the vault for a while after five wrong PINs", async () => {
     await bob.client.rpc("vault_set_pin", { new_pin: "1357" });
     let last: VaultResult | null = null;

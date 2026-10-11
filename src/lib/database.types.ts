@@ -357,6 +357,7 @@ export type Database = {
     Functions: {
       hook_before_user_created: { Args: { event: Json }; Returns: Json };
       keepalive: { Args: Record<PropertyKey, never>; Returns: boolean };
+      move_note_to_vault: { Args: { new_position?: number; note_id: string }; Returns: boolean };
       vault_set_pin: { Args: { current_pin?: string; new_pin: string }; Returns: Json };
       vault_status: { Args: Record<PropertyKey, never>; Returns: Json };
       vault_unlock: { Args: { pin: string }; Returns: Json };

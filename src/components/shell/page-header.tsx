@@ -14,15 +14,16 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-wrap items-end gap-3 px-4 pt-[calc(var(--safe-top)+1.25rem)] pb-4 md:pt-(--gutter) md:pr-(--gutter) md:pl-0",
+        // One row: the title (its subtitle wraps if need be) and the actions beside it.
+        "flex items-end gap-3 px-4 pt-[calc(var(--safe-top)+1.25rem)] pb-4 md:pt-(--gutter) md:pr-(--gutter) md:pl-0",
         className,
       )}
     >
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <h1 className="ui-title text-[1.75rem] leading-tight font-semibold tracking-tight md:text-[2rem]">{title}</h1>
         {subtitle && <p className="mt-0.5 text-[0.95rem] text-muted">{subtitle}</p>}
       </div>
-      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+      {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
     </header>
   );
 }

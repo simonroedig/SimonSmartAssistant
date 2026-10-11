@@ -122,7 +122,27 @@ export function useUpdateNote() {
     queryKey: queryKeys.notes,
     errorTitle: "Couldn't update the note",
     mutationFn: async ({ id, patch }) => {
-      const { error } = await createClient().from("notes").update(patch).eq("id", id);
+      const client = createClient();
+      // Into the vault: the rest first (while the note can still be seen), then the move itself –
+      // a plain update can't hide a note from its own user while the vault is locked.
+      if (patch.vault === true) {
+        const { title, body, pinned, position } = patch;
+        const rest: NotePatch = {};
+        if (title !== undefined) rest.title = title;
+        if (body !== undefined) rest.body = body;
+        if (pinned !== undefined) rest.pinned = pinned;
+        if (Object.keys(rest).length > 0) {
+          const { error } = await client.from("notes").update(rest).eq("id", id);
+          if (error) throw error;
+        }
+        const { error } = await client.rpc("move_note_to_vault", {
+          note_id: id,
+          ...(position !== undefined ? { new_position: position } : {}),
+        });
+        if (error) throw error;
+        return;
+      }
+      const { error } = await client.from("notes").update(patch).eq("id", id);
       if (error) throw error;
     },
     update: (data, { id, patch }, key) =>

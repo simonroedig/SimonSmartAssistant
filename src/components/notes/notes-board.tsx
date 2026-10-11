@@ -111,15 +111,12 @@ type Placement = { categoryId: string | null; vault: boolean };
 
 type EditorState = { mode: "create"; placement: Placement } | { mode: "edit"; note: Note } | null;
 
-/** Leaving the vault open this long without touching anything locks it again. */
-const VAULT_IDLE_MS = 3 * 60_000;
-
 /**
- * Keeps the vault shut whenever it isn't in use: when the page is left or goes
- * into the background, and after a few idle minutes. Locking also drops the
- * vault's notes from memory.
+ * The vault stays open while you're in it – also when you switch to another
+ * window or app – and locks when you leave it or the notes page (or when its
+ * 30 minutes are up). Locking also drops its notes from memory.
  */
-function useVaultGuard(inVault: boolean) {
+function useVaultGuard() {
   const open = useVaultOpen();
   const queryClient = useQueryClient();
 
@@ -127,29 +124,7 @@ function useVaultGuard(inVault: boolean) {
     if (!open) queryClient.removeQueries({ queryKey: queryKeys.vaultNotes, exact: true });
   }, [open, queryClient]);
 
-  useEffect(() => {
-    const onHidden = () => document.visibilityState === "hidden" && lockVault();
-    document.addEventListener("visibilitychange", onHidden);
-    return () => {
-      document.removeEventListener("visibilitychange", onHidden);
-      lockVault();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!open || !inVault) return;
-    let timer = window.setTimeout(lockVault, VAULT_IDLE_MS);
-    const touch = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(lockVault, VAULT_IDLE_MS);
-    };
-    const events = ["pointerdown", "keydown", "wheel"] as const;
-    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
-    return () => {
-      window.clearTimeout(timer);
-      events.forEach((e) => window.removeEventListener(e, touch));
-    };
-  }, [open, inVault]);
+  useEffect(() => () => lockVault(), []);
 }
 
 /** Notes in a Google Keep-like board (page) or as a scrollable list (home card). */
@@ -179,7 +154,7 @@ export function NotesBoard({
 
   const inVault = variant === "page" && filter === "vault";
   if (filter === "vault" && !vaultOpen) setFilter("all"); // Locked meanwhile (idle, another tab…).
-  useVaultGuard(inVault);
+  useVaultGuard();
 
   const categoryList = useMemo(() => categories.data ?? [], [categories.data]);
   const byId = useMemo(() => new Map(categoryList.map((c) => [c.id, c])), [categoryList]);
@@ -274,8 +249,7 @@ export function NotesBoard({
   );
 
   const loading = (inVault ? vaultNotes.isLoading : notes.isLoading) && all.length === 0;
-  const tagFor = (note: Note) =>
-    note.category_id && note.category_id !== filteredCategory ? byId.get(note.category_id) : undefined;
+  const tagFor = (note: Note) => (note.category_id ? byId.get(note.category_id) : undefined);
 
   if (variant === "card") {
     return (
@@ -339,7 +313,8 @@ export function NotesBoard({
     );
   }
 
-  const grid = "grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
+  // Two side by side already on phones (like Keep), so more fit on the screen.
+  const grid = "grid grid-cols-2 items-start gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4";
   const sortable = (items: Note[]) => (
     <SortableList
       items={items}
@@ -390,7 +365,7 @@ export function NotesBoard({
             )}
           >
             <Lock className="size-4 shrink-0" />
-            <span className="min-w-0 flex-1">The vault is open – it locks when you leave.</span>
+            <span className="min-w-0 flex-1">The vault is open – it locks when you leave it.</span>
             <Button variant="ghost" size="sm" onClick={() => changeFilter("all")}>
               Lock
             </Button>

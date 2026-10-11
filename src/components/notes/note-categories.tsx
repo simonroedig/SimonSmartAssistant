@@ -18,6 +18,8 @@ export const VAULT_TONE = TONE_STYLES.slate;
 const CHIP =
   "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium whitespace-nowrap transition-colors select-none [-webkit-touch-callout:none]";
 const CHIP_IDLE = "text-muted well hover:text-fg";
+// Picked: tinted, with a thin ring in its colour – clear even for a grey category on a light page.
+const CHIP_ON = "font-semibold ring-[1.5px] ring-current/45 ring-inset";
 
 /** Keeps the picked chip of a sideways-scrolling row in view. */
 function useScrollToPressed(key: unknown) {
@@ -70,7 +72,7 @@ function CategoryChip({
       onClick={() => {
         if (!longPress.wasLongPress()) onSelect();
       }}
-      className={cn(CHIP, active ? cn(tone.soft, tone.text) : CHIP_IDLE)}
+      className={cn(CHIP, active ? cn(tone.soft, tone.text, CHIP_ON) : CHIP_IDLE)}
     >
       <span className={cn("size-2 rounded-full bg-current", tone.text)} />
       {category.name}
@@ -117,7 +119,10 @@ export function NoteFilters({
         type="button"
         aria-pressed={filter === "all"}
         onClick={() => onChange("all")}
-        className={cn(CHIP, filter === "all" ? cn(TONE_STYLES.orange.soft, TONE_STYLES.orange.text) : CHIP_IDLE)}
+        className={cn(
+          CHIP,
+          filter === "all" ? cn(TONE_STYLES.orange.soft, TONE_STYLES.orange.text, CHIP_ON) : CHIP_IDLE,
+        )}
       >
         All
       </button>
@@ -209,7 +214,7 @@ export function CategoryPicker({
             type="button"
             aria-pressed={active}
             onClick={() => onChange({ categoryId: active ? null : category.id, vault: false })}
-            className={cn(CHIP, small, active ? cn(tone.soft, tone.text) : CHIP_IDLE)}
+            className={cn(CHIP, small, active ? cn(tone.soft, tone.text, CHIP_ON) : CHIP_IDLE)}
           >
             <span className={cn("size-1.5 rounded-full bg-current", tone.text)} />
             {category.name}
@@ -267,6 +272,14 @@ function CategoryForm({
   const [color, setColor] = useState<Tone>(editing ? categoryTone(editing) : "sky");
   const save = useSaveCategory();
   const remove = useDeleteCategory();
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  // A new one starts typing (once the sheet is in); editing doesn't pop the keyboard up.
+  useEffect(() => {
+    if (!open || editing) return;
+    const id = window.setTimeout(() => nameRef.current?.focus(), 150);
+    return () => window.clearTimeout(id);
+  }, [open, editing]);
 
   const submit = () => {
     if (!name.trim()) return;
@@ -319,12 +332,12 @@ function CategoryForm({
         }}
       >
         <input
+          ref={nameRef}
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name, e.g. Work"
           aria-label="Category name"
           maxLength={30}
-          autoFocus
           className="field h-11 w-full rounded-2xl px-4 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
         />
         <div role="radiogroup" aria-label="Colour" className="flex flex-wrap gap-2.5">
