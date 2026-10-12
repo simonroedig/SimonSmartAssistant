@@ -1,30 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The dashboard's icon (rising sun over two lines), placed in the adaptive icon's safe zone. -->
+<!-- The dashboard's icon (tiles in the sections' colours, the wall clock in the big one), inside the
+     adaptive icon's safe zone so a round mask doesn't cut the tiles. Same drawing as src/app/icon.svg. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="0.2"
-        android:scaleY="0.2"
-        android:translateX="2.8"
-        android:translateY="1.4">
+        android:scaleX="0.17"
+        android:scaleY="0.17"
+        android:translateX="10.48"
+        android:translateY="10.48">
         <path
-            android:pathData="M256,152 L256,118 M369,203 L393,179 M143,203 L119,179"
-            android:strokeWidth="22"
-            android:strokeColor="#FFEEB8"
-            android:strokeLineCap="round" />
+            android:fillColor="#EEF1F8"
+            android:pathData="M140,104 L236,104 A36,36 0 0,1 272,140 L272,236 A36,36 0 0,1 236,272 L140,272 A36,36 0 0,1 104,236 L104,140 A36,36 0 0,1 140,104 Z" />
         <path
-            android:fillColor="#FFD98A"
-            android:pathData="M146,318 A110,110 0 0,1 366,318 Z" />
+            android:fillColor="#FB7185"
+            android:pathData="M328,104 L372,104 A36,36 0 0,1 408,140 L408,236 A36,36 0 0,1 372,272 L328,272 A36,36 0 0,1 292,236 L292,140 A36,36 0 0,1 328,104 Z" />
         <path
-            android:fillAlpha="0.95"
-            android:fillColor="#FFFFFF"
-            android:pathData="M116,338 L396,338 A12,12 0 0,1 396,362 L116,362 A12,12 0 0,1 116,338 Z" />
+            android:fillColor="#34D399"
+            android:pathData="M140,292 L184,292 A36,36 0 0,1 220,328 L220,372 A36,36 0 0,1 184,408 L140,408 A36,36 0 0,1 104,372 L104,328 A36,36 0 0,1 140,292 Z" />
         <path
-            android:fillAlpha="0.55"
-            android:fillColor="#FFFFFF"
-            android:pathData="M172,384 L340,384 A12,12 0 0,1 340,408 L172,408 A12,12 0 0,1 172,384 Z" />
+            android:fillColor="#FCD34D"
+            android:pathData="M276,292 L372,292 A36,36 0 0,1 408,328 L408,372 A36,36 0 0,1 372,408 L276,408 A36,36 0 0,1 240,372 L240,328 A36,36 0 0,1 276,292 Z" />
+        <path
+            android:pathData="M188,146 L188,188 L218,206"
+            android:strokeWidth="20"
+            android:strokeColor="#151B2C"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:fillColor="#151B2C"
+            android:pathData="M177,188 A11,11 0 1,0 199,188 A11,11 0 1,0 177,188 Z" />
     </group>
 </vector>

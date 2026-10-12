@@ -170,7 +170,7 @@ export function LoginView({
         className="w-full max-w-[26rem] rounded-(--radius-card) p-7 glass md:p-9"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icon.svg" alt="" className="mb-6 size-14 rounded-2xl shadow-[0_12px_40px_-12px_var(--accent)]" />
+        <img src="/icon.svg" alt="" className="mb-6 size-14 rounded-2xl shadow-[0_12px_32px_-12px_rgb(0_0_0/0.45)]" />
         <h1 className="ui-title text-2xl font-semibold tracking-tight">Smart Assistant</h1>
         <p className="mt-1 text-muted">Sign in to your private dashboard.</p>
 

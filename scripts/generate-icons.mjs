@@ -13,16 +13,17 @@ const targets = [
   { file: "public/icons/icon-192.png", size: 192, maskable: false },
   { file: "public/icons/icon-512.png", size: 512, maskable: false },
   { file: "public/icons/maskable-512.png", size: 512, maskable: true },
-  { file: "src/app/apple-icon.png", size: 180, maskable: true },
+  // iOS only rounds the corners: full bleed, but the motif as big as on the normal icon.
+  { file: "src/app/apple-icon.png", size: 180, maskable: true, scale: 1 },
 ];
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
-for (const { file, size, maskable } of targets) {
+for (const { file, size, maskable, scale = 0.82 } of targets) {
   await page.setViewportSize({ width: size, height: size });
   // Maskable icons need a full-bleed background and the motif inside the safe zone.
-  const inner = maskable ? Math.round(size * 0.82) : size;
-  await page.setContent(`<html><body style="margin:0;background:${maskable ? "linear-gradient(135deg,#9b8cff,#5b4cf0 55%,#2a2580)" : "transparent"};display:grid;place-items:center;width:${size}px;height:${size}px">
+  const inner = maskable ? Math.round(size * scale) : size;
+  await page.setContent(`<html><body style="margin:0;background:${maskable ? "linear-gradient(135deg,#1c2438,#0c111e)" : "transparent"};display:grid;place-items:center;width:${size}px;height:${size}px">
     <img src="${maskable ? motifData : svgData}" style="width:${inner}px;height:${inner}px"></body></html>`);
   await page.waitForTimeout(50);
   const png = await page.screenshot({ omitBackground: !maskable, clip: { x: 0, y: 0, width: size, height: size } });

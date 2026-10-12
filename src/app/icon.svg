@@ -1,22 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The dashboard as tiles in its sections' colours (planner, shopping, backlog), the wall clock in the big one. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#9b8cff"/>
-      <stop offset="0.55" stop-color="#5b4cf0"/>
-      <stop offset="1" stop-color="#2a2580"/>
-    </linearGradient>
-    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff8dc"/>
-      <stop offset="1" stop-color="#ffc864"/>
+      <stop offset="0" stop-color="#1c2438"/>
+      <stop offset="1" stop-color="#0c111e"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <g stroke="#ffeeb8" stroke-width="22" stroke-linecap="round" opacity="0.95">
-    <line x1="256" y1="152" x2="256" y2="118"/>
-    <line x1="369" y1="203" x2="393" y2="179"/>
-    <line x1="143" y1="203" x2="119" y2="179"/>
-  </g>
-  <path d="M146 318a110 110 0 0 1 220 0z" fill="url(#sun)"/>
-  <rect x="104" y="338" width="304" height="24" rx="12" fill="#ffffff" opacity="0.95"/>
-  <rect x="160" y="384" width="192" height="24" rx="12" fill="#ffffff" opacity="0.55"/>
+  <rect x="104" y="104" width="168" height="168" rx="36" fill="#eef1f8"/>
+  <path d="M188 146V188L218 206" fill="none" stroke="#151b2c" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="188" cy="188" r="11" fill="#151b2c"/>
+  <rect x="292" y="104" width="116" height="168" rx="36" fill="#fb7185"/>
+  <rect x="104" y="292" width="116" height="116" rx="36" fill="#34d399"/>
+  <rect x="240" y="292" width="168" height="116" rx="36" fill="#fcd34d"/>
 </svg>
