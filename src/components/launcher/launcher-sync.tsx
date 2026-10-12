@@ -135,18 +135,35 @@ export function LauncherSync() {
   return null;
 }
 
-/** Whether a newer launcher app has been published on this server. */
+/** How often a launcher that stays open looks for a newer version. */
+const UPDATE_CHECK_EVERY = 30 * 60_000;
+
+/**
+ * Whether a newer launcher app has been published on this server. A launcher
+ * is hardly ever restarted, so it looks again whenever it comes back to the
+ * front and every half hour – not only when it starts.
+ */
 export function useLauncherUpdate() {
   const { version, update } = useLauncherState();
   const [latest, setLatest] = useState<{ versionCode: number; versionName: string } | null>(null);
   useEffect(() => {
     if (version === null) return;
     let cancelled = false;
-    void latestLauncherVersion().then((found) => {
-      if (!cancelled) setLatest(found);
-    });
+    const check = () => {
+      void latestLauncherVersion().then((found) => {
+        if (!cancelled && found) setLatest(found);
+      });
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    check();
+    const timer = window.setInterval(check, UPDATE_CHECK_EVERY);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [version]);
   return {

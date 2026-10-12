@@ -260,6 +260,27 @@ test("launcher: a newer app version is offered on the home screen", async ({ pag
   await expect.poll(async () => (await sent(page)).some((m) => m.type === "update")).toBe(true);
 });
 
+test("launcher: a version published while it stays open shows up once it comes back to the front", async ({ page }) => {
+  await fakeLauncher(page);
+  // At first nothing newer than the installed app is out.
+  let published = { versionCode: 1, versionName: "1.1" };
+  await page.route("**/launcher/version.json", (route) => route.fulfill({ json: published }));
+  const checked = page.waitForResponse("**/launcher/version.json");
+  await page.goto("/");
+  await checked;
+  await expect(page.getByText(/Launcher update/)).toHaveCount(0);
+
+  // Published meanwhile; the launcher is never restarted, only brought back to the front.
+  published = { versionCode: 9, versionName: "1.9" };
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.getByText("Launcher update 1.9")).toBeVisible();
+});
+
 test("launcher: searching apps scrolls down to the best matches by the thumb", async ({ page }) => {
   // A launcher with many apps, so the search results are taller than the screen.
   await page.addInitScript(() => {
