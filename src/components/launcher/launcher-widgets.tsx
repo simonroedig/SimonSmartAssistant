@@ -238,6 +238,11 @@ export function BlockedAppsSection() {
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span className="min-w-0 flex-1">
             To also send you home when a blocked app is opened another way, turn on the service in accessibility.
+            <span className="mt-1.5 block text-xs opacity-90">
+              Greyed out there (&ldquo;restricted setting&rdquo;)? Android asks for this once for apps from outside the
+              Play Store: Settings → Apps → Smart Assistant → ⋮ (top right) → <b>Allow restricted settings</b>, then
+              turn it on.
+            </span>
           </span>
           <Button variant="primary" size="sm" onClick={() => void launcher.openFilterSettings()}>
             Turn on

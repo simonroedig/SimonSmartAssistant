@@ -18,6 +18,29 @@ test.describe("app allowlist", () => {
     await page.goto("/shopping");
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test("a requested code is still waiting after switching to the mail app and back (page reloaded)", async ({
+    page,
+  }) => {
+    const { waitForCode } = await import("./helpers");
+    await page.goto("/login");
+    await page.getByLabel("E-mail").fill("dev@example.com");
+    const since = Date.now();
+    await page.getByRole("button", { name: "Send me a code" }).click();
+    await expect(page.getByLabel("Code")).toBeVisible();
+    const code = await waitForCode("dev@example.com", since);
+
+    // Back from the mail app, the page (or the whole launcher) was reloaded: still the code step.
+    await page.reload();
+    await expect(page.getByLabel("Code")).toBeVisible();
+    await expect(page.getByText("dev@example.com")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Resend in \d+s/ })).toBeVisible();
+    await page.getByLabel("Code").fill(code);
+    await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+
+    // Signed in, the waiting code is forgotten: the next sign-in starts with the e-mail.
+    expect(await page.evaluate(() => localStorage.getItem("ssa:pending-code"))).toBeNull();
+  });
 });
 
 test("passkeys: register on this device, then sign in with it", async ({ page, context }) => {

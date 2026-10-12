@@ -31,6 +31,36 @@ function friendlyError(message: string | undefined, status?: number): string {
   return message || "Something went wrong. Please try again.";
 }
 
+/**
+ * A code that was asked for, kept on the device: switching to the mail app and
+ * back (which may reload the page, or the whole launcher) leads straight back
+ * to entering the code instead of asking for a new one.
+ */
+const PENDING_KEY = "ssa:pending-code";
+const PENDING_FOR = 60 * 60_000; // as long as a code is valid
+const RESEND_AFTER = 60;
+
+type PendingCode = { email: string; sentAt: number };
+
+function readPending(): PendingCode | null {
+  try {
+    const pending = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "null") as PendingCode | null;
+    if (pending && typeof pending.email === "string" && Date.now() - pending.sentAt < PENDING_FOR) return pending;
+  } catch {
+    // Nothing usable stored.
+  }
+  return null;
+}
+
+function writePending(pending: PendingCode | null) {
+  try {
+    if (pending) localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+    else localStorage.removeItem(PENDING_KEY);
+  } catch {
+    // Private mode: the step just isn't remembered.
+  }
+}
+
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 48 48" className="size-5" aria-hidden="true">
@@ -75,6 +105,19 @@ export function LoginView({
   const webauthn = hydrated && "PublicKeyCredential" in window;
   const codeRef = useRef<HTMLInputElement>(null);
 
+  // Back from the mail app: the code step again, with what's left of the resend wait.
+  // (Read after hydration – the server can't know – and applied in the next frame.)
+  useEffect(() => {
+    const pending = readPending();
+    if (!pending) return;
+    const id = requestAnimationFrame(() => {
+      setEmail(pending.email);
+      setStep("code");
+      setCooldown(Math.max(0, RESEND_AFTER - Math.floor((Date.now() - pending.sentAt) / 1000)));
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   useEffect(() => {
     if (cooldown <= 0) return;
     const id = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
@@ -82,6 +125,7 @@ export function LoginView({
   }, [cooldown]);
 
   const done = () => {
+    writePending(null);
     clearPersistedCache();
     window.location.replace(next);
   };
@@ -108,8 +152,9 @@ export function LoginView({
     } catch {
       // ignore
     }
+    writePending({ email: address, sentAt: Date.now() });
     setStep("code");
-    setCooldown(60);
+    setCooldown(RESEND_AFTER);
     setCode("");
     window.setTimeout(() => codeRef.current?.focus(), 150);
   };
@@ -248,8 +293,8 @@ export function LoginView({
               }}
             >
               <p className="text-sm text-muted">
-                We sent a code to <span className="font-semibold text-fg">{email.trim()}</span>. It&apos;s valid for a
-                limited time.
+                We sent a code to <span className="font-semibold text-fg">{email.trim()}</span>. It&apos;s valid for an
+                hour – if you ask for another one, only the newest works.
               </p>
               <div>
                 <Label htmlFor="code">Code</Label>
@@ -275,7 +320,14 @@ export function LoginView({
                 Sign in
               </Button>
               <div className="flex items-center justify-between pt-1">
-                <Button variant="ghost" size="sm" onClick={() => setStep("start")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    writePending(null);
+                    setStep("start");
+                  }}
+                >
                   <ArrowLeft /> Change e-mail
                 </Button>
                 <Button
