@@ -35,7 +35,16 @@ const day = (offset) => {
 };
 const t = (h, m = 0) => h * 60 + m;
 
-for (const table of ["plan_blocks", "todos", "shopping_items", "shopping_history", "day_notes", "notes"]) {
+for (const table of [
+  "plan_blocks",
+  "todos",
+  "shopping_items",
+  "shopping_history",
+  "day_notes",
+  "notes",
+  "note_categories",
+  "birthdays",
+]) {
   await supabase.from(table).delete().not("user_id", "is", null);
 }
 
@@ -59,97 +68,140 @@ await supabase.from("user_settings").upsert({
   ],
 });
 
-const items = ["Hafermilch", "Eier", "Bananen", "Vollkornbrot", "Kaffeebohnen", "Spinat", "Feta", "Zahnpasta"];
-for (const name of [...items, "Hafermilch", "Bananen", "Kaffeebohnen", "Tomaten", "Pasta", "Joghurt"]) {
-  await supabase.from("shopping_items").insert({ name });
-}
-const { data: all } = await supabase.from("shopping_items").select("*");
-const seen = new Set();
-for (const row of all) {
-  if (seen.has(row.name)) await supabase.from("shopping_items").delete().eq("id", row.id);
-  seen.add(row.name);
-}
-await supabase.from("shopping_items").update({ note: "2x" }).eq("name", "Hafermilch");
-await supabase.from("shopping_items").update({ checked: true }).in("name", ["Tomaten", "Pasta", "Joghurt"]);
+const check = (result) => {
+  if (result.error) throw result.error;
+  return result.data;
+};
 
-const { data: todos, error: todoError } = await supabase
-  .from("todos")
-  .insert(
+// Shopping: what's often bought (the one-tap suggestions), then today's list.
+for (const name of ["Eggs", "Butter", "Apples", "Yoghurt"]) {
+  const [row] = check(await supabase.from("shopping_items").insert({ name, position: 0 }).select());
+  check(await supabase.from("shopping_items").delete().eq("id", row.id));
+}
+const list = [
+  { name: "Oat milk", note: "2x" },
+  { name: "Bananas" },
+  { name: "Coffee beans" },
+  { name: "Tomatoes", note: "500 g" },
+  { name: "Sourdough bread" },
+  { name: "Olive oil" },
+  { name: "Eggs" },
+];
+check(
+  await supabase
+    .from("shopping_items")
+    .insert(list.map((item, i) => ({ name: item.name, note: item.note ?? null, position: i + 1 }))),
+);
+check(await supabase.from("shopping_items").update({ checked: true }).eq("name", "Eggs"));
+
+// Backlog: free text, the first line is the headline.
+check(
+  await supabase.from("todos").insert(
     [
-      { title: "Steuererklärung abschicken\nBelege liegen im Ordner", starred: true, due_date: day(2), position: 1 },
-      { title: "Fahrrad zur Inspektion bringen", due_date: day(0), position: 2 },
-      { title: "Geschenk für Mama besorgen", due_date: day(9), position: 3 },
-      {
-        title:
-          "Kamera fürs Smart Home recherchieren\nLokal speichernd, kein Cloud-Abo. Am besten PoE und mit RTSP, damit sie später ins Dashboard kann.",
-        position: 4,
-      },
-      { title: "Wohnung: Lampe im Flur tauschen", position: 5 },
-      { title: "Arzttermin vereinbaren", starred: true, position: 6 },
-      { title: "Backup der Fotos machen", done: true, position: 7 },
+      { title: "Renew passport", starred: true, due_date: day(5), position: 1 },
+      { title: "Plan the trip to Lisbon\nFlights, a place near Alfama, day trip to Sintra.", position: 2 },
+      { title: "Call the landlord about the heating", due_date: day(1), position: 3 },
+      { title: "Fix the bike's back brake", position: 4 },
+      { title: "Back up the photo library", position: 5 },
+      { title: "Cancel the old phone contract", done: true, position: 6 },
     ],
     { defaultToNull: false },
-  )
-  .select();
-if (todoError) throw todoError;
+  ),
+);
 
-const blocks = [
-  { start: t(7, 30), end: t(8, 15), title: "Morning routine", color: "sky" },
+// Planner: today (done until mid-morning) and tomorrow.
+const today = [
+  { start: t(7), end: t(7, 45), title: "Run along the river", color: "emerald", done: true },
   {
-    start: t(8, 30),
-    end: t(11, 30),
-    title: "Deep work: Dashboard",
+    start: t(9),
+    end: t(12),
+    title: "Deep work – portfolio site",
     color: "violet",
-    notes: "Planner drag & drop polish",
+    notes: "Project pages first, then the about page.",
   },
-  { start: t(11, 30), end: t(12), title: "Emails & admin", color: "slate" },
-  { start: t(12, 30), end: t(13, 30), title: "Lunch with Lea", color: "orange" },
-  { start: t(14), end: t(16), title: "University: Seminar", color: "indigo" },
-  { start: t(15), end: t(15, 30), title: "Call bank", color: "rose" },
-  { start: t(16, 30), end: t(17, 30), title: "Gym", color: "emerald" },
-  { start: t(18), end: t(18, 45), title: "Groceries", color: "lime" },
-  { start: t(19), end: t(20, 30), title: "Cook & dinner", color: "amber" },
-  { start: t(21), end: t(22, 30), title: "Read", color: "teal" },
+  { start: t(12, 30), end: t(13, 30), title: "Lunch & a short walk", color: "yellow" },
+  { start: t(14), end: t(15), title: "Call with the design agency", color: "blue" },
+  { start: t(15, 30), end: t(17, 30), title: "Dashboard: polish the notes", color: "indigo" },
+  { start: t(18, 30), end: t(20), title: "Bouldering", color: "orange" },
+  { start: t(20, 30), end: t(21, 30), title: "Read", color: "slate" },
 ];
-await supabase.from("plan_blocks").insert(
-  blocks.map((b, i) => ({
-    day: day(0),
-    start_min: b.start,
-    end_min: b.end,
-    title: b.title,
-    color: b.color,
-    notes: b.notes ?? null,
-    done: i < 2,
-  })),
+const tomorrow = [
+  { start: t(7, 30), end: t(8), title: "Stretching", color: "emerald" },
+  { start: t(9), end: t(11, 30), title: "Deep work – case study", color: "violet" },
+  { start: t(12), end: t(13), title: "Groceries", color: "lime" },
+  { start: t(18), end: t(20), title: "Dinner with friends", color: "rose" },
+];
+check(
+  await supabase.from("plan_blocks").insert(
+    [...today.map((b) => ({ ...b, day: day(0) })), ...tomorrow.map((b) => ({ ...b, day: day(1) }))].map((b) => ({
+      day: b.day,
+      start_min: b.start,
+      end_min: b.end,
+      title: b.title,
+      color: b.color,
+      notes: b.notes ?? null,
+      done: b.done ?? false,
+    })),
+  ),
 );
-await supabase.from("plan_blocks").insert(
-  [
-    { day: day(1), start_min: t(9), end_min: t(12), title: "Deep work", color: "violet" },
-    { day: day(1), start_min: t(17), end_min: t(18), title: "Gym", color: "emerald" },
-    { day: day(-1), start_min: t(10), end_min: t(11), title: "Dentist", color: "rose" },
-    {
-      day: day(2),
-      start_min: t(10),
-      end_min: t(11),
-      title: todos[0].title.split("\n")[0],
-      color: "amber",
-      todo_id: todos[0].id,
-    },
-  ],
-  { defaultToNull: false },
+check(
+  await supabase
+    .from("day_notes")
+    .upsert({ day: day(0), focus: "Ship the portfolio draft" }, { onConflict: "user_id,day" }),
 );
-await supabase
-  .from("day_notes")
-  .upsert({ day: day(0), focus: "Ship the dashboard planner" }, { onConflict: "user_id,day" });
 
-await supabase.from("notes").insert(
-  [
-    { title: "WLAN Gäste", body: "Netz: Wohnzimmer-Gast\nPasswort: sonnenblume-42", pinned: true, position: 1 },
-    { title: null, body: "Ideen fürs Wochenende: Flohmarkt, Therme, neuen Italiener testen", position: 2 },
-    { title: "Geschenkideen", body: "Mama – Kochbuch\nPapa – Fahrradlampe\nLena – Konzertkarten", position: 3 },
-    { title: "Pi Display", body: "Settings → This device → Text size 110 %\nNight mode: at night", position: 4 },
-  ],
-  { defaultToNull: false },
+// Notes, some in categories.
+const [ideas, travel, recipes] = check(
+  await supabase
+    .from("note_categories")
+    .insert([
+      { name: "Ideas", color: "yellow" },
+      { name: "Travel", color: "sky" },
+      { name: "Recipes", color: "orange" },
+    ])
+    .select(),
+);
+check(
+  await supabase.from("notes").insert(
+    [
+      { title: "Guest Wi-Fi", body: "Network: Home-Guest\nPassword: on the fridge", pinned: true, position: 1 },
+      {
+        title: "Gift ideas",
+        body: "Mum – a good chef's knife\nTom – climbing chalk bag\nAnna – the new Murakami",
+        position: 2,
+        category_id: ideas.id,
+      },
+      {
+        title: "Lisbon",
+        body: "Time Out Market\nLX Factory on Sunday\nTram 28 early in the morning",
+        position: 3,
+        category_id: travel.id,
+      },
+      {
+        title: "Pasta al limone",
+        body: "Zest of 2 lemons, butter, parmesan, a splash of pasta water. Black pepper.",
+        position: 4,
+        category_id: recipes.id,
+      },
+      {
+        title: "Dashboard ideas",
+        body: "Habit streaks on the home screen\nWeekly review on Sunday evening",
+        position: 5,
+        category_id: ideas.id,
+      },
+      { title: "Books", body: "Project Hail Mary\nThe Design of Everyday Things", position: 6 },
+    ],
+    { defaultToNull: false },
+  ),
+);
+
+// A birthday later this month (planner and month calendar).
+const soon = new Date();
+soon.setDate(soon.getDate() + 6);
+check(
+  await supabase
+    .from("birthdays")
+    .insert({ name: "Anna", day: soon.getDate(), month: soon.getMonth() + 1, year: 1994 }),
 );
 
 console.log("Seeded demo data for", EMAIL);
