@@ -111,7 +111,9 @@ export function LauncherSync() {
       if (event.type === "home") {
         // Home button: back to the home screen – or the apps, if that's what Home is switched to.
         const target = getHomeView() === "apps" ? "/apps" : "/";
-        if (path.current === target) window.scrollTo({ top: 0, behavior: "smooth" });
+        // Back from an app the page jumps: a tap during a scroll animation would only stop it.
+        const behavior = event.returning === true ? "instant" : "smooth";
+        if (path.current === target) window.scrollTo({ top: 0, behavior });
         else if (target === "/") {
           if (homeIsBelow()) router.back();
           else router.replace("/");

@@ -17,6 +17,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.accessibility.AccessibilityManager
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.inputmethod.InputMethodManager
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.net.ConnectivityManager
@@ -34,6 +35,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -45,6 +47,9 @@ import org.json.JSONObject
  * in the browser) in a WebView, plus what only a launcher can do – list and
  * open the installed apps, search the web in Firefox, update itself.
  */
+/** How soon after a tap the window must get the focus for the tap to count as "early". */
+private const val EARLY_TAP_MS = 1500L
+
 class LauncherActivity : ComponentActivity() {
     private lateinit var root: FrameLayout
     private lateinit var webView: WebView
@@ -56,6 +61,10 @@ class LauncherActivity : ComponentActivity() {
     private var safeArea: Pair<Float, Float>? = null
     private var failedUrl: String? = null
     private var themed = false
+    // A tap that came while the window didn't have the focus yet (just back from an app):
+    // where it landed (CSS px in the page) and when.
+    private var earlyTap: Pair<Float, Float>? = null
+    private var earlyTapAt = 0L
     private val connectivity by lazy { getSystemService(ConnectivityManager::class.java) }
 
     // Back online: bring the dashboard back by itself.
@@ -177,14 +186,19 @@ class LauncherActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
-            bridge.send(JSONObject().put("type", "home"))
+            // Coming back from an app (not yet resumed): the page jumps instead of animating –
+            // a tap during a scroll animation would only stop it.
+            val returning = !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            bridge.send(JSONObject().put("type", "home").put("returning", returning))
         }
     }
 
+    // No endTouch() here: coming back, the finger may already be down for the next tap
+    // (the window takes touches before the activity counts as resumed), and cancelling
+    // it would swallow that tap. Leaving (onPause) ends whatever was going on.
     override fun onResume() {
         super.onResume()
         webView.onResume()
-        endTouch()
         if (offline.isShown) retry()
     }
 
@@ -199,7 +213,54 @@ class LauncherActivity : ComponentActivity() {
     // that tap isn't spent on giving it the focus.
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && !webView.hasFocus()) webView.requestFocus()
+        if (!hasFocus) return
+        if (!webView.hasFocus()) webView.requestFocus()
+        val tap = earlyTap
+        earlyTap = null
+        if (tap != null && SystemClock.uptimeMillis() - earlyTapAt < EARLY_TAP_MS) {
+            // Let the tap finish in the page first, then see what it was meant for.
+            root.postDelayed({ finishEarlyTap(tap.first, tap.second) }, 120)
+        }
+    }
+
+    /** Notes taps that arrive before the window has the focus (see [finishEarlyTap]). */
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && !hasWindowFocus()) {
+            val at = IntArray(2)
+            webView.getLocationInWindow(at)
+            val density = resources.displayMetrics.density
+            earlyTap = (event.x - at[0]) / density to (event.y - at[1]) / density
+            earlyTapAt = SystemClock.uptimeMillis()
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    /**
+     * A text field tapped right after coming back from an app, before Android gave the
+     * window its focus back: the page may have taken the tap without opening the keyboard
+     * (or not taken it at all). If the tap landed on a text field, it gets the focus and
+     * the keyboard comes up – one tap, like at any other time. Other taps are left alone.
+     */
+    private fun finishEarlyTap(x: Float, y: Float) {
+        val script =
+            """
+            (function (x, y) {
+              var t = document.elementFromPoint(x, y);
+              if (!t) return false;
+              var label = t.closest && t.closest("label");
+              var el = (label && label.control) || (t.closest && t.closest("input, textarea, [contenteditable]"));
+              if (!el || el.disabled || el.readOnly) return false;
+              if (el.tagName === "INPUT" && /^(button|checkbox|radio|range|color|file|submit|reset|image|hidden)$/.test(el.type)) return false;
+              if (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA" && !el.isContentEditable) return false;
+              if (document.activeElement !== el) el.focus({ preventScroll: true });
+              return document.activeElement === el;
+            })($x, $y)
+            """.trimIndent()
+        webView.evaluateJavascript(script) { result ->
+            if (result != "true") return@evaluateJavascript
+            webView.requestFocus()
+            getSystemService(InputMethodManager::class.java)?.showSoftInput(webView, 0)
+        }
     }
 
     /**
@@ -208,6 +269,7 @@ class LauncherActivity : ComponentActivity() {
      * after coming back can get lost.
      */
     private fun endTouch() {
+        earlyTap = null
         val now = SystemClock.uptimeMillis()
         val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
         cancel.source = InputDevice.SOURCE_TOUCHSCREEN
