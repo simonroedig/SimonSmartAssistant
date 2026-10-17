@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { AutoUpdate } from "@/components/kiosk/auto-update";
 import { KeepAwake } from "@/components/kiosk/keep-awake";
 import { Screensaver } from "@/components/kiosk/screensaver";
+import { StillMode } from "@/components/kiosk/still-mode";
 import { TouchScroll } from "@/components/kiosk/touch-scroll";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
@@ -23,6 +24,7 @@ export default async function SignedInLayout({ children }: LayoutProps<"/">) {
         <Screensaver />
         <AutoUpdate />
         <KeepAwake />
+        <StillMode />
         <TouchScroll />
       </RealtimeProvider>
     </SessionProvider>

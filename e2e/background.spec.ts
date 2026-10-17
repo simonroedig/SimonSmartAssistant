@@ -62,3 +62,24 @@ test("in the background the live connection rests; back on screen the list catch
   await phone.context().close();
   await other.context().close();
 });
+
+test("wall display at rest: nothing moves after two minutes untouched, a tap brings it back", async ({ page }) => {
+  await page.clock.install();
+  await mockWeather(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/weather?kiosk=1");
+  const icon = page.locator('img[src^="/weather/"]').first();
+  await expect(icon).toHaveAttribute("src", /^\/weather\/[\w-]+\.svg$/);
+  await expect(page.locator("html")).not.toHaveAttribute("data-still");
+
+  // Two minutes without a touch: the still icons, and the sky would stop too.
+  await page.clock.runFor(2 * 60_000 + 1000);
+  await expect(page.locator("html")).toHaveAttribute("data-still", "");
+  await expect(icon).toHaveAttribute("src", /^\/weather\/still\/[\w-]+\.svg$/);
+
+  // A tap: moving again.
+  await page.mouse.click(700, 20);
+  await expect(page.locator("html")).not.toHaveAttribute("data-still");
+  await expect(icon).toHaveAttribute("src", /^\/weather\/[\w-]+\.svg$/);
+  await page.goto("/weather?kiosk=0");
+});

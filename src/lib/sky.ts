@@ -243,7 +243,7 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
   // Stars at night, rain and snow – only in the sky.
   const stars = !isDay && (w === "clear" || w === "partly") ? (dark ? 0.9 : 0.55) : 0;
   vars["--hz-stars"] = String(calm ? +(stars * 0.45).toFixed(3) : stars);
-  vars["--hz-rain"] = w === "rain" || w === "storm" ? (dark ? "0.35" : "0.9") : "0";
+  vars["--hz-rain"] = w === "rain" || w === "storm" ? (dark ? "0.6" : "0.75") : "0";
   vars["--hz-snow"] = w === "snow" ? (dark ? "0.6" : "1") : "0";
   vars["--hz-h"] = pct(H);
   vars["--hz-width"] = pct(width);
