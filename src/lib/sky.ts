@@ -183,7 +183,6 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
       `linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.5)}, ${rgb(hor)} ${pct(H)}, ${rgb(ground)} ${pct(H + 30)})`,
     ].join(",");
     vars["--hz-ground"] = NONE;
-    vars["--hz-lines"] = NONE;
   } else {
     const body: string[] = [];
     if (isDay) {
@@ -204,23 +203,10 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
     }
     body.push(`linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.6)}, ${rgb(hor)} ${pct(H)})`);
     vars["--hz-sky"] = body.join(",");
-    // Below the horizon: calm ground the cards sit on (it also hides the setting sun) …
+    // Below the horizon the sky flows softly into a calm ground the cards sit on
+    // (no edge, no lines); the setting sun sinks into it.
     vars["--hz-ground"] =
-      `linear-gradient(180deg, transparent ${pct(H)}, ${rgb(mix(hor, ground, 0.35))} ${pct(H)}, ${rgb(ground)} ${pct(H + 22)}, ${rgb(ground)} 100%)`;
-    // … with fine lines that get closer towards the horizon, like water or a plain.
-    const lineA = dark ? 0.11 : 0.8;
-    const lines: string[] = [];
-    for (let i = 1; i <= 9; i++) {
-      const y = (H + Math.pow(i / 9, 1.8) * 26).toFixed(2);
-      lines.push(
-        `<line x1='0' x2='100' y1='${y}' y2='${y}' stroke='rgba(255,255,255,${(lineA * (1 - i / 11)).toFixed(3)})' stroke-width='1' vector-effect='non-scaling-stroke'/>`,
-      );
-    }
-    lines.push(
-      `<line x1='0' x2='100' y1='${H}' y2='${H}' stroke='rgba(255,255,255,${dark ? 0.22 : 1})' stroke-width='1' vector-effect='non-scaling-stroke'/>`,
-    );
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'>${lines.join("")}</svg>`;
-    vars["--hz-lines"] = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+      `linear-gradient(180deg, transparent ${pct(H - 9)}, ${rgb(mix(hor, ground, 0.5), 0.85)} ${pct(H + 3)}, ${rgb(ground)} ${pct(H + 20)}, ${rgb(ground)} 100%)`;
   }
 
   const haze: RGB = dark ? [70, 76, 92] : [255, 255, 255];
@@ -276,7 +262,6 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
 export const SKY_VARS = [
   "--hz-sky",
   "--hz-ground",
-  "--hz-lines",
   "--hz-haze",
   "--hz-clouds",
   "--hz-stars",

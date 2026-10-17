@@ -120,23 +120,9 @@ nav[data-attached]:not([data-tabbar]) {
   background-color: transparent;
   transition: none;
 }
-/* … the ground below the horizon with its lines, and fog – in the sky window only
-   (on wide screens the clock's column, softly fading out to the right) … */
+/* … the ground the sky flows into below the horizon, and fog … */
 [data-design="sky"] .ambient::before {
-  right: auto;
-  width: var(--hz-width, 100%);
-  background:
-    var(--hz-haze, none),
-    var(--hz-lines, none) 0 0 / 100% 100% no-repeat,
-    var(--hz-ground, none);
-  -webkit-mask-image: linear-gradient(90deg, black calc(100% - 4rem), transparent);
-  mask-image: linear-gradient(90deg, black calc(100% - 4rem), transparent);
-}
-@media (orientation: portrait) {
-  [data-design="sky"] .ambient::before {
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
+  background: var(--hz-haze, none), var(--hz-ground, none);
 }
 /* … clouds … */
 [data-design="sky"] .ambient::after {

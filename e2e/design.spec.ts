@@ -50,7 +50,7 @@ test("Aurora Sky: the sky follows time and weather, and leaves nothing behind wh
   await expect(html).toHaveAttribute("data-sky", "partly");
   const sky = () => page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-sky"));
   await expect.poll(sky).toContain("circle at");
-  expect(await page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-lines"))).toContain("svg");
+  expect(await page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-ground"))).toContain("rgb");
 
   // Another section: only the mood at the top.
   await page.goto("/shopping");

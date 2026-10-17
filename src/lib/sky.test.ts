@@ -72,11 +72,11 @@ describe("computeSky", () => {
     expect(at(777, true)).not.toBe(at(777));
   });
 
-  it("keeps other pages calm: no sun disc, no horizon lines", () => {
+  it("keeps other pages calm: no sun disc, no ground", () => {
     const calm = computeSky({ ...base, layout: CALM_LAYOUT });
     expect(calm.vars["--hz-sky"]).not.toContain("circle at");
-    expect(calm.vars["--hz-lines"]).not.toContain("svg");
-    expect(computeSky(base).vars["--hz-lines"]).toContain("svg");
+    expect(calm.vars["--hz-ground"]).toBe("linear-gradient(transparent, transparent)");
+    expect(computeSky(base).vars["--hz-ground"]).toContain("transparent 16%");
   });
 
   it("sets exactly the variables it lists for clean-up", () => {
