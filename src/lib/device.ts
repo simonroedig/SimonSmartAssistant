@@ -5,7 +5,7 @@
 export type ThemeMode = "auto" | "system" | "dark" | "light";
 export type ScreensaverMode = "off" | "night" | "always";
 /** The design system (see src/lib/designs.ts and src/app/designs.css). */
-export type DesignId = "aurora" | "studio" | "tactile" | "block" | "doodle";
+export type DesignId = "aurora" | "sky" | "studio" | "tactile" | "block" | "doodle";
 
 export type DevicePrefs = {
   /** auto = dark between sunset and sunrise */
@@ -38,6 +38,8 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
 
 export const DEVICE_STORAGE_KEY = "ssa:device";
 export const SUN_STORAGE_KEY = "ssa:sun";
+/** Aurora Sky: the sky last drawn (src/lib/sky.ts), painted again before the first frame. */
+export const SKY_STORAGE_KEY = "ssa:sky";
 export const DEVICE_CHANGE_EVENT = "ssa:device-change";
 
 export type SunTimes = { sunrise: number; sunset: number };
@@ -92,6 +94,7 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
     // Background of each design, light and dark (also the browser's/status bar's colour).
     const backgrounds: Record<string, [string, string]> = {
       aurora: ["#eceff7", "#060913"],
+      sky: ["#e2ebf9", "#080d1f"],
       studio: ["#f5f6f8", "#08090c"],
       tactile: ["#e9e6e1", "#2a2c31"],
       block: ["#fff4e0", "#2b2933"],
@@ -104,6 +107,20 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
     root.dataset.design = design;
     root.classList.toggle("kiosk", prefs.kiosk === true);
     root.dataset.phase = phase;
+    // Aurora Sky: the sky as it was last drawn, until the page computes it anew.
+    if (design === "sky") {
+      try {
+        const sky = JSON.parse(localStorage.getItem("ssa:sky") || "null");
+        if (sky && typeof sky === "object") {
+          for (const name of Object.keys(sky)) {
+            if (name.startsWith("--") && typeof sky[name] === "string") root.style.setProperty(name, sky[name]);
+          }
+          if (typeof sky.weather === "string") root.dataset.sky = sky.weather;
+        }
+      } catch {
+        // drawn by the page in a moment
+      }
+    }
     const scale = typeof prefs.scale === "number" && prefs.scale >= 0.75 && prefs.scale <= 1.6 ? prefs.scale : 1;
     root.style.fontSize = scale === 1 ? "" : `${16 * scale}px`;
 
@@ -138,6 +155,15 @@ export function writeDevicePrefs(patch: Partial<DevicePrefs>): DevicePrefs {
   applyDeviceState(DEVICE_STORAGE_KEY, SUN_STORAGE_KEY);
   window.dispatchEvent(new Event(DEVICE_CHANGE_EVENT));
   return next;
+}
+
+export function readSunTimes(): SunTimes | null {
+  try {
+    const sun = JSON.parse(localStorage.getItem(SUN_STORAGE_KEY) || "null");
+    return sun && typeof sun.sunrise === "number" && typeof sun.sunset === "number" ? sun : null;
+  } catch {
+    return null;
+  }
 }
 
 export function writeSunTimes(sun: SunTimes): void {

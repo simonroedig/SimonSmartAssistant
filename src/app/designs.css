@@ -47,6 +47,159 @@ nav[data-attached]:not([data-tabbar]) {
 }
 
 /* ========================================================================== */
+/* Aurora Sky – Aurora's glass under the live sky: the time of day sets the   */
+/* colours and the sun's or moon's place, the weather the mood (src/lib/sky.ts */
+/* computes it, the sky controller puts it on <html> as --hz-* variables)      */
+/* ========================================================================== */
+
+:root[data-design="sky"],
+[data-design="sky"] {
+  --bg: #e2ebf9;
+  --surface: rgb(255 255 255 / 0.5);
+  --nav-bg: #f5f8fd;
+  --surface-strong: rgb(255 255 255 / 0.95);
+  --surface-sunken: rgb(20 30 60 / 0.045);
+  --surface-hover: rgb(20 30 60 / 0.05);
+  --line: rgb(20 30 60 / 0.08);
+  --line-strong: rgb(20 30 60 / 0.15);
+  --text: #0e1526;
+  --text-muted: #445069;
+  --text-faint: #7c869c;
+  --accent: #2f72e6;
+  --accent-soft: rgb(47 114 230 / 0.13);
+  --accent-fg: #ffffff;
+  --sleep: rgb(20 30 60 / 0.035);
+  --sleep-stripe: rgb(20 30 60 / 0.05);
+  --hz-shadow: rgb(60 80 130 / 0.22);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.85) inset, 0 22px 50px -30px var(--hz-shadow);
+  --shadow-pop: 0 40px 90px -24px var(--hz-shadow);
+  --radius-card: 1.6rem;
+  --radius-bar: 1.6rem;
+  /* Until the sky is computed (and in the sample in Settings): a calm day sky. */
+  --hz-fallback: linear-gradient(180deg, #cfe3fb 0%, #e3eefb 18%, #eef4fc 32%, #f4f7fc 60%);
+  color-scheme: light;
+}
+
+:root.dark[data-design="sky"],
+.dark [data-design="sky"] {
+  --bg: #080d1f;
+  --surface: rgb(255 255 255 / 0.055);
+  --nav-bg: #0b1126;
+  --surface-strong: rgb(16 21 40 / 0.97);
+  --surface-sunken: rgb(0 0 0 / 0.18);
+  --surface-hover: rgb(255 255 255 / 0.06);
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.15);
+  --text: #f1f4fb;
+  --text-muted: #b0b8cc;
+  --text-faint: #6f7891;
+  --accent: #a5b4fc;
+  --accent-soft: rgb(165 180 252 / 0.18);
+  --accent-fg: #0a0d1a;
+  --sleep: rgb(0 0 0 / 0.2);
+  --sleep-stripe: rgb(255 255 255 / 0.03);
+  --hz-shadow: rgb(0 0 0 / 0.55);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.06) inset, 0 24px 60px -30px var(--hz-shadow);
+  --hz-fallback: linear-gradient(180deg, #04060f 0%, #080d1f 16%, #0f1730 30%, #0c1124 60%);
+  color-scheme: dark;
+}
+
+/* The sky: gradient with the sun or moon (behind everything) … */
+[data-design="sky"] .ambient {
+  background: var(--hz-sky, var(--hz-fallback));
+}
+[data-design="sky"] .ambient::before,
+[data-design="sky"] .ambient::after,
+[data-design="sky"] .ambient > span {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  filter: none;
+  opacity: 1;
+  background-color: transparent;
+  transition: none;
+}
+/* … the ground below the horizon with its lines, and fog – in the sky window only
+   (on wide screens the clock's column, softly fading out to the right) … */
+[data-design="sky"] .ambient::before {
+  right: auto;
+  width: var(--hz-width, 100%);
+  background:
+    var(--hz-haze, none),
+    var(--hz-lines, none) 0 0 / 100% 100% no-repeat,
+    var(--hz-ground, none);
+  -webkit-mask-image: linear-gradient(90deg, black calc(100% - 4rem), transparent);
+  mask-image: linear-gradient(90deg, black calc(100% - 4rem), transparent);
+}
+@media (orientation: portrait) {
+  [data-design="sky"] .ambient::before {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+/* … clouds … */
+[data-design="sky"] .ambient::after {
+  background: var(--hz-clouds, none);
+  filter: blur(10px);
+}
+/* … and stars, rain or snow, only above the horizon. */
+[data-design="sky"] .ambient > span {
+  right: auto;
+  width: var(--hz-width, 100%);
+  -webkit-mask-image: linear-gradient(180deg, black 0, black calc(var(--hz-h, 22%) - 6%), transparent var(--hz-h, 22%));
+  mask-image: linear-gradient(180deg, black 0, black calc(var(--hz-h, 22%) - 6%), transparent var(--hz-h, 22%));
+}
+[data-design="sky"] .ambient > span::before,
+[data-design="sky"] .ambient > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+[data-design="sky"] .ambient > span::before {
+  opacity: var(--hz-stars, 0);
+  background:
+    radial-gradient(circle at 20% 30%, white 0 1px, transparent 1.6px) 0 0 / 173px 151px,
+    radial-gradient(circle at 70% 80%, rgb(255 255 255 / 0.75) 0 1px, transparent 1.5px) 0 0 / 251px 223px,
+    radial-gradient(circle at 45% 55%, rgb(255 255 255 / 0.55) 0 0.8px, transparent 1.3px) 0 0 / 97px 113px;
+}
+:root[data-design="sky"]:is([data-sky="rain"], [data-sky="storm"]) .ambient > span::after {
+  opacity: var(--hz-rain, 0);
+  background: repeating-linear-gradient(104deg, transparent 0 11px, rgb(255 255 255 / 0.7) 11px 12px);
+  -webkit-mask-image: repeating-linear-gradient(14deg, black 0 18px, transparent 18px 46px);
+  mask-image: repeating-linear-gradient(14deg, black 0 18px, transparent 18px 46px);
+}
+:root.dark[data-design="sky"]:is([data-sky="rain"], [data-sky="storm"]) .ambient > span::after {
+  background: repeating-linear-gradient(104deg, transparent 0 11px, rgb(190 210 255 / 0.6) 11px 12px);
+}
+:root[data-design="sky"][data-sky="snow"] .ambient > span::after {
+  opacity: var(--hz-snow, 0);
+  background:
+    radial-gradient(circle at 30% 40%, white 0 2px, transparent 2.6px) 0 0 / 61px 73px,
+    radial-gradient(circle at 70% 20%, rgb(255 255 255 / 0.9) 0 1.4px, transparent 2px) 0 0 / 43px 51px,
+    radial-gradient(circle at 50% 70%, rgb(255 255 255 / 0.8) 0 2.6px, transparent 3.2px) 0 0 / 111px 97px;
+  filter: drop-shadow(0 0 1px rgb(120 140 170 / 0.5));
+}
+
+@scope ([data-design="sky"]) to ([data-design]) {
+  /* Frosted glass with a light edge: the sky shows through. */
+  :is(.glass, .bar) {
+    border-color: rgb(255 255 255 / 0.65);
+  }
+  .ui-display {
+    font-weight: 200;
+    letter-spacing: -0.05em;
+  }
+  .ui-title {
+    letter-spacing: -0.015em;
+  }
+}
+.dark [data-design="sky"] :is(.glass, .bar),
+:root.dark[data-design="sky"] :is(.glass, .bar) {
+  border-color: rgb(255 255 255 / 0.09);
+}
+
+/* ========================================================================== */
 /* Studio – crisp and minimal: solid surfaces, hairline edges, one bright     */
 /* accent and a soft spotlight over a fine grid                               */
 /* ========================================================================== */
@@ -744,6 +897,17 @@ nav[data-attached]:not([data-tabbar]) {
 }
 
 /* Samples */
+[data-design="sky"].design-preview {
+  background:
+    radial-gradient(circle at 78% 30%, #fffdf3 0 9px, rgb(255 226 176 / 0.6) 10px, transparent 46px),
+    linear-gradient(180deg, #cfe3fb 0%, #e6eefb 40%, #fbefe2 62%, #f7f4f2 62%, #f4f1ef 100%);
+}
+.dark [data-design="sky"].design-preview {
+  background:
+    radial-gradient(circle at 78% 26%, #f0f3ff 0 7px, rgb(195 200 255 / 0.22) 8px, transparent 34px),
+    radial-gradient(circle at 20% 20%, white 0 0.8px, transparent 1.3px) 0 0 / 23px 19px,
+    linear-gradient(180deg, #04060f 0%, #0a1024 40%, #121a33 62%, #0b1022 62%, #0b1022 100%);
+}
 [data-design="studio"].design-preview {
   background:
     radial-gradient(ellipse 80% 60% at 50% -10%, var(--spotlight), transparent 75%),

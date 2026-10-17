@@ -6,11 +6,11 @@ test("designs: pick one in Settings – it restyles the whole app and stays on t
   await page.goto("/settings");
   const designs = page.getByRole("radiogroup", { name: "Design" });
   // Wait for the picker to render before reading the labels (evaluateAll doesn't retry).
-  await expect(designs.getByRole("radio")).toHaveCount(5);
+  await expect(designs.getByRole("radio")).toHaveCount(6);
   expect(await designs.getByRole("radio").evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")))).toEqual(
-    ["Aurora", "Studio", "Tactile", "Block", "Doodle"],
+    ["Aurora", "Aurora Sky", "Studio", "Tactile", "Block", "Doodle"],
   );
-  await expect(designs.getByRole("radio", { name: "Aurora" })).toHaveAttribute("aria-checked", "true");
+  await expect(designs.getByRole("radio", { name: "Aurora", exact: true })).toHaveAttribute("aria-checked", "true");
   const html = page.locator("html");
   await expect(html).toHaveAttribute("data-design", "aurora");
 
@@ -33,6 +33,34 @@ test("designs: pick one in Settings – it restyles the whole app and stays on t
 
   // Back to Aurora.
   await page.goto("/settings");
-  await page.getByRole("radiogroup", { name: "Design" }).getByRole("radio", { name: "Aurora" }).click();
+  await page.getByRole("radiogroup", { name: "Design" }).getByRole("radio", { name: "Aurora", exact: true }).click();
   await expect(html).toHaveAttribute("data-design", "aurora");
+});
+
+test("Aurora Sky: the sky follows time and weather, and leaves nothing behind when switched off", async ({ page }) => {
+  await mockWeather(page);
+  await page.goto("/settings");
+  const designs = page.getByRole("radiogroup", { name: "Design" });
+  await designs.getByRole("radio", { name: "Aurora Sky" }).click();
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-design", "sky");
+
+  // Home: the full scene around the clock (sun or moon, horizon), the weather on <html>.
+  await page.getByRole("link", { name: "Home" }).first().click();
+  await expect(html).toHaveAttribute("data-sky", "partly");
+  const sky = () => page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-sky"));
+  await expect.poll(sky).toContain("circle at");
+  expect(await page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-lines"))).toContain("svg");
+
+  // Another section: only the mood at the top.
+  await page.goto("/shopping");
+  await expect.poll(sky).not.toContain("circle at");
+  await expect.poll(sky).toContain("linear-gradient");
+
+  // Back to Aurora: none of the sky's colours stay on the page.
+  await page.goto("/settings");
+  await page.getByRole("radiogroup", { name: "Design" }).getByRole("radio", { name: "Aurora", exact: true }).click();
+  await expect(html).toHaveAttribute("data-design", "aurora");
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--accent"))).toBe("");
+  await expect(html).not.toHaveAttribute("data-sky", /.*/);
 });

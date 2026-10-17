@@ -8,6 +8,11 @@ import type { DesignId } from "./device";
 export const DESIGNS: { id: DesignId; name: string; description: string }[] = [
   { id: "aurora", name: "Aurora", description: "Soft glass on a colour glow that follows the time of day" },
   {
+    id: "sky",
+    name: "Aurora Sky",
+    description: "The sky over your city, live: sun and moon, the time of day and the weather",
+  },
+  {
     id: "studio",
     name: "Studio",
     description: "Crisp and minimal: solid surfaces, hairline edges, a soft spotlight",

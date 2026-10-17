@@ -5,6 +5,7 @@ import { Screensaver } from "@/components/kiosk/screensaver";
 import { TouchScroll } from "@/components/kiosk/touch-scroll";
 import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { SkyController } from "@/components/providers/sky-controller";
 import { AppShell } from "@/components/shell/app-shell";
 import { requireUser } from "@/lib/auth/session";
 import { NAVIGATION_COOKIE, navigationFromCookie } from "@/lib/navigation";
@@ -18,6 +19,7 @@ export default async function SignedInLayout({ children }: LayoutProps<"/">) {
     <SessionProvider value={{ userId: user.id, email: user.email }}>
       <RealtimeProvider>
         <AppShell initialNavigation={navigation}>{children}</AppShell>
+        <SkyController />
         <Screensaver />
         <AutoUpdate />
         <KeepAwake />

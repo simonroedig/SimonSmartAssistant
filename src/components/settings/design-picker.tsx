@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  */
 export function DesignPicker({ value, onChange }: { value: DesignId; onChange: (design: DesignId) => void }) {
   return (
-    <div role="radiogroup" aria-label="Design" className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div role="radiogroup" aria-label="Design" className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3">
       {DESIGNS.map((design) => {
         const active = design.id === value;
         return (
