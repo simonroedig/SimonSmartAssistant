@@ -152,18 +152,17 @@ test("launcher: the apps used last, in a strip above the search", async ({ page 
   await page.goto("/apps");
   await expect(page.getByRole("button", { name: "Search the web" })).toBeVisible();
   // Off until switched on in Settings.
-  await expect(page.getByRole("button", { name: "Recent apps" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Recent apps" })).toBeHidden();
   await page.goto("/settings");
   await page.getByRole("switch", { name: "Recently used apps" }).click();
   await expect(page.getByRole("switch", { name: "Recently used apps" })).toBeChecked();
   await page.goto("/apps");
+  // Switched on, it's simply there – no extra button next to the search.
   const strip = page.getByRole("region", { name: "Recent apps" });
-  const toggle = page.getByRole("button", { name: "Recent apps" });
-  await expect(strip).toBeHidden();
+  await expect(strip).toBeVisible();
+  await expect(page.getByRole("button", { name: "Recent apps" })).toHaveCount(0);
 
   // First the system's permission is needed.
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await strip.getByRole("button", { name: "Allow" }).click();
   await expect.poll(async () => (await sent(page)).some((m) => m.type === "usageAccess")).toBe(true);
 
@@ -186,16 +185,17 @@ test("launcher: the apps used last, in a strip above the search", async ({ page 
   await recent.nth(1).click();
   await expect.poll(async () => (await sent(page)).find((m) => m.type === "launch")?.app).toBe("b|0");
 
-  // Out of the way while searching; stays open on this phone.
+  // Out of the way while searching, back after it.
   await page.getByLabel("Search apps or the web").fill("fi");
   await expect(strip).toBeHidden();
   await page.getByLabel("Search apps or the web").fill("");
-  await page.reload();
-  await expect(page.getByRole("button", { name: "Recent apps" })).toHaveAttribute("aria-pressed", "true");
   await expect(strip).toBeVisible();
 
-  // Closed again: the tray folds away.
-  await page.getByRole("button", { name: "Recent apps" }).click();
+  // Switched off in Settings: gone.
+  await page.goto("/settings");
+  await page.getByRole("switch", { name: "Recently used apps" }).click();
+  await page.goto("/apps");
+  await expect(page.getByRole("search")).toBeVisible();
   await expect(strip).toBeHidden();
 });
 

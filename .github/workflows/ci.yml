@@ -53,6 +53,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests
         run: npx playwright test
+      # What the page looked like when a test failed, right in the log.
+      - name: Page snapshots of failed tests
+        if: failure()
+        run: for f in test-results/*/error-context.md; do [ -f "$f" ] && { echo "::group::$f"; cat "$f"; echo "::endgroup::"; }; done; true
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

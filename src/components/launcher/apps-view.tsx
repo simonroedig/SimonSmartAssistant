@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Globe, History, LayoutGrid, Search, X } from "lucide-react";
+import { Ban, Globe, LayoutGrid, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppLink } from "@/components/shell/app-link";
@@ -83,19 +83,9 @@ function AppTile({
   );
 }
 
-const RECENT_KEY = "ssa:recent-apps";
-
-function readRecentOpen() {
-  try {
-    return localStorage.getItem(RECENT_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 /**
- * The apps used last, in a tray above the search (inside the same panel, so it
- * reads as what the button opened): the newest on the right, older ones further
+ * The apps used last, in a tray right above the search (when switched on in
+ * Settings, always there): the newest on the right, older ones further
  * left. Tapping one brings it back as you left it. (Previews and closing apps stay
  * with the system's own recents screen – a launcher can't close other apps.)
  */
@@ -190,7 +180,6 @@ export function AppsView() {
   const isLauncher = useIsLauncher();
   const { apps, features } = useLauncherState();
   const [query, setQuery] = useState("");
-  const [recentOpen, setRecentOpen] = useState(readRecentOpen);
   const [device] = useDevicePrefs();
   // Optional (Settings), and only with a launcher version that can.
   const hasRecent = device.recentApps && features.includes("recent");
@@ -242,15 +231,6 @@ export function AppsView() {
     setQuery("");
     closeKeyboard();
   };
-  // Stays open or closed on this phone, as you left it.
-  const toggleRecent = () => {
-    setRecentOpen(!recentOpen);
-    try {
-      localStorage.setItem(RECENT_KEY, recentOpen ? "0" : "1");
-    } catch {
-      // Private mode – remembered until the page reloads.
-    }
-  };
 
   return (
     <FillPage>
@@ -299,7 +279,7 @@ export function AppsView() {
               <RecentTray
                 apps={apps}
                 // Out of the way while searching.
-                open={recentOpen && !term}
+                open={!term}
                 onOpen={opened}
               />
             )}
@@ -345,22 +325,6 @@ export function AppsView() {
               >
                 <Globe className="size-5" />
               </button>
-              {hasRecent && (
-                <button
-                  type="button"
-                  aria-label="Recent apps"
-                  aria-pressed={recentOpen}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={toggleRecent}
-                  // Pressed in like the tray it opened; raised while closed.
-                  className={cn(
-                    "grid size-12 shrink-0 place-items-center rounded-2xl transition-colors",
-                    recentOpen ? "text-fg well" : "bg-surface-strong text-muted shadow-(--shadow-card)",
-                  )}
-                >
-                  <History className="size-5" />
-                </button>
-              )}
             </form>
           </div>
         </div>

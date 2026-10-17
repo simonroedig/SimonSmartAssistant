@@ -306,7 +306,7 @@ export function LauncherSection() {
           {features.includes("recent") && (
             <Row
               label="Recently used apps"
-              hint="A button next to the apps search shows the apps you used last. Android doesn't tell other apps which ones are still open."
+              hint="The apps you used last, right above the apps search. Android doesn't tell other apps which ones are still open."
             >
               <Switch
                 checked={device.recentApps}
