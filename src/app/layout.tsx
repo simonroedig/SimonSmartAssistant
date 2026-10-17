@@ -40,6 +40,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-dvh">
         <div className="ambient" aria-hidden="true">
           <span />
+          {/* Aurora Sky's sun and moon (unused by the other designs). */}
+          <i />
         </div>
         <Providers>{children}</Providers>
       </body>

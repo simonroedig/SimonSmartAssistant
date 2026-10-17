@@ -36,7 +36,7 @@ export type SkyLayout = {
   /** The sun's and moon's path, from the left. */
   x0: number;
   x1: number;
-  /** Width of the sky window from the left (the clock's column on wide screens). */
+  /** Width of the clock's window from the left (below 100: its column on a wide screen). */
   width: number;
 };
 
@@ -183,6 +183,7 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
       `linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.5)}, ${rgb(hor)} ${pct(H)}, ${rgb(ground)} ${pct(H + 30)})`,
     ].join(",");
     vars["--hz-ground"] = NONE;
+    vars["--hz-sun"] = NONE;
   } else {
     const body: string[] = [];
     if (isDay) {
@@ -201,8 +202,10 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
         `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb([240, 243, 255], clear ? 0.95 : 0.3)} 0 ${disc}vmax, ${rgb(glow, clear ? 0.22 : 0.08)} ${disc + 0.15}vmax, transparent ${disc * 7}vmax)`,
       );
     }
-    body.push(`linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.6)}, ${rgb(hor)} ${pct(H)})`);
-    vars["--hz-sky"] = body.join(",");
+    // The sun or moon in its own layer: cut off at the horizon (the top of the first
+    // card below the clock), so it sets behind that card and never shines through cards.
+    vars["--hz-sun"] = body.join(",");
+    vars["--hz-sky"] = `linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.6)}, ${rgb(hor)} ${pct(H)})`;
     // Below the horizon the sky flows softly into a calm ground the cards sit on
     // (no edge, no lines); the setting sun sinks into it.
     vars["--hz-ground"] =
@@ -226,7 +229,7 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
     snow: 0.55,
     storm: dark ? 0.45 : 0.5,
   }[w];
-  const cx = (f: number) => (land ? 3 + (width - 4) * f : 4 + 92 * f);
+  const cx = (f: number) => 4 + 92 * f;
   const cy = (f: number) => (calm ? 2 + (H - 4) * f * 0.7 : T + (H - T) * f);
   const cloud = (fx: number, fy: number, wv: number, hv: number, a: number) =>
     `radial-gradient(ellipse ${wv}vmax ${hv}vmax at ${pct(cx(fx))} ${pct(cy(fy))}, ${rgb(cloudC, cloudA * a)}, transparent 70%)`;
@@ -246,7 +249,6 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
   vars["--hz-rain"] = w === "rain" || w === "storm" ? (dark ? "0.6" : "0.75") : "0";
   vars["--hz-snow"] = w === "snow" ? (dark ? "0.6" : "1") : "0";
   vars["--hz-h"] = pct(H);
-  vars["--hz-width"] = pct(width);
 
   // The accent follows the sky: coral at dawn, blue by day, amber in the evening, lavender at night.
   vars["--accent"] = rgb(accent);
@@ -268,7 +270,7 @@ export const SKY_VARS = [
   "--hz-rain",
   "--hz-snow",
   "--hz-h",
-  "--hz-width",
+  "--hz-sun",
   "--accent",
   "--accent-soft",
   "--nav-bg",

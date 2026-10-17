@@ -92,9 +92,11 @@ function useDarkClass() {
 }
 
 /**
- * On the home screen the clock is the window to the sky: the horizon lies just below
- * the date, the sun and moon travel where no text is – right of the clock on wide
- * screens (in the clock's column), over the right half of the sky on phones.
+ * On the home screen the clock is the window to the sky: the horizon is the top of the
+ * first card below it (the sun sets behind that card), the sun and moon travel where
+ * no text is – right of the clock on wide screens, over the right half on phones.
+ * Scrolling moves the horizon up with the cards (--hz-scroll), so the sun goes behind
+ * them instead of showing through.
  */
 function useHomeLayout(home: boolean): SkyLayout {
   const [layout, setLayout] = useState<SkyLayout>(CALM_LAYOUT);
@@ -112,7 +114,10 @@ function useHomeLayout(home: boolean): SkyLayout {
       range.selectNodeContents(time);
       const text = range.getBoundingClientRect();
       const y = window.scrollY;
-      const horizon = Math.min(45, Math.max(14, ((box.bottom + y + 14) / vh) * 100));
+      let below = hero.nextElementSibling;
+      while (below && below.getBoundingClientRect().height === 0) below = below.nextElementSibling;
+      const edge = below ? below.getBoundingClientRect().top : box.bottom + 14;
+      const horizon = Math.min(45, Math.max(14, ((edge + y) / vh) * 100));
       const top = Math.max(4, ((box.top + y + 10) / vh) * 100);
       const column = box.right < vw * 0.6;
       let next: SkyLayout;
@@ -134,9 +139,11 @@ function useHomeLayout(home: boolean): SkyLayout {
     schedule();
     // The clock appears after hydration and changes size with the time and the text size.
     const observer = new ResizeObserver(schedule);
+    // (The column too: the cards below it – e.g. the launcher's search bar – come and go.)
     const watch = () => {
       const hero = document.querySelector("[data-sky-window]");
       if (hero) observer.observe(hero);
+      if (hero?.parentElement) observer.observe(hero.parentElement);
     };
     watch();
     const retry = window.setTimeout(() => {
@@ -144,11 +151,23 @@ function useHomeLayout(home: boolean): SkyLayout {
       schedule();
     }, 500);
     window.addEventListener("resize", schedule);
+
+    let scrollFrame = 0;
+    const sun = () => document.querySelector<HTMLElement>(".ambient > i");
+    const onScroll = () => {
+      cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(() => sun()?.style.setProperty("--hz-scroll", `${window.scrollY}px`));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(scrollFrame);
       window.clearTimeout(retry);
       observer.disconnect();
       window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", onScroll);
+      sun()?.style.removeProperty("--hz-scroll");
     };
   }, [home]);
   return home ? layout : CALM_LAYOUT;

@@ -4,9 +4,9 @@ import { CALM_LAYOUT, computeSky, SKY_VARS, skyWeather, type SkyInput, type SkyL
 const PHONE: SkyLayout = { scene: "full", horizon: 25, top: 7, x0: 55, x1: 93, width: 100 };
 const base: SkyInput = { minutes: 720, sunrise: 455, sunset: 1100, weather: "clear", dark: false, layout: PHONE };
 
-/** Where the sun or moon is drawn (the first radial gradient of --hz-sky), in %. */
+/** Where the sun or moon is drawn (its own layer, --hz-sun), in %. */
 function body(sky: ReturnType<typeof computeSky>) {
-  const m = sky.vars["--hz-sky"].match(/circle at ([\d.]+)% ([\d.]+)%/);
+  const m = sky.vars["--hz-sun"].match(/circle at ([\d.]+)% ([\d.]+)%/);
   return m ? { x: Number(m[1]), y: Number(m[2]) } : null;
 }
 
@@ -75,6 +75,7 @@ describe("computeSky", () => {
   it("keeps other pages calm: no sun disc, no ground", () => {
     const calm = computeSky({ ...base, layout: CALM_LAYOUT });
     expect(calm.vars["--hz-sky"]).not.toContain("circle at");
+    expect(calm.vars["--hz-sun"]).toBe("linear-gradient(transparent, transparent)");
     expect(calm.vars["--hz-ground"]).toBe("linear-gradient(transparent, transparent)");
     expect(computeSky(base).vars["--hz-ground"]).toContain("transparent 16%");
   });

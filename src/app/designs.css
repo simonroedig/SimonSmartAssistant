@@ -124,15 +124,31 @@ nav[data-attached]:not([data-tabbar]) {
 [data-design="sky"] .ambient::before {
   background: var(--hz-haze, none), var(--hz-ground, none);
 }
+/* … the sun or moon, cut off at the horizon – the top of the first card below the
+   clock, which moves up as the page scrolls (--hz-scroll): the sun sets behind the
+   cards and never shines through them … */
+[data-design="sky"] .ambient > i {
+  position: absolute;
+  inset: 0;
+  background: var(--hz-sun, none);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    black calc(var(--hz-h, 22%) - var(--hz-scroll, 0px) - 1.5vh),
+    transparent calc(var(--hz-h, 22%) - var(--hz-scroll, 0px))
+  );
+  mask-image: linear-gradient(
+    180deg,
+    black calc(var(--hz-h, 22%) - var(--hz-scroll, 0px) - 1.5vh),
+    transparent calc(var(--hz-h, 22%) - var(--hz-scroll, 0px))
+  );
+}
 /* … clouds … */
 [data-design="sky"] .ambient::after {
   background: var(--hz-clouds, none);
   filter: blur(10px);
 }
-/* … and stars, rain or snow, only above the horizon. */
+/* … stars, rain or snow above the horizon, across the whole width … */
 [data-design="sky"] .ambient > span {
-  right: auto;
-  width: var(--hz-width, 100%);
   -webkit-mask-image: linear-gradient(180deg, black 0, black calc(var(--hz-h, 22%) - 6%), transparent var(--hz-h, 22%));
   mask-image: linear-gradient(180deg, black 0, black calc(var(--hz-h, 22%) - 6%), transparent var(--hz-h, 22%));
 }
