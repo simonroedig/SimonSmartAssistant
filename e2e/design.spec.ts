@@ -6,9 +6,9 @@ test("designs: pick one in Settings – it restyles the whole app and stays on t
   await page.goto("/settings");
   const designs = page.getByRole("radiogroup", { name: "Design" });
   // Wait for the picker to render before reading the labels (evaluateAll doesn't retry).
-  await expect(designs.getByRole("radio")).toHaveCount(4);
+  await expect(designs.getByRole("radio")).toHaveCount(5);
   expect(await designs.getByRole("radio").evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")))).toEqual(
-    ["Aurora", "Tactile", "Block", "Doodle"],
+    ["Aurora", "Studio", "Tactile", "Block", "Doodle"],
   );
   await expect(designs.getByRole("radio", { name: "Aurora" })).toHaveAttribute("aria-checked", "true");
   const html = page.locator("html");

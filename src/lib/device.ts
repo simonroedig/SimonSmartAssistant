@@ -5,7 +5,7 @@
 export type ThemeMode = "auto" | "system" | "dark" | "light";
 export type ScreensaverMode = "off" | "night" | "always";
 /** The design system (see src/lib/designs.ts and src/app/designs.css). */
-export type DesignId = "aurora" | "tactile" | "block" | "doodle";
+export type DesignId = "aurora" | "studio" | "tactile" | "block" | "doodle";
 
 export type DevicePrefs = {
   /** auto = dark between sunset and sunrise */
@@ -92,6 +92,7 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
     // Background of each design, light and dark (also the browser's/status bar's colour).
     const backgrounds: Record<string, [string, string]> = {
       aurora: ["#eceff7", "#060913"],
+      studio: ["#f5f6f8", "#08090c"],
       tactile: ["#e9e6e1", "#2a2c31"],
       block: ["#fff4e0", "#2b2933"],
       doodle: ["#fffaf0", "#1f2622"],

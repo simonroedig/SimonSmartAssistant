@@ -65,7 +65,7 @@ wall a moment later.
 - **Notes** – Keep-style notes with coloured categories, pinning, a trash, and a **vault** whose notes
   only open with a PIN.
 - **Weather** – the current conditions, hourly curve, 7-day forecast, UV, air quality and pollen.
-- **Four designs** (Aurora, Tactile, Block, Doodle), each in light and dark, chosen per device.
+- **Five designs** (Aurora, Studio, Tactile, Block, Doodle), each in light and dark, chosen per device.
 
 <table>
   <tr>

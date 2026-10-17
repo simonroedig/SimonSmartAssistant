@@ -12,6 +12,7 @@ import { cn, vibrate } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
 
 const GUTTER = 56; // px for hour labels
+const LABEL_HEIGHT = 26; // px a sleep label needs, incl. its padding
 const LONG_PRESS_MS = 280;
 
 type DragState = {
@@ -258,6 +259,16 @@ export function DayTimeline({
     }
   };
 
+  // What the timeline shows between two minutes: a block (where it's being dragged to, if
+  // it is) or the block being created.
+  const occupied = (from: number, to: number) =>
+    blocks.some((b) => {
+      const start = drag?.id === b.id ? drag.start : b.start_min;
+      const end = drag?.id === b.id ? drag.end : b.end_min;
+      return start < to && end > from;
+    }) ||
+    (draft != null && draft.start < to && draft.end > from);
+
   const hours = [];
   for (let h = Math.ceil(rangeStart / 60); h * 60 <= rangeEnd; h++) hours.push(h);
   // Squeezed hours only get a label every other hour.
@@ -298,16 +309,32 @@ export function DayTimeline({
 
         {/* Sleep */}
         {sleepRanges.map(([s, e]) => {
-          const top = y(Math.max(s, rangeStart));
-          const bottom = y(Math.min(e, rangeEnd));
+          const from = Math.max(s, rangeStart);
+          const to = Math.min(e, rangeEnd);
+          const top = y(from);
+          const bottom = y(to);
           if (bottom - top <= 0) return null;
+          // The label ("Bedtime 23:00", "Sleep until 07:00") sits at the top of the shade –
+          // unless a block covers that spot; then at the bottom, and with both taken, not at all.
+          const labelMin = LABEL_HEIGHT / pxPerMin;
+          const labelAt =
+            bottom - top <= 28
+              ? null
+              : !occupied(from, from + labelMin)
+                ? "top"
+                : !occupied(to - labelMin, to)
+                  ? "bottom"
+                  : null;
           return (
             <div
               key={`${s}-${e}`}
-              className="pointer-events-none absolute right-2 flex items-start rounded-xl sleep-shade px-3 pt-1.5"
+              className={cn(
+                "pointer-events-none absolute right-2 flex rounded-xl sleep-shade px-3",
+                labelAt === "bottom" ? "items-end pb-1.5" : "items-start pt-1.5",
+              )}
               style={{ top, height: bottom - top, left: GUTTER }}
             >
-              {bottom - top > 28 && (
+              {labelAt && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-faint">
                   <Moon className="size-3.5" />
                   {e <= MINUTES_PER_DAY && s < 12 * 60

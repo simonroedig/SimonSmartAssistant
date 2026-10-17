@@ -298,6 +298,39 @@ test("planner: a bedtime after midnight is shown at the end of the same day", as
   await expect(page.getByText("Midnight", { exact: true })).toHaveCount(0);
 });
 
+test("planner: a block where the night starts or ends never sits on the sleep label", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/planner?day=2030-01-15");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Clear this day" }).click();
+  const addAt = async (minute: number, title: string) => {
+    await page.getByRole("button", { name: "Add a block" }).click({ position: { x: 200, y: (minute / 60) * 64 + 5 } });
+    await page.getByRole("dialog").getByLabel("What").fill(title);
+    await page.getByRole("dialog").getByRole("button", { name: "Add to plan" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  };
+
+  // A Tuesday: asleep until 07:00, bedtime 23:30. Both labels sit at the top of their shade.
+  const morning = page.getByText("Sleep until 07:00");
+  await expect(morning).toBeAttached();
+  await expect(page.getByText("Bedtime 23:30")).toBeAttached();
+
+  // A block at midnight takes the top of the night: the label moves to its bottom (07:00).
+  await addAt(0, "Night owl");
+  const block = page.locator('[role="button"]', { hasText: "Night owl" }).first();
+  await expect(block).toContainText("00:00");
+  const shade = page.locator(".sleep-shade", { has: morning });
+  await expect(shade).toHaveClass(/items-end/);
+  const label = (await morning.boundingBox())!;
+  const night = (await shade.boundingBox())!;
+  expect(night.y + night.height - (label.y + label.height)).toBeLessThan(12);
+
+  // A block at bedtime fills the short evening shade: no label rather than one under the block.
+  await addAt(23 * 60 + 30, "Late show");
+  await expect(page.locator('[role="button"]', { hasText: "Late show" }).first()).toContainText("23:30");
+  await expect(page.getByText("Bedtime 23:30")).toHaveCount(0);
+});
+
 test("backlog: due dates from the quick picks and the built-in calendar", async ({ page }) => {
   await page.goto("/todos");
   const title = `Due test ${Date.now() % 10000}`;
