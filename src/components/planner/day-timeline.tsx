@@ -89,7 +89,9 @@ export function DayTimeline({
     timer?: number;
     fingerLike: boolean;
   } | null>(null);
-  const suppressClick = useRef(false);
+  // The click a browser sends after a drag is not a tap: swallowed until this moment
+  // (an event timestamp). Infinity while dragging; a new press starts afresh.
+  const suppressClickUntil = useRef(0);
   const autoScroll = useRef<{ raf: number; speed: number; lastClientY: number }>({ raf: 0, speed: 0, lastClientY: 0 });
   const clock = useNow("minute");
   const now = isToday && clock ? minutesOfDay(clock) : null;
@@ -182,7 +184,7 @@ export function DayTimeline({
     dragRef.current = state;
     setDragging(true);
     setDrag(state);
-    suppressClick.current = true;
+    suppressClickUntil.current = Infinity;
     vibrate(12);
   };
 
@@ -200,7 +202,7 @@ export function DayTimeline({
   const onBlockPointerDown = (e: React.PointerEvent, block: PlanBlock, mode: "move" | "resize") => {
     if (e.button !== 0 || overview) return;
     e.stopPropagation();
-    suppressClick.current = false;
+    suppressClickUntil.current = 0;
     const p = {
       block,
       mode,
@@ -252,8 +254,9 @@ export function DayTimeline({
     dragRef.current = null;
     setDragging(false);
     setDrag(null);
-    // The click that may follow a drag is swallowed; make sure later taps work.
-    if (state) window.setTimeout(() => (suppressClick.current = false), 80);
+    // The click that may follow the drag is swallowed – however late a busy browser
+    // sends it; a tap a moment later counts again.
+    if (state) suppressClickUntil.current = e.timeStamp + 600;
     if (state && !cancelled && (state.start !== state.originStart || state.end !== state.originEnd)) {
       onChangeTime(p.block, state.start, state.end);
     }
@@ -355,8 +358,8 @@ export function DayTimeline({
           // New blocks belong to this day: the part after midnight is for looking only.
           style={{ left: GUTTER, height: y(Math.min(rangeEnd, MINUTES_PER_DAY)) }}
           onClick={(e) => {
-            if (suppressClick.current) {
-              suppressClick.current = false;
+            if (e.timeStamp < suppressClickUntil.current) {
+              suppressClickUntil.current = 0;
               return;
             }
             const minute = rangeStart + contentY(e.clientY) / pxPerMin;
@@ -410,8 +413,8 @@ export function DayTimeline({
               // (for dragging) a mouse click lands on this element.
               onClick={(e) => {
                 e.stopPropagation();
-                if (suppressClick.current) {
-                  suppressClick.current = false;
+                if (e.timeStamp < suppressClickUntil.current) {
+                  suppressClickUntil.current = 0;
                   return;
                 }
                 onOpen(block);
