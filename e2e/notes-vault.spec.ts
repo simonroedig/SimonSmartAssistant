@@ -10,6 +10,13 @@ test.beforeEach(async ({ page }) => {
 
 const filters = (page: Page) => page.getByRole("group", { name: "Filter notes" });
 
+/** Opens a category to rename, recolour or delete: the pencil (all categories), then that one. */
+async function editCategory(page: Page, name: string) {
+  await filters(page).getByRole("button", { name: "Edit categories" }).click();
+  await page.getByRole("dialog", { name: "Categories" }).getByRole("button", { name, exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Edit category" })).toBeVisible();
+}
+
 /** Opens the vault from the notes page – setting the PIN first if there is none yet. */
 async function openVault(page: Page) {
   await filters(page).getByRole("button", { name: "Vault" }).click();
@@ -61,22 +68,73 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await editor.getByRole("button", { name: "Done" }).click();
   await expect(card.getByText(name)).toHaveCount(0);
 
-  // Rename it (the pencil next to a picked category), then delete it.
+  // Rename it (the pencil: all categories, then the one), then delete it.
   await chip.click();
-  await filters(page)
-    .getByRole("button", { name: `Edit ${name}` })
-    .click();
-  await sheet.getByLabel("Category name").fill(`${name} new`);
-  await sheet.getByRole("button", { name: "Save" }).click();
+  await editCategory(page, name);
+  const form = page.getByRole("dialog", { name: "Edit category" });
+  await form.getByLabel("Category name").fill(`${name} new`);
+  await form.getByRole("button", { name: "Save" }).click();
   await expect(filters(page).getByRole("button", { name: `${name} new`, exact: true })).toBeVisible();
-  await filters(page)
-    .getByRole("button", { name: `Edit ${name} new` })
-    .click();
-  await sheet.getByRole("button", { name: "Delete category" }).click();
+  await editCategory(page, `${name} new`);
+  await form.getByRole("button", { name: "Delete category" }).click();
   await expect(filters(page).getByRole("button", { name: `${name} new`, exact: true })).toHaveCount(0);
   await expect(filters(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
   // Its notes stay.
   await expect(card).toBeVisible();
+});
+
+test("notes: categories in an order of your own – drag them in the list behind the pencil", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/notes");
+  const stamp = Date.now() % 100000;
+  const names = [`First ${stamp}`, `Second ${stamp}`];
+  for (const name of names) {
+    await filters(page).getByRole("button", { name: "New category" }).click();
+    const form = page.getByRole("dialog", { name: "New category" });
+    await form.getByLabel("Category name").fill(name);
+    await form.getByRole("button", { name: "Add category" }).click();
+    await expect(form).toBeHidden();
+  }
+  const chipOrder = () =>
+    filters(page)
+      .getByRole("button")
+      .evaluateAll((els) => els.map((el) => el.textContent?.trim() ?? ""));
+  const order = async () => (await chipOrder()).filter((t) => t.endsWith(String(stamp)));
+  await expect.poll(order).toEqual(names);
+  // Vault and All always come first.
+  expect((await chipOrder()).slice(0, 2)).toEqual(["Vault", "All"]);
+
+  // The pencil is always there; in its list the second one moves up (here by keyboard).
+  await filters(page).getByRole("button", { name: "Edit categories" }).click();
+  const list = page.getByRole("dialog", { name: "Categories" });
+  const handle = list.getByRole("button", { name: `Move ${names[1]}` });
+  await handle.focus();
+  // Give the sensor a moment between steps, like a person would.
+  for (const key of ["Space", "ArrowUp", "Space"]) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(250);
+  }
+  const listOrder = () =>
+    list
+      .getByRole("button", { name: /^Move / })
+      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")?.replace("Move ", "") ?? ""));
+  await expect
+    .poll(async () => (await listOrder()).filter((n) => n.endsWith(String(stamp))))
+    .toEqual([names[1], names[0]]);
+  await page.keyboard.press("Escape");
+  await expect(list).toBeHidden();
+  await expect.poll(order).toEqual([names[1], names[0]]);
+
+  // It stays that way.
+  await page.reload();
+  await expect.poll(order).toEqual([names[1], names[0]]);
+  expect((await chipOrder()).slice(0, 2)).toEqual(["Vault", "All"]);
+
+  for (const name of names) {
+    await editCategory(page, name);
+    await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
 });
 
 test("notes: the vault – only with the PIN, locked again on leaving, never kept on the device", async ({ page }) => {
@@ -203,7 +261,7 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   // The vault comes first, then All, then the categories.
   const chips = await filters(page).getByRole("button").allTextContents();
   expect(chips.slice(0, 2).map((c) => c.trim())).toEqual(["Vault", "All"]);
-  const categories = chips.slice(2, -1).map((c) => c.trim()); // (the last one is +)
+  const categories = chips.slice(2, -2).map((c) => c.trim()); // (the last two are + and the pencil)
 
   const cdp = await context.newCDPSession(page);
   const swipe = async (dx: number) => {
@@ -265,12 +323,8 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   // Clean up the categories (a moment after the swipe – the tap that ends one is swallowed).
   await page.waitForTimeout(150);
   for (const name of added) {
-    await filters(page).getByRole("button", { name, exact: true }).click();
-    await pressed(name);
-    await filters(page)
-      .getByRole("button", { name: `Edit ${name}` })
-      .click();
-    await page.getByRole("dialog").getByRole("button", { name: "Delete category" }).click();
+    await editCategory(page, name);
+    await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
   }
   await context.close();

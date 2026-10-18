@@ -8,13 +8,16 @@ import {
   ChevronRight,
   Copy,
   ListTodo,
+  Maximize2,
+  Minimize2,
   RotateCcw,
+  Sun,
   Timer,
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { AutoTextarea, Input, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
@@ -63,6 +66,7 @@ export function BlockEditor({
   onSave,
   onDelete,
   onCopyTo,
+  awakeFor,
 }: {
   state: EditorState | null;
   onClose: () => void;
@@ -72,6 +76,8 @@ export function BlockEditor({
   onSave: (block: PlanBlock, draft: BlockDraft) => void;
   onDelete: (block: PlanBlock) => void;
   onCopyTo: (block: PlanBlock, day: DayKey) => void;
+  /** Wake-up and bedtime of a day (minutes), for "Full day". */
+  awakeFor: (day: DayKey) => [number, number];
 }) {
   const title = state?.mode === "edit" ? "Edit block" : "New block";
   return (
@@ -87,6 +93,7 @@ export function BlockEditor({
           onSave={onSave}
           onDelete={onDelete}
           onCopyTo={onCopyTo}
+          awakeFor={awakeFor}
         />
       )}
     </Sheet>
@@ -102,6 +109,7 @@ function EditorForm({
   onSave,
   onDelete,
   onCopyTo,
+  awakeFor,
 }: {
   state: EditorState;
   recent: PlanBlock[];
@@ -111,6 +119,7 @@ function EditorForm({
   onSave: (block: PlanBlock, draft: BlockDraft) => void;
   onDelete: (block: PlanBlock) => void;
   onCopyTo: (block: PlanBlock, day: DayKey) => void;
+  awakeFor: (day: DayKey) => [number, number];
 }) {
   const existing = state.mode === "edit" ? state.block : null;
   const [title, setTitle] = useState(existing?.title ?? (state.mode === "create" ? (state.title ?? "") : ""));
@@ -140,11 +149,18 @@ function EditorForm({
   }, [recent, title]);
 
   const duration = end - start;
+  // The whole waking day of the block's day (for big things that fill it).
+  const [wake, bed] = day ? awakeFor(day) : [0, MINUTES_PER_DAY];
+  const fullDay = start === wake && end === bed;
 
   // A length of your own (not one of the quick picks) gets a chip of its own, so a
   // quick pick can be tried and the own length picked again.
   const [custom, setCustom] = useState<number | null>(null);
-  if (duration > 0 && !DURATIONS.includes(duration) && custom !== duration) setCustom(duration);
+  if (duration > 0 && !fullDay && !DURATIONS.includes(duration) && custom !== duration) setCustom(duration);
+
+  // Long details: a few lines while editing the rest, all of it on request.
+  const [notesOpen, setNotesOpen] = useState(false);
+  const longNotes = notes.split("\n").reduce((lines, line) => lines + 1 + Math.floor(line.length / 48), 0) > 7;
 
   // A suggestion fills in title, colour and length – and can be taken back.
   const [beforeSuggestion, setBeforeSuggestion] = useState<{
@@ -286,14 +302,26 @@ function EditorForm({
             })}
           </div>
         )}
-        <Textarea
+        <AutoTextarea
           aria-label="Details"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional details"
           maxLength={4000}
-          className="mt-2 min-h-16"
+          minRows={2}
+          maxRows={notesOpen ? 400 : 7}
+          className="mt-2"
         />
+        {(longNotes || notesOpen) && (
+          <button
+            type="button"
+            onClick={() => setNotesOpen(!notesOpen)}
+            className="mt-1.5 flex items-center gap-1.5 px-1 text-sm font-medium text-muted hover:text-fg"
+          >
+            {notesOpen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+            {notesOpen ? "Show less" : "Show all details"}
+          </button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -345,6 +373,31 @@ function EditorForm({
             {formatDuration(d)}
           </button>
         ))}
+        {wake < bed && (
+          <button
+            type="button"
+            aria-pressed={fullDay}
+            title={`From waking up to bedtime (${formatDuration(bed - wake)})`}
+            onClick={() => {
+              setStart(wake);
+              setEnd(bed);
+            }}
+            className={cn(
+              "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors",
+              fullDay
+                ? cn(
+                    "border-transparent ring-2 ring-inset",
+                    blockStyle(color).bg,
+                    blockStyle(color).text,
+                    blockStyle(color).ring,
+                  )
+                : "border-line bg-surface-sunken text-muted hover:text-fg",
+            )}
+          >
+            <Sun className="size-3.5" />
+            Full day
+          </button>
+        )}
       </div>
 
       <div>

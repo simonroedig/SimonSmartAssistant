@@ -118,6 +118,8 @@ export function usePlanner(day: DayKey) {
     },
     onDelete: deleteBlock,
     onCopyTo: (block: PlanBlock, target: DayKey) => copyTo([block], target),
+    // "Full day": from waking up to bedtime of that day.
+    awakeFor: (target: DayKey) => awakeWindow(settings.sleepSchedule, target),
   };
 
   const draftPreview =

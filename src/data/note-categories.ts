@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { positionAtEnd } from "@/lib/ordering";
 import { isPaletteColor, type PaletteColor } from "@/lib/palette";
 import { type NoteCategory, nowIso, queryKeys, useAppQuery, useOptimisticMutation } from "./core";
 
@@ -9,12 +10,16 @@ export function categoryColor(category: Pick<NoteCategory, "color">): PaletteCol
   return isPaletteColor(category.color) ? category.color : "sky";
 }
 
-/** The user's note categories, oldest first. */
+/** The user's note categories, in their order (oldest first unless moved). */
 export function useNoteCategories() {
   return useAppQuery({
     queryKey: queryKeys.noteCategories,
     queryFn: async () => {
-      const { data, error } = await createClient().from("note_categories").select("*").order("created_at");
+      const { data, error } = await createClient()
+        .from("note_categories")
+        .select("*")
+        .order("position")
+        .order("created_at");
       if (error) throw error;
       return data;
     },
@@ -42,8 +47,28 @@ export function useSaveCategory() {
       const list = (data ?? []) as NoteCategory[];
       if (!isNew) return list.map((c) => (c.id === id ? { ...c, name: name.trim(), color } : c));
       const now = nowIso();
-      return [...list, { id, name: name.trim(), color, created_at: now, updated_at: now, user_id: "" }];
+      return [
+        ...list,
+        { id, name: name.trim(), color, position: positionAtEnd(list), created_at: now, updated_at: now, user_id: "" },
+      ];
     },
+  });
+}
+
+/** Moves a category to a new place in the order (see positionForMove). */
+export function useMoveCategory() {
+  return useOptimisticMutation<{ id: string; position: number }>({
+    table: "note_categories",
+    queryKey: queryKeys.noteCategories,
+    errorTitle: "Couldn't move the category",
+    mutationFn: async ({ id, position }) => {
+      const { error } = await createClient().from("note_categories").update({ position }).eq("id", id);
+      if (error) throw error;
+    },
+    update: (data, { id, position }) =>
+      ((data ?? []) as NoteCategory[])
+        .map((c) => (c.id === id ? { ...c, position } : c))
+        .sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at)),
   });
 }
 

@@ -69,7 +69,7 @@ test("block editor: details under What, a suggestion can be taken back, your own
   await expect(day).toContainText("5 March");
 });
 
-test("note editor: Done once there is text; the whole note can be copied", async ({ page, context }) => {
+test("note editor: Done once there is text; its text can be copied (without the title)", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notes");
@@ -83,7 +83,7 @@ test("note editor: Done once there is text; the whole note can be copied", async
   await expect(done).toBeEnabled();
 
   await dialog.getByRole("button", { name: "Copy note" }).click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("Only a title\n\nDoor code 1234");
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("Door code 1234");
 
   await done.click();
   await expect(dialog).toBeHidden();

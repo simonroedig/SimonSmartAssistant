@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { lockVault, useVaultOpen } from "@/lib/vault";
 import {
   CategoryPicker,
+  CategoriesSheet,
   CategorySheet,
   type CategorySheetState,
   CategoryTag,
@@ -155,6 +156,7 @@ export function NotesBoard({
   // Every visit starts with all notes.
   const [filter, setFilter] = useState<NoteFilter>("all");
   const [categorySheet, setCategorySheet] = useState<CategorySheetState>(null);
+  const [managing, setManaging] = useState(false);
   const [pinSheet, setPinSheet] = useState<VaultPinMode | null>(null);
 
   const inVault = variant === "page" && filter === "vault";
@@ -260,7 +262,7 @@ export function NotesBoard({
       if (next === "vault") openVault();
       else changeFilter(next === "all" ? "all" : { category: next });
     },
-    variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null,
+    variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null && !managing,
   );
 
   const editorSheet = (
@@ -380,6 +382,7 @@ export function NotesBoard({
         onVault={openVault}
         onAdd={() => setCategorySheet({ mode: "create" })}
         onEdit={(category) => setCategorySheet({ mode: "edit", category })}
+        onManage={() => setManaging(true)}
         className="mb-2 md:mb-4"
       />
       <Composer onCreate={(draft, pin) => create(draft, pin)} className="max-md:hidden" />
@@ -451,6 +454,20 @@ export function NotesBoard({
         </button>
       </div>
       {editorSheet}
+      <CategoriesSheet
+        open={managing}
+        categories={categoryList}
+        onClose={() => setManaging(false)}
+        // One sheet at a time: the list closes, the category opens.
+        onEdit={(category) => {
+          setManaging(false);
+          setCategorySheet({ mode: "edit", category });
+        }}
+        onAdd={() => {
+          setManaging(false);
+          setCategorySheet({ mode: "create" });
+        }}
+      />
       <CategorySheet
         state={categorySheet}
         onClose={() => setCategorySheet(null)}
@@ -588,9 +605,9 @@ function NoteEditor({
   );
 }
 
-/** The whole note to the clipboard: title on the first line, then the text. */
+/** The note's text to the clipboard (without its title – that's just its name). */
 async function copyNote(title: string, body: string) {
-  const text = [title.trim(), body.trim()].filter(Boolean).join("\n\n");
+  const text = body.trim() || title.trim();
   try {
     await navigator.clipboard.writeText(text);
     toast.success("Note copied");

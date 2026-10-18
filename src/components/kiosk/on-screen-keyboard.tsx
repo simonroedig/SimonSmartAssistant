@@ -7,9 +7,9 @@ import { useDevicePrefs } from "@/hooks/use-device-prefs";
 import { cn } from "@/lib/utils";
 
 /**
- * Built-in German (QWERTZ) on-screen keyboard for the wall display. The system
- * keyboards on Raspberry Pi OS don't reliably appear in a fullscreen Chromium,
- * so the app brings its own. It types into whatever text field has focus.
+ * Built-in on-screen keyboard for the wall display: QWERTY with the German letters
+ * (ä, ö, ü, ß). The system keyboards on Raspberry Pi OS don't reliably appear in a
+ * fullscreen Chromium, so the app brings its own. It types into whatever text field has focus.
  */
 
 type Editable = HTMLInputElement | HTMLTextAreaElement;
@@ -67,9 +67,9 @@ function deleteBackward(el: Editable) {
 }
 
 const LETTERS = [
-  ["q", "w", "e", "r", "t", "z", "u", "i", "o", "p", "ü"],
+  ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "ü"],
   ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ö", "ä"],
-  ["y", "x", "c", "v", "b", "n", "m", "ß", "-"],
+  ["z", "x", "c", "v", "b", "n", "m", "ß", "-"],
 ];
 const SYMBOLS = [
   ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],

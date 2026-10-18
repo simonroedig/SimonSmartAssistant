@@ -2,6 +2,7 @@
 
 import { CloudSun, MapPin, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useLayoutEffect, useRef } from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { useSettings, useSettingsRow, useUpdateSettings } from "@/data/settings";
 import { useForecast } from "@/data/weather";
@@ -22,6 +23,7 @@ export function WeatherCard({ className, days = 7 }: { className?: string; days?
   const updateSettings = useUpdateSettings();
   const forecast = useForecast(settings.location);
   const now = useNow("minute");
+  const dailyBox = useFullRowsOnly();
 
   const header = (
     <CardHeader
@@ -111,15 +113,43 @@ export function WeatherCard({ className, days = 7 }: { className?: string; days?
         </div>
         <HourlyStrip hours={hours} sleepSchedule={settings.sleepSchedule} className="mx-0 mt-3 px-4" />
         <div className="mx-5 my-2 h-px bg-line" />
-        <DailyList
-          className="px-3"
-          dense
-          days={data.daily.slice(0, days)}
-          today={today}
-          currentTemp={data.current.temperature}
-          onSelect={(day) => router.push(`/weather?day=${day}`)}
-        />
+        {/* As many days as fit whole: on a short screen the last ones step aside. */}
+        <div ref={dailyBox} className="min-h-0 flex-1 overflow-hidden">
+          <DailyList
+            className="px-3"
+            dense
+            days={data.daily.slice(0, days)}
+            today={today}
+            currentTemp={data.current.temperature}
+            onSelect={(day) => router.push(`/weather?day=${day}`)}
+          />
+        </div>
       </div>
     </Card>
   );
+}
+
+/**
+ * Hides the rows of a list (its <li>s) that don't fit the box whole, so a short card
+ * ends after the last complete row instead of cutting one in half.
+ */
+function useFullRowsOnly() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    const fit = () => {
+      const bottom = box.getBoundingClientRect().bottom + 1;
+      for (const row of box.querySelectorAll<HTMLElement>("li")) {
+        row.style.visibility = row.getBoundingClientRect().bottom > bottom ? "hidden" : "";
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    const list = box.firstElementChild;
+    if (list) observer.observe(list);
+    return () => observer.disconnect();
+  });
+  return ref;
 }

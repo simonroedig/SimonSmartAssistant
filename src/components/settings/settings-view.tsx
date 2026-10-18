@@ -182,7 +182,7 @@ export function SettingsView() {
                 label="Wall display mode"
               />
             </Row>
-            <Row label="On-screen keyboard" hint="Built-in German keyboard for touch screens">
+            <Row label="On-screen keyboard" hint="Built-in keyboard (QWERTY with ä, ö, ü, ß) for touch screens">
               <Switch
                 checked={device.keyboard}
                 onCheckedChange={(keyboard) => setDevice({ keyboard })}

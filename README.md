@@ -109,7 +109,7 @@ wall a moment later.
   PINs lock it with a growing wait. Vault notes are never kept in the offline cache.
 - **Instant everywhere.** Every change shows up immediately (optimistic updates) and is synced to the
   other devices through Realtime.
-- **Made for touch.** Press-and-hold to move, swipe between days and categories, a German on-screen
+- **Made for touch.** Press-and-hold to move, swipe between days and categories, an on-screen
   keyboard on the wall – and a fix for touch screens that report themselves as a mouse.
 - **A phone launcher that updates itself.** Every change to the Android app is built, signed and
   published by CI; the launcher notices the new version and installs it in one tap.

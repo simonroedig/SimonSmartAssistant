@@ -55,8 +55,13 @@ export function HourlyStrip({
   className?: string;
   firstIsNow?: boolean;
 }) {
+  // The rain line only takes room when some hour has a real chance of rain.
+  const anyRain = hours.some((h) => h.precipitationProbability >= 20);
   return (
-    <div className={cn("-mx-1 no-scrollbar flex snap-x scroll-px-4 gap-1 overflow-x-auto px-1 py-0.5", className)}>
+    // Never squeezed by a short card (it would scroll up and down): the daily list gives way.
+    <div
+      className={cn("-mx-1 no-scrollbar flex shrink-0 snap-x scroll-px-4 gap-1 overflow-x-auto px-1 py-0.5", className)}
+    >
       {hours.map((h, i) => {
         const now = firstIsNow && i === 0;
         const sleep = sleepForHour(sleepSchedule, h);
@@ -84,15 +89,17 @@ export function HourlyStrip({
             >
               {Math.round(h.temperature)}°
             </span>
-            <span
-              className={cn(
-                "flex h-4 items-center gap-0.5 text-[0.68rem] font-semibold text-sky-500 tabular dark:text-sky-300",
-                h.precipitationProbability < 20 && "invisible",
-              )}
-            >
-              <Droplets className="size-3" />
-              {h.precipitationProbability}%
-            </span>
+            {anyRain && (
+              <span
+                className={cn(
+                  "flex h-4 items-center gap-0.5 text-[0.68rem] font-semibold text-sky-500 tabular dark:text-sky-300",
+                  h.precipitationProbability < 20 && "invisible",
+                )}
+              >
+                <Droplets className="size-3" />
+                {h.precipitationProbability}%
+              </span>
+            )}
           </div>
         );
       })}

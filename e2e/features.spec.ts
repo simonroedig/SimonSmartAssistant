@@ -736,3 +736,29 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
   await expect(dialog.getByLabel("Note", { exact: true })).toBeFocused();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
 });
+
+test("planner: a block for the whole waking day, and long details shown in full on request", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // A Tuesday: awake from 07:00 to 23:30.
+  await page.goto("/planner?day=2030-01-22");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Clear this day" }).click();
+  await page.getByRole("button", { name: "Add a block" }).click({ position: { x: 200, y: 9 * 64 + 5 } });
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("What").fill("Moving day");
+  await dialog.getByRole("button", { name: "Full day" }).click();
+  await expect(dialog.getByRole("button", { name: "Full day" })).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByRole("button", { name: "Start: 07:00" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "End: 23:30" })).toBeVisible();
+
+  // Long details: a few lines, all of them on request.
+  const details = dialog.getByLabel("Details");
+  await details.fill(Array.from({ length: 20 }, (_, i) => `Line ${i + 1}: boxes, keys, the van`).join("\n"));
+  const short = (await details.boundingBox())!.height;
+  await dialog.getByRole("button", { name: "Show all details" }).click();
+  await expect.poll(async () => (await details.boundingBox())!.height).toBeGreaterThan(short * 2);
+  await dialog.getByRole("button", { name: "Show less" }).click();
+  await dialog.getByRole("button", { name: "Add to plan" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('[role="button"]', { hasText: "Moving day" }).first()).toContainText("07:00 – 23:30");
+});

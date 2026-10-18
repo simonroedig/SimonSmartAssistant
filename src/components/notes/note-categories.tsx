@@ -1,12 +1,14 @@
 "use client";
 
-import { Check, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
+import { DragHandle, SortableList } from "@/components/ui/sortable";
 import { newId, type NoteCategory } from "@/data/core";
-import { categoryColor, useDeleteCategory, useSaveCategory } from "@/data/note-categories";
+import { categoryColor, useDeleteCategory, useMoveCategory, useSaveCategory } from "@/data/note-categories";
 import { useLongPress } from "@/hooks/use-long-press";
+import { positionForMove } from "@/lib/ordering";
 import { PALETTE, PALETTE_COLORS, type PaletteColor } from "@/lib/palette";
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
@@ -102,7 +104,10 @@ function CategoryChip({
   );
 }
 
-/** The filters above the notes: the vault, All, the categories, and + for a new one. */
+/**
+ * The filters above the notes: the vault, All, the categories, + for a new one and
+ * the pencil for all categories (order, edit).
+ */
 export function NoteFilters({
   filter,
   categories,
@@ -111,6 +116,7 @@ export function NoteFilters({
   onVault,
   onAdd,
   onEdit,
+  onManage,
   className,
 }: {
   filter: NoteFilter;
@@ -121,6 +127,8 @@ export function NoteFilters({
   onVault: () => void;
   onAdd: () => void;
   onEdit: (category: NoteCategory) => void;
+  /** The pencil: all categories, to put in order and edit. */
+  onManage: () => void;
   className?: string;
 }) {
   const selected = typeof filter === "object" ? categories.find((c) => c.id === filter.category) : undefined;
@@ -177,11 +185,11 @@ export function NoteFilters({
       >
         <Plus className="size-4" />
       </button>
-      {selected && (
+      {categories.length > 0 && (
         <button
           type="button"
-          aria-label={`Edit ${selected.name}`}
-          onClick={() => onEdit(selected)}
+          aria-label="Edit categories"
+          onClick={onManage}
           className={cn(CHIP, "w-9 justify-center px-0 text-faint hover:text-fg")}
         >
           <Pencil className="size-3.5" />
@@ -245,6 +253,57 @@ export function CategoryPicker({
         );
       })}
     </div>
+  );
+}
+
+/**
+ * All categories, in the order of the chips: drag by the grip to reorder, tap one to
+ * rename, recolour or delete it. (Vault and All always come first.)
+ */
+export function CategoriesSheet({
+  open,
+  categories,
+  onClose,
+  onEdit,
+  onAdd,
+}: {
+  open: boolean;
+  categories: NoteCategory[];
+  onClose: () => void;
+  onEdit: (category: NoteCategory) => void;
+  onAdd: () => void;
+}) {
+  const move = useMoveCategory();
+  return (
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()} title="Categories">
+      <p className="-mt-2 mb-3 text-sm text-muted">Drag to change the order, tap one to edit it.</p>
+      <SortableList
+        items={categories}
+        className="flex flex-col gap-1.5"
+        onMove={(id, index) => move.mutate({ id, position: positionForMove(categories, id, index) })}
+      >
+        {(category) => {
+          const style = PALETTE[categoryColor(category)];
+          return (
+            <div className="flex items-center gap-1 rounded-2xl pr-1 well">
+              <DragHandle label={`Move ${category.name}`} className="w-10" />
+              <button
+                type="button"
+                onClick={() => onEdit(category)}
+                className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 text-left font-medium"
+              >
+                <span className={cn("size-2.5 shrink-0 rounded-full bg-current", style.ink)} />
+                <span className="truncate">{category.name}</span>
+                <ChevronRight className="ml-auto size-4 shrink-0 text-faint" />
+              </button>
+            </div>
+          );
+        }}
+      </SortableList>
+      <Button variant="secondary" onClick={onAdd} className="mt-3 w-full">
+        <Plus /> New category
+      </Button>
+    </Sheet>
   );
 }
 
