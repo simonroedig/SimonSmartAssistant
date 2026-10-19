@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Fab } from "@/components/ui/fab";
 import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
@@ -447,17 +448,15 @@ export function NotesBoard({
       {/* A new note right away, like the planner's +: on phones by the thumb (it takes
           less room than a bar, so more notes show), on wide screens in the corner as well
           as "Take a note…" at the top. */}
-      <Button
-        size="icon-lg"
+      <Fab
         aria-label={inVault ? "Add a note to the vault" : "Add a note"}
         onClick={() => setEditor({ mode: "create", placement: here })}
         className={cn(
-          "ui-action z-30 rounded-full shadow-(--shadow-card) max-md:absolute max-md:right-0 max-md:bottom-1 md:fixed md:right-[calc(2*var(--gutter))] md:bottom-[calc(2*var(--gutter))]",
+          // Phones: the same spot as the planner's + (1rem inside its card, plus the card's 1px border).
+          "max-md:absolute max-md:right-[calc(1rem+1px)] max-md:bottom-[calc(1rem+1px)] md:fixed md:right-[calc(2*var(--gutter))] md:bottom-[calc(2*var(--gutter))]",
           TONE_STYLES.orange.solid,
         )}
-      >
-        <Plus className="!size-6" />
-      </Button>
+      />
       {editorSheet}
       <CategoriesSheet
         open={managing}

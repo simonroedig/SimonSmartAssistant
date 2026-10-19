@@ -1,12 +1,13 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, CalendarPlus, ClipboardCopy, Eraser, ListTodo, MoreHorizontal, Plus } from "lucide-react";
+import { CalendarDays, CalendarPlus, ClipboardCopy, Eraser, ListTodo, MoreHorizontal } from "lucide-react";
 import { motion } from "motion/react";
 import { DropdownMenu } from "radix-ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Fab } from "@/components/ui/fab";
 import { Sheet } from "@/components/ui/sheet";
 import { queryKeys, type Todo } from "@/data/core";
 import { fetchBlocks, plannedBlockByTodo, useLinkedBlocks } from "@/data/planner";
@@ -286,15 +287,11 @@ export function PlannerView({
       <div className="grid min-h-0 flex-1 gap-4 px-4 md:pr-(--gutter) md:pb-(--gutter) md:pl-0 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card className="min-h-0 [touch-action:pan-y] overflow-hidden">
           {/* "Add" sits in the card's corner (near the thumb on phones). */}
-          <Button
-            variant="primary"
-            size="icon-lg"
+          <Fab
             aria-label="Add block"
             onClick={() => planner.createAtNextFree()}
-            className={cn("ui-action absolute right-4 bottom-4 z-30 rounded-full shadow-(--shadow-card)", rose.solid)}
-          >
-            <Plus className="!size-6" />
-          </Button>
+            className={cn("absolute right-4 bottom-4", rose.solid)}
+          />
           <div className="flex flex-col gap-3 px-3 pt-3 md:px-4">
             <FocusInput day={day} week={planner.week} />
             <DayExtrasChips extras={dayExtras(day)} className="-mt-1" />
