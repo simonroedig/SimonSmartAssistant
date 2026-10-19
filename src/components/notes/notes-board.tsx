@@ -73,11 +73,16 @@ function NoteCard({
         aria-label={`Open note "${noteLabel(note)}"`}
         className="block w-full px-4 py-3 pr-10 text-left"
       >
-        {note.title && <span className="mb-1 block text-[0.98rem] leading-snug font-semibold">{note.title}</span>}
+        {/* Long titles: at most two lines, then "…" (long words break instead of running out). */}
+        {note.title && (
+          <span className="mb-1 line-clamp-2 text-[0.98rem] leading-snug font-semibold [overflow-wrap:anywhere]">
+            {note.title}
+          </span>
+        )}
         {note.body && (
           <span
             className={cn(
-              "block text-[0.92rem] leading-snug break-words whitespace-pre-line text-muted",
+              "block text-[0.92rem] leading-snug [overflow-wrap:anywhere] whitespace-pre-line text-muted",
               lines === 3 ? "line-clamp-3" : "line-clamp-8",
               !note.title && "text-fg",
             )}

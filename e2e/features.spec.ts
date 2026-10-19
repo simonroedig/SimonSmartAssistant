@@ -738,7 +738,26 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
   await expect(dialog.getByRole("heading", { name: "New note" })).toBeVisible();
   await page.waitForTimeout(400);
   await expect(dialog.getByLabel("Note", { exact: true })).toBeFocused();
-  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  // A long title stays inside its card: at most two lines, long words break, then "…".
+  const longTitle = `${Date.now() % 100000} ZugangsdatenHundesittingPortalFerienbetreuung für den ganzen Sommer und noch ein bisschen länger`;
+  await dialog.getByLabel("Title", { exact: true }).fill(longTitle);
+  await dialog.getByLabel("Note", { exact: true }).fill("Login on the fridge");
+  await dialog.getByRole("button", { name: "Done" }).click();
+  const longCard = page.getByRole("button", { name: `Open note "${longTitle.slice(0, 39)}…"` });
+  await expect(longCard).toBeVisible();
+  const fits = await longCard.evaluate((card) => {
+    const title = card.querySelector("span")!;
+    const box = card.getBoundingClientRect();
+    const t = title.getBoundingClientRect();
+    const lineHeight = parseFloat(getComputedStyle(title).lineHeight);
+    return {
+      inside: t.left >= box.left && t.right <= box.right,
+      noOverflow: title.scrollWidth <= title.clientWidth,
+      lines: Math.round(t.height / lineHeight),
+    };
+  });
+  expect(fits).toEqual({ inside: true, noOverflow: true, lines: 2 });
 });
 
 test("planner: a block for the whole waking day, and long details shown in full on request", async ({ page }) => {
