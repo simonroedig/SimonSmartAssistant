@@ -33,7 +33,8 @@ export function NowNext({
   }
 
   return (
-    <div className={cn("grid gap-2", current && next ? "sm:grid-cols-2" : "", className)}>
+    // One column that may shrink (long titles are cut off, not pushed past the card's edge).
+    <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-2", current && next && "sm:grid-cols-2", className)}>
       {current ? (
         <button
           type="button"

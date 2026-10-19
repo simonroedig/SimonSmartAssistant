@@ -265,7 +265,6 @@ nav[data-attached]:not([data-tabbar]) {
   --accent: #3355ff;
   --accent-soft: rgb(51 85 255 / 0.1);
   --accent-fg: #ffffff;
-  --today: #0891b2;
   --sleep: rgb(10 12 20 / 0.028);
   --sleep-stripe: rgb(10 12 20 / 0.045);
   --grid-line: rgb(10 12 20 / 0.05);
@@ -298,7 +297,6 @@ nav[data-attached]:not([data-tabbar]) {
   --accent: #7088ff;
   --accent-soft: rgb(112 136 255 / 0.15);
   --accent-fg: #060917;
-  --today: #67d5ea;
   --sleep: rgb(255 255 255 / 0.015);
   --sleep-stripe: rgb(255 255 255 / 0.03);
   --grid-line: rgb(255 255 255 / 0.035);
@@ -434,7 +432,6 @@ nav[data-attached]:not([data-tabbar]) {
   --text-muted: #6c655c;
   --text-faint: #a0978b;
   --accent: #5e55d6;
-  --today: #2e74b5;
   --accent-soft: rgb(94 85 214 / 0.13);
   --accent-fg: #ffffff;
   --sleep: rgb(120 108 92 / 0.06);
@@ -472,7 +469,6 @@ nav[data-attached]:not([data-tabbar]) {
   --text-muted: #a8a39b;
   --text-faint: #716c65;
   --accent: #9c93ff;
-  --today: #8ec5f0;
   --accent-soft: rgb(156 147 255 / 0.16);
   --accent-fg: #16151f;
   --sleep: rgb(0 0 0 / 0.16);
@@ -596,7 +592,6 @@ nav[data-attached]:not([data-tabbar]) {
   --text-muted: #3f3c37;
   --text-faint: #7a746a;
   --accent: #6d4aff;
-  --today: #1d5fd6;
   --accent-soft: rgb(109 74 255 / 0.16);
   --accent-fg: #ffffff;
   --sleep: rgb(17 17 17 / 0.04);
@@ -629,7 +624,6 @@ nav[data-attached]:not([data-tabbar]) {
   --text-muted: #cfc9bf;
   --text-faint: #958f85;
   --accent: #a593ff;
-  --today: #93b9ff;
   --accent-soft: rgb(165 147 255 / 0.2);
   --accent-fg: #111111;
   --sleep: rgb(0 0 0 / 0.18);
@@ -763,7 +757,6 @@ nav[data-attached]:not([data-tabbar]) {
   --text-muted: #675d86;
   --text-faint: #a199ba;
   --accent: #8b5cf6;
-  --today: #1e8bc9;
   --accent-soft: rgb(139 92 246 / 0.15);
   --accent-fg: #ffffff;
   --sleep: rgb(90 70 140 / 0.05);
@@ -805,7 +798,6 @@ nav[data-attached]:not([data-tabbar]) {
   --text-muted: #c4beaf;
   --text-faint: #8b8678;
   --accent: #c4a7ff;
-  --today: #8fd2f2;
   --accent-soft: rgb(196 167 255 / 0.18);
   --accent-fg: #1f1830;
   --sleep: rgb(0 0 0 / 0.2);

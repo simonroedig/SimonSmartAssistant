@@ -151,5 +151,24 @@ test("planner on a touch screen: press and hold to move, swipe to scroll", async
   await touch("touchEnd", 0, 0);
   await expect(held).toHaveCount(0);
   await expect(block).toContainText("11:00 – 12:00");
+
+  // Empty space: a quick swipe scrolls; press and hold, then drag, draws a new block.
+  await settle();
+  // 13:00 at the top of the timeline, so the drawing stays clear of its scrolling edges.
+  await scroller.evaluate((el) => (el.scrollTop = 13 * 64));
+  await settle();
+  const surface = page.getByRole("button", { name: "Add a block" });
+  const area = (await surface.boundingBox())!;
+  const startY = area.y + 14 * 64 + 3; // 14:00
+  await touch("touchStart", area.x + 200, startY);
+  await page.waitForTimeout(450);
+  await expect(page.locator("[data-drawing]")).toHaveCount(1);
+  for (let i = 1; i <= 8; i++) await touch("touchMove", area.x + 200, startY + i * 12);
+  await expect(page.locator("[data-drawing]")).toHaveText("14:00 – 15:30");
+  await touch("touchEnd", 0, 0);
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: "Start: 14:00" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "End: 15:30" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await context.close();
 });

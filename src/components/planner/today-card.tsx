@@ -180,6 +180,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
             isToday={isToday}
             draft={planner.draftPreview}
             onCreateAt={(m) => planner.createAt(m)}
+            onCreateRange={(start, end) => planner.createRange(start, end)}
             onOpen={(block) => planner.setEditor({ mode: "edit", block })}
             onChangeTime={planner.changeTime}
             onToggleDone={planner.toggleDone}

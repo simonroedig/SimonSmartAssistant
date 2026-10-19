@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, ChevronRight, CircleDashed, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
@@ -13,8 +13,11 @@ import { PALETTE, PALETTE_COLORS, type PaletteColor } from "@/lib/palette";
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
-/** What the notes page shows: everything (but the vault), the vault, or one category. */
-export type NoteFilter = "all" | "vault" | { category: string };
+/**
+ * What the notes page shows: everything (but the vault), the vault, the notes
+ * without a category ("none", the chip "Others"), or one category.
+ */
+export type NoteFilter = "all" | "vault" | "none" | { category: string };
 
 export const VAULT_TONE = TONE_STYLES.slate;
 
@@ -105,8 +108,9 @@ function CategoryChip({
 }
 
 /**
- * The filters above the notes: the vault, All, the categories, + for a new one and
- * the pencil for all categories (order, edit).
+ * The filters above the notes: the vault and Others (just their icons, so they take
+ * little room), All, the categories, + for a new one and the pencil for all
+ * categories (order, edit).
  */
 export function NoteFilters({
   filter,
@@ -149,12 +153,23 @@ export function NoteFilters({
         type="button"
         aria-pressed={filter === "vault"}
         aria-label={vaultOpen ? "Vault (open)" : "Vault"}
+        title="Vault"
         onClick={onVault}
         // Open, the vault stands out in solid grey.
-        className={cn(CHIP, filter === "vault" ? VAULT_TONE.solid : CHIP_IDLE)}
+        className={cn(CHIP, "w-9 justify-center px-0", filter === "vault" ? VAULT_TONE.solid : CHIP_IDLE)}
       >
-        <Lock className="size-3.5" strokeWidth={2.4} />
-        Vault
+        <Lock className="size-4" strokeWidth={2.4} />
+      </button>
+      <button
+        type="button"
+        aria-pressed={filter === "none"}
+        aria-label="Others"
+        title="Others – notes without a category"
+        onClick={() => onChange(filter === "none" ? "all" : "none")}
+        // An empty dot: no category.
+        className={cn(CHIP, "w-9 justify-center px-0", filter === "none" ? cn("bg-fg/8 text-fg", CHIP_ON) : CHIP_IDLE)}
+      >
+        <CircleDashed className="size-4" strokeWidth={2.2} />
       </button>
       <button
         type="button"

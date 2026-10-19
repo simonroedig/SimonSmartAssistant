@@ -176,6 +176,7 @@ export function NotesBoard({
     if (variant === "card") return board;
     if (filter === "vault") return vaultList;
     if (filteredCategory) return board.filter((n) => n.category_id === filteredCategory);
+    if (filter === "none") return board.filter((n) => !n.category_id);
     return board;
   }, [variant, filter, filteredCategory, board, vaultList]);
   const pinned = all.filter((n) => n.pinned);
@@ -242,8 +243,8 @@ export function NotesBoard({
     setFilter(next);
   };
 
-  // In the order of the chips: the vault, All, the categories.
-  const order = ["vault", "all", ...categoryList.map((c) => c.id)];
+  // In the order of the chips: the vault, Others, All, the categories.
+  const order = ["vault", "none", "all", ...categoryList.map((c) => c.id)];
   const key = filterKey(filter);
 
   // The notes slide in from the side the picked filter is on.
@@ -260,7 +261,7 @@ export function NotesBoard({
       const next = order[order.indexOf(key) + direction];
       if (!next) return;
       if (next === "vault") openVault();
-      else changeFilter(next === "all" ? "all" : { category: next });
+      else changeFilter(next === "all" || next === "none" ? next : { category: next });
     },
     variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null && !managing,
   );
@@ -369,11 +370,13 @@ export function NotesBoard({
       ? "Nothing in the vault yet. Notes here only open with your PIN."
       : filteredCategory
         ? `No notes in ${byId.get(filteredCategory)?.name ?? "this category"} yet.`
-        : "No notes yet. Codes, ideas, gift lists – anything goes.";
+        : filter === "none"
+          ? "No notes without a category."
+          : "No notes yet. Codes, ideas, gift lists – anything goes.";
 
   return (
     // Sideways moves are the page's (swipes), up and down scroll.
-    <div className={cn("flex [touch-action:pan-y] flex-col", className)} {...swipe}>
+    <div className={cn("relative flex [touch-action:pan-y] flex-col", className)} {...swipe}>
       <NoteFilters
         filter={filter}
         categories={categoryList}
@@ -386,8 +389,8 @@ export function NotesBoard({
         className="mb-2 md:mb-4"
       />
       <Composer onCreate={(draft, pin) => create(draft, pin)} className="max-md:hidden" />
-      {/* Phones: only this part scrolls; "Take a note" stays below it. */}
-      <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-3">
+      {/* Phones: only this part scrolls (room at the end for the + button). */}
+      <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-20">
         <motion.div
           key={key}
           initial={{ opacity: 0, x: shownKey.direction * 28 }}
@@ -441,18 +444,20 @@ export function NotesBoard({
           )}
         </motion.div>
       </div>
-      {/* Phones: "Take a note" waits at the bottom, where the thumb is. */}
-      <div className="rounded-(--radius-bar) p-2 bar md:hidden">
-        <button
-          type="button"
-          onClick={() => setEditor({ mode: "create", placement: here })}
-          className="flex w-full items-center text-left"
-        >
-          <span className="field flex h-12 flex-1 items-center rounded-2xl px-4 text-[0.95rem] text-faint well">
-            {inVault ? "Take a note for the vault…" : "Take a note…"}
-          </span>
-        </button>
-      </div>
+      {/* A new note right away, like the planner's +: on phones by the thumb (it takes
+          less room than a bar, so more notes show), on wide screens in the corner as well
+          as "Take a note…" at the top. */}
+      <Button
+        size="icon-lg"
+        aria-label={inVault ? "Add a note to the vault" : "Add a note"}
+        onClick={() => setEditor({ mode: "create", placement: here })}
+        className={cn(
+          "ui-action z-30 rounded-full shadow-(--shadow-card) max-md:absolute max-md:right-0 max-md:bottom-1 md:fixed md:right-[calc(2*var(--gutter))] md:bottom-[calc(2*var(--gutter))]",
+          TONE_STYLES.orange.solid,
+        )}
+      >
+        <Plus className="!size-6" />
+      </Button>
       {editorSheet}
       <CategoriesSheet
         open={managing}

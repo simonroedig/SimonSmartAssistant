@@ -59,6 +59,21 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await filters(page).getByRole("button", { name: "All", exact: true }).click();
   await expect(card.getByText(name)).toBeVisible();
 
+  // Others: only the notes without a category – a new one written there, not this one.
+  await filters(page).getByRole("button", { name: "Others", exact: true }).click();
+  await expect(card).toHaveCount(0);
+  const loose = `Loose thought ${Date.now() % 100000}`;
+  // (The round + opens a new note on wide screens too, besides "Take a note…".)
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  const fresh = page.getByRole("dialog");
+  await fresh.getByLabel("Note", { exact: true }).fill(loose);
+  await fresh.getByRole("button", { name: "Done" }).click();
+  const looseCard = page.getByRole("button", { name: `Open note "${loose}"` });
+  await expect(looseCard).toBeVisible();
+  await filters(page).getByRole("button", { name: "All", exact: true }).click();
+  await expect(looseCard).toBeVisible();
+  await expect(card).toBeVisible();
+
   // In the editor the category can be taken off again (tap it once more).
   await card.click();
   const editor = page.getByRole("dialog");
@@ -98,11 +113,11 @@ test("notes: categories in an order of your own – drag them in the list behind
   const chipOrder = () =>
     filters(page)
       .getByRole("button")
-      .evaluateAll((els) => els.map((el) => el.textContent?.trim() ?? ""));
+      .evaluateAll((els) => els.map((el) => el.textContent?.trim() || el.getAttribute("aria-label") || ""));
   const order = async () => (await chipOrder()).filter((t) => t.endsWith(String(stamp)));
   await expect.poll(order).toEqual(names);
-  // Vault and All always come first.
-  expect((await chipOrder()).slice(0, 2)).toEqual(["Vault", "All"]);
+  // Vault, Others and All always come first.
+  expect((await chipOrder()).slice(0, 3)).toEqual(["Vault", "Others", "All"]);
 
   // The pencil is always there; in its list the second one moves up (here by keyboard).
   await filters(page).getByRole("button", { name: "Edit categories" }).click();
@@ -128,7 +143,7 @@ test("notes: categories in an order of your own – drag them in the list behind
   // It stays that way.
   await page.reload();
   await expect.poll(order).toEqual([names[1], names[0]]);
-  expect((await chipOrder()).slice(0, 2)).toEqual(["Vault", "All"]);
+  expect((await chipOrder()).slice(0, 3)).toEqual(["Vault", "Others", "All"]);
 
   for (const name of names) {
     await editCategory(page, name);
@@ -258,10 +273,12 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   }
   await filters(page).getByRole("button", { name: "All", exact: true }).click();
 
-  // The vault comes first, then All, then the categories.
-  const chips = await filters(page).getByRole("button").allTextContents();
-  expect(chips.slice(0, 2).map((c) => c.trim())).toEqual(["Vault", "All"]);
-  const categories = chips.slice(2, -2).map((c) => c.trim()); // (the last two are + and the pencil)
+  // The vault comes first, then Others (notes without a category), All, the categories.
+  const chips = await filters(page)
+    .getByRole("button")
+    .evaluateAll((els) => els.map((el) => el.textContent?.trim() || el.getAttribute("aria-label") || ""));
+  expect(chips.slice(0, 3)).toEqual(["Vault", "Others", "All"]);
+  const categories = chips.slice(3, -2); // (the last two are + and the pencil)
 
   const cdp = await context.newCDPSession(page);
   const swipe = async (dx: number) => {
@@ -309,6 +326,9 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   }
   // Back at All, the row is back at its start, as when the page opens.
   await expect.poll(scrolled).toEqual({ start: true, end: false });
+  // Then Others, then the vault.
+  await swipe(160);
+  await pressed("Others");
   await swipe(160);
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("PIN", { exact: true }).fill(PIN);
@@ -317,7 +337,7 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   await expect.poll(scrolled).toEqual({ start: true, end: false });
   // Swiping out of it locks it again.
   await swipe(-160);
-  await pressed("All");
+  await pressed("Others");
   await expect(row.getByRole("button", { name: "Vault", exact: true })).toHaveAttribute("aria-pressed", "false");
 
   // Clean up the categories (a moment after the swipe – the tap that ends one is swallowed).

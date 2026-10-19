@@ -73,7 +73,7 @@ test("note editor: Done once there is text; its text can be copied (without the 
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notes");
-  await page.getByRole("button", { name: "Take a note…" }).click();
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
   const dialog = page.getByRole("dialog");
   const done = dialog.getByRole("button", { name: "Done" });
   await expect(done).toBeDisabled();

@@ -8,8 +8,10 @@ import {
   ChevronRight,
   Copy,
   ListTodo,
+  MapPin,
   Maximize2,
   Minimize2,
+  Navigation,
   RotateCcw,
   Sun,
   Timer,
@@ -53,6 +55,7 @@ export type BlockDraft = {
   title: string;
   color: BlockColor;
   notes: string | null;
+  location: string | null;
   done: boolean;
   todo_id: string | null;
 };
@@ -129,6 +132,7 @@ function EditorForm({
     (existing?.color as BlockColor) ?? (state.mode === "create" ? (state.color ?? "violet") : "violet"),
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [location, setLocation] = useState(existing?.location ?? "");
   const [done, setDone] = useState(existing?.done ?? false);
   const [day, setDay] = useState<DayKey>(existing?.day ?? (state.mode === "create" ? state.day : ""));
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -195,6 +199,7 @@ function EditorForm({
     title: title.trim(),
     color,
     notes: notes.trim() || null,
+    location: location.trim() || null,
     done,
     todo_id: todoId,
   });
@@ -322,6 +327,33 @@ function EditorForm({
             {notesOpen ? "Show less" : "Show all details"}
           </button>
         )}
+        {/* Where: the place opens in Google Maps (the app on the phone, a tab elsewhere). */}
+        <div className="mt-2 flex items-center gap-2">
+          <label className="relative flex min-w-0 flex-1 items-center">
+            <MapPin className="pointer-events-none absolute left-4 size-4 text-faint" />
+            <Input
+              aria-label="Location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Location (optional)"
+              maxLength={200}
+              className="pl-10"
+            />
+          </label>
+          {location.trim() && (
+            <Button asChild variant="secondary" size="icon">
+              <a
+                href={mapsUrl(location)}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open in Google Maps"
+                title="Open in Google Maps"
+              >
+                <Navigation />
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -480,4 +512,9 @@ function EditorForm({
       </div>
     </form>
   );
+}
+
+/** A Google Maps search for a place (Android hands it to the Maps app). */
+export function mapsUrl(place: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.trim())}`;
 }

@@ -323,6 +323,7 @@ export function PlannerView({
               isToday={isToday}
               draft={planner.draftPreview}
               onCreateAt={(minute) => planner.createAt(minute)}
+              onCreateRange={(start, end) => planner.createRange(start, end)}
               onOpen={(block) => planner.setEditor({ mode: "edit", block })}
               onChangeTime={planner.changeTime}
               onToggleDone={planner.toggleDone}

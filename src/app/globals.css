@@ -34,7 +34,8 @@
   --sleep: rgb(15 23 42 / 0.035);
   --sleep-stripe: rgb(15 23 42 / 0.05);
   --now: #f43f5e;
-  --today: #0284c7;
+  /* Today (its label, number and tint) in the design's accent – the colour of Home too. */
+  --today: var(--accent);
   /* Frame of a focused field; sections set their own colour (FIELD_FOCUS). */
   --field-focus: color-mix(in oklab, var(--accent) 60%, transparent);
   --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -24px rgb(30 41 82 / 0.28);
@@ -87,7 +88,6 @@
   --sleep: rgb(0 0 0 / 0.24);
   --sleep-stripe: rgb(255 255 255 / 0.025);
   --now: #ff5c7a;
-  --today: #7dd3fc;
   --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.05) inset, 0 24px 60px -30px rgb(0 0 0 / 0.75);
   --shadow-pop: 0 40px 100px -20px rgb(0 0 0 / 0.8);
   --blob-1: #3b2f9e;

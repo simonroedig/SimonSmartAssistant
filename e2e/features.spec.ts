@@ -727,8 +727,12 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
   await expect(field).toBeFocused();
 
   await page.goto("/notes");
-  const take = page.getByRole("button", { name: "Take a note…" });
-  expect((await take.boundingBox())!.y).toBeGreaterThan(560);
+  // A round + by the thumb (bottom right) instead of a "Take a note" bar.
+  const take = page.getByRole("button", { name: "Add a note", exact: true });
+  const plus = (await take.boundingBox())!;
+  expect(plus.y).toBeGreaterThan(560);
+  expect(plus.x).toBeGreaterThan(260);
+  await expect(page.getByRole("button", { name: "Take a note…" })).toHaveCount(0);
   await take.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("heading", { name: "New note" })).toBeVisible();
@@ -761,4 +765,52 @@ test("planner: a block for the whole waking day, and long details shown in full 
   await dialog.getByRole("button", { name: "Add to plan" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('[role="button"]', { hasText: "Moving day" }).first()).toContainText("07:00 – 23:30");
+});
+
+test("planner: press and drag over empty space to draw a block; a place opens in Google Maps", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/planner?day=2030-01-23");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Clear this day" }).click();
+
+  // With the mouse: press at 13:00, drag down to 15:00, let go.
+  const surface = page.getByRole("button", { name: "Add a block" });
+  // Noon at the top of the timeline, so 13:00–15:00 is well inside it (near its
+  // edges the timeline scrolls along while drawing).
+  await page
+    .locator("div.overflow-y-auto", { has: surface })
+    .first()
+    .evaluate((el) => (el.scrollTop = 12 * 64));
+  const box = (await surface.boundingBox())!;
+  const at = (minute: number) => box.y + (minute / 60) * 64 + 3;
+  await page.mouse.move(box.x + 200, at(13 * 60));
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(box.x + 200, at(13 * 60) + i * 16);
+  // While drawing, the new block shows its time.
+  await expect(page.locator("[data-drawing]")).toHaveText("13:00 – 15:00");
+  await page.mouse.up();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "New block" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Start: 13:00" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "End: 15:00" })).toBeVisible();
+  await dialog.getByLabel("What").fill("Dentist");
+  await dialog.getByLabel("Location").fill("Zahnarztpraxis Marienplatz München");
+  const maps = dialog.getByRole("link", { name: "Open in Google Maps" });
+  await expect(maps).toHaveAttribute(
+    "href",
+    "https://www.google.com/maps/search/?api=1&query=Zahnarztpraxis%20Marienplatz%20M%C3%BCnchen",
+  );
+  await expect(maps).toHaveAttribute("target", "_blank");
+  await dialog.getByRole("button", { name: "Add to plan" }).click();
+  await expect(dialog).toBeHidden();
+  const block = page.locator('[role="button"]', { hasText: "Dentist" }).first();
+  await expect(block).toContainText("13:00 – 15:00");
+  await expect(block).toContainText("Zahnarztpraxis Marienplatz München");
+
+  // A plain click on empty space still adds a block right there (no drawing).
+  await page.mouse.click(box.x + 200, at(12 * 60 + 30));
+  await expect(dialog.getByRole("button", { name: "Start: 12:30" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toBeHidden();
 });

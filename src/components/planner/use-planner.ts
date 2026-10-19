@@ -51,6 +51,11 @@ export function usePlanner(day: DayKey) {
     });
   };
 
+  /** Opens the editor for a block drawn on the timeline (from start to end). */
+  const createRange = (start: number, end: number) => {
+    setEditor({ mode: "create", day, start, end });
+  };
+
   /** Opens the editor at the next free slot (after now for today, after waking up otherwise). */
   const createAtNextFree = (extra?: Partial<Extract<EditorState, { mode: "create" }>>) => {
     const isToday = day === toDayKey(new Date());
@@ -138,6 +143,7 @@ export function usePlanner(day: DayKey) {
     editor,
     setEditor,
     createAt,
+    createRange,
     createAtNextFree,
     changeTime,
     toggleDone,

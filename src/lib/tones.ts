@@ -58,15 +58,16 @@ export const TONE_STYLES: Record<
 export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-2 ring-slate-400/55 ring-inset dark:ring-white/40";
 /**
  * "Now" / "Today" (weather hours and days, the planner's week strip and
- * calendars): quietly marked with a light tint and its label or number in blue
- * – each design has its own --today blue. It never outshines the picked day.
+ * calendars): quietly marked with a light tint and its label or number in the
+ * design's accent (--today = --accent; in Aurora Sky it follows the sky). It never
+ * outshines the picked day.
  */
 export const TODAY_RING = "bg-today/10";
-/** Today while it is also the picked day: picked wins, the blue number stays. */
+/** Today while it is also the picked day: picked wins, the coloured number stays. */
 export const TODAY_RING_STRONG = SELECTED_DAY;
-/** The blue of today's label or number. */
+/** The colour of today's label or number. */
 export const TODAY_TEXT = "font-semibold text-today";
-/** The word "Today" in a title: the same blue, at the title's own weight. */
+/** The word "Today" in a title: the same colour, at the title's own weight. */
 /**
  * A toast's action (Undo) in the colour of the section it belongs to – the same
  * as the section's solid buttons. Put on the toast (`classNames.toast`); sonner's

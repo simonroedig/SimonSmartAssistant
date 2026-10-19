@@ -175,6 +175,7 @@ export type Database = {
           end_min: number;
           icon: string | null;
           id: string;
+          location: string | null;
           notes: string | null;
           start_min: number;
           title: string;
@@ -191,6 +192,7 @@ export type Database = {
           end_min: number;
           icon?: string | null;
           id?: string;
+          location?: string | null;
           notes?: string | null;
           start_min: number;
           title: string;
@@ -206,6 +208,7 @@ export type Database = {
           end_min?: number;
           icon?: string | null;
           id?: string;
+          location?: string | null;
           notes?: string | null;
           start_min?: number;
           title?: string;
