@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 });
 
-test("block editor: details under What, a suggestion can be taken back, your own length stays a chip, swipe moves the day", async ({
+test("block editor: details under What, colours before the times, a suggestion brings its details and place (and can be taken back), your own length stays a chip, swipe moves the day", async ({
   page,
 }) => {
   await page.goto("/planner?day=2031-03-04");
@@ -16,6 +16,9 @@ test("block editor: details under What, a suggestion can be taken back, your own
   await page.getByRole("button", { name: "Add a block" }).click({ position: { x: 200, y: 9 * 64 + 5 } });
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("What").fill(gym);
+  await dialog.getByLabel("Details").fill("Leg day – bring a towel");
+  await dialog.getByLabel("Location").fill("McFit Sendlinger Tor");
+  await dialog.getByRole("button", { name: "Green", exact: true }).click();
   await dialog.getByRole("button", { name: "Add to plan" }).click();
   await expect(dialog).toBeHidden();
   await page.waitForTimeout(300);
@@ -29,13 +32,32 @@ test("block editor: details under What, a suggestion can be taken back, your own
     (await dialog.getByText("Start", { exact: true }).boundingBox())!.y,
   );
 
-  // A suggestion fills in What – and Undo takes it back.
+  // The colours come before the times (those are mostly set by dragging on the timeline).
+  expect((await dialog.getByText("Colour", { exact: true }).boundingBox())!.y).toBeLessThan(
+    (await dialog.getByText("Start", { exact: true }).boundingBox())!.y,
+  );
+
+  // A suggestion fills in What, its colour, details and place – not the time – and Undo
+  // brings back what was there before (your own details included).
   const what = dialog.getByLabel("What");
+  const place = dialog.getByLabel("Location");
+  await details.fill("My own words");
+  const startLabel = await dialog.getByRole("button", { name: /^Start: / }).getAttribute("aria-label");
+  const endLabel = await dialog.getByRole("button", { name: /^End: / }).getAttribute("aria-label");
   await dialog.getByRole("button", { name: gym }).click();
   await expect(what).toHaveValue(gym);
+  await expect(details).toHaveValue("Leg day – bring a towel");
+  await expect(place).toHaveValue("McFit Sendlinger Tor");
+  await expect(dialog.getByRole("button", { name: "Green", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(dialog.getByRole("button", { name: /^Start: / })).toHaveAttribute("aria-label", startLabel!);
+  await expect(dialog.getByRole("button", { name: /^End: / })).toHaveAttribute("aria-label", endLabel!);
   await dialog.getByRole("button", { name: "Undo" }).click();
   await expect(what).toHaveValue("");
+  await expect(details).toHaveValue("My own words");
+  await expect(place).toHaveValue("");
+  await expect(dialog.getByRole("button", { name: "Violet", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(dialog.getByRole("button", { name: "Undo" })).toHaveCount(0);
+  await details.fill("");
 
   // An own length (not a quick pick) gets a chip: try 2h, then go back to it.
   await dialog.getByRole("button", { name: "End later" }).click();

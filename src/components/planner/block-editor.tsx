@@ -166,21 +166,40 @@ function EditorForm({
   const [notesOpen, setNotesOpen] = useState(false);
   const longNotes = notes.split("\n").reduce((lines, line) => lines + 1 + Math.floor(line.length / 48), 0) > 7;
 
-  // A suggestion fills in title, colour and length – and can be taken back.
-  const [beforeSuggestion, setBeforeSuggestion] = useState<{
-    title: string;
-    color: BlockColor;
-    end: number;
-    picked: string;
-  } | null>(null);
-  const undoSuggestion = () => {
-    if (!beforeSuggestion) return;
-    setTitle(beforeSuggestion.title);
-    setColor(beforeSuggestion.color);
-    setEnd(beforeSuggestion.end);
-    setBeforeSuggestion(null);
+  // A suggestion fills in everything but the time (that's already where you put it):
+  // title, colour, details and place – its details and place only where it has some,
+  // so your own stay otherwise. Undo brings back what was there before.
+  type Fields = { title: string; color: BlockColor; notes: string; location: string };
+  const [suggested, setSuggested] = useState<{ before: Fields; applied: Fields } | null>(null);
+  // Only while the suggestion is as it was put in (after your own edits, Undo would throw them away).
+  const canUndo =
+    suggested !== null &&
+    title === suggested.applied.title &&
+    notes === suggested.applied.notes &&
+    location === suggested.applied.location;
+  const pickSuggestion = (s: PlanBlock) => {
+    // Picking another one starts again from your own values, not from the last pick.
+    const before = canUndo ? suggested.before : { title, color, notes, location };
+    const applied: Fields = {
+      title: s.title,
+      color: (s.color as BlockColor) ?? "violet",
+      notes: s.notes?.trim() ? s.notes : before.notes,
+      location: s.location?.trim() ? s.location : before.location,
+    };
+    setTitle(applied.title);
+    setColor(applied.color);
+    setNotes(applied.notes);
+    setLocation(applied.location);
+    setSuggested({ before, applied });
   };
-  const canUndo = beforeSuggestion !== null && title === beforeSuggestion.picked;
+  const undoSuggestion = () => {
+    if (!suggested) return;
+    setTitle(suggested.before.title);
+    setColor(suggested.before.color);
+    setNotes(suggested.before.notes);
+    setLocation(suggested.before.location);
+    setSuggested(null);
+  };
 
   // Phones: a sideways swipe anywhere in the editor moves the block a day.
   const swipe = useSwipe((direction) => setDay(addDays(day, direction)));
@@ -291,13 +310,7 @@ function EditorForm({
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => {
-                    if (!canUndo) setBeforeSuggestion({ title, color, end, picked: s.title });
-                    else setBeforeSuggestion({ ...beforeSuggestion!, picked: s.title });
-                    setTitle(s.title);
-                    setColor((s.color as BlockColor) ?? "violet");
-                    if (!existing) setEnd(Math.min(MINUTES_PER_DAY, start + (s.end_min - s.start_min)));
-                  }}
+                  onClick={() => pickSuggestion(s)}
                   className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium whitespace-nowrap transition-colors well hover:bg-surface-hover"
                 >
                   <span className={cn("size-2.5 rounded-full", st.swatch)} />
@@ -353,6 +366,29 @@ function EditorForm({
               </a>
             </Button>
           )}
+        </div>
+      </div>
+
+      <div>
+        <Label>Colour</Label>
+        <div className="flex flex-wrap gap-2">
+          {BLOCK_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={BLOCK_STYLES[c].label}
+              title={BLOCK_STYLES[c].label}
+              aria-pressed={color === c}
+              onClick={() => setColor(c)}
+              className={cn(
+                "grid size-10 place-items-center rounded-full transition-transform active:scale-90",
+                BLOCK_STYLES[c].swatch,
+                color === c && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--surface-strong)]",
+              )}
+            >
+              {color === c && <Check className={cn("size-4", BLOCK_STYLES[c].onSwatch)} strokeWidth={3} />}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -430,29 +466,6 @@ function EditorForm({
             Full day
           </button>
         )}
-      </div>
-
-      <div>
-        <Label>Colour</Label>
-        <div className="flex flex-wrap gap-2">
-          {BLOCK_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={BLOCK_STYLES[c].label}
-              title={BLOCK_STYLES[c].label}
-              aria-pressed={color === c}
-              onClick={() => setColor(c)}
-              className={cn(
-                "grid size-10 place-items-center rounded-full transition-transform active:scale-90",
-                BLOCK_STYLES[c].swatch,
-                color === c && "ring-2 ring-fg ring-offset-2 ring-offset-[var(--surface-strong)]",
-              )}
-            >
-              {color === c && <Check className={cn("size-4", BLOCK_STYLES[c].onSwatch)} strokeWidth={3} />}
-            </button>
-          ))}
-        </div>
       </div>
 
       {existing && (

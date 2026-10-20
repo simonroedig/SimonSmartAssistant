@@ -152,6 +152,35 @@ test("planner on a touch screen: press and hold to move, swipe to scroll", async
   await expect(held).toHaveCount(0);
   await expect(block).toContainText("11:00 – 12:00");
 
+  // The edges too: a swipe that starts on one scrolls and leaves the time alone …
+  await settle();
+  const edge = (side: "start" | "end") => block.locator(`xpath=..`).locator(`[data-resize="${side}"]`);
+  let e = (await edge("end").boundingBox())!;
+  const beforeEdgeSwipe = await scroller.evaluate((el) => el.scrollTop);
+  await touch("touchStart", e.x + 40, e.y + e.height / 2);
+  for (let i = 1; i <= 6; i++) await touch("touchMove", e.x + 40, e.y + e.height / 2 - i * 25);
+  await touch("touchEnd", 0, 0);
+  await page.waitForTimeout(400);
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBeGreaterThan(beforeEdgeSwipe);
+  await expect(block).toContainText("11:00 – 12:00");
+  await settle();
+  await block.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await settle();
+  // … while press and hold, then drag, changes the end – or the start.
+  for (const [side, dy, text] of [
+    ["end", 8, "11:00 – 12:30"],
+    ["start", -8, "10:30 – 12:30"],
+  ] as const) {
+    e = (await edge(side).boundingBox())!;
+    const y0 = e.y + e.height / 2;
+    await touch("touchStart", e.x + 40, y0);
+    await expect(held).toHaveCount(1);
+    for (let i = 1; i <= 4; i++) await touch("touchMove", e.x + 40, y0 + i * dy);
+    await touch("touchEnd", 0, 0);
+    await expect(held).toHaveCount(0);
+    await expect(block).toContainText(text);
+  }
+
   // Empty space: a quick swipe scrolls; press and hold, then drag, draws a new block.
   await settle();
   // 13:00 at the top of the timeline, so the drawing stays clear of its scrolling edges.

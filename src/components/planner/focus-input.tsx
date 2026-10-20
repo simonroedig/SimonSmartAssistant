@@ -42,9 +42,8 @@ export function FocusInput({ day, week, className }: { day: DayKey; week: DayKey
         onChange={(e) => setDraft(e.target.value)}
         onFocus={() => setDraft((d) => d ?? stored)}
         onBlur={commit}
-        placeholder={
-          today && today !== day ? "What matters most that day?" : "What's the one thing that matters today?"
-        }
+        // Short, so it fits the phone's width.
+        placeholder={today && today !== day ? "What matters most that day?" : "What matters most today?"}
         maxLength={200}
         enterKeyHint="done"
         aria-label="Focus of the day"

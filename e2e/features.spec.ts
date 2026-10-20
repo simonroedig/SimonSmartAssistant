@@ -833,3 +833,29 @@ test("planner: press and drag over empty space to draw a block; a place opens in
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(dialog).toBeHidden();
 });
+
+test("week strip: a busy day shows a dot for every block, all inside the day", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/planner?day=2031-05-06");
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Clear this day" }).click();
+  const colours = ["Violet", "Green", "Orange", "Red", "Blue", "Yellow", "Pink"];
+  const dialog = page.getByRole("dialog");
+  for (const [i, colour] of colours.entries()) {
+    await page.getByRole("button", { name: "Add block" }).click();
+    await dialog.getByLabel("What").fill(`Busy ${i + 1}`);
+    await dialog.getByRole("button", { name: colour, exact: true }).click();
+    await dialog.getByRole("button", { name: "Add to plan" }).click();
+    await expect(dialog).toBeHidden();
+  }
+  const day = page.getByRole("button", { name: /^Tuesday, 6 May/ });
+  const dots = day.locator("[data-dot]");
+  await expect(dots).toHaveCount(colours.length);
+  const box = (await day.boundingBox())!;
+  for (const dot of await dots.all()) {
+    const d = (await dot.boundingBox())!;
+    expect(d.width).toBeGreaterThan(1.5);
+    expect(d.x).toBeGreaterThanOrEqual(box.x);
+    expect(d.x + d.width).toBeLessThanOrEqual(box.x + box.width);
+  }
+});

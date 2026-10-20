@@ -15,10 +15,16 @@ const GUTTER = 56; // px for hour labels
 const LABEL_HEIGHT = 26; // px a sleep label needs, incl. its padding
 const LONG_PRESS_MS = 280;
 
+type DragMode = "move" | "resize-start" | "resize-end" | "create";
+
+/** The little bar on a block's edge: shown on hover, and while that edge is dragged. */
+const handleBar = (bar: string, dragged: boolean) =>
+  cn("h-1 w-8 rounded-full opacity-0 transition-opacity group-hover:opacity-60", bar, dragged && "opacity-80");
+
 type DragState = {
   id: string;
-  /** Moving a block, changing its end, or drawing a new one on empty space. */
-  mode: "move" | "resize" | "create";
+  /** Moving a block, changing its start or end, or drawing a new one on empty space. */
+  mode: DragMode;
   originStart: number;
   originEnd: number;
   pointerStartY: number; // content coordinates
@@ -86,7 +92,7 @@ export function DayTimeline({
   const pending = useRef<{
     /** The block pressed, or null for empty space (drawing a new one). */
     block: PlanBlock | null;
-    mode: "move" | "resize" | "create";
+    mode: DragMode;
     /** Empty space: the slot pressed. */
     minute?: number;
     pointerId: number;
@@ -144,6 +150,8 @@ export function DayTimeline({
       const length = state.originEnd - state.originStart;
       start = clamp(Math.round((state.originStart + delta) / snap) * snap, 0, MINUTES_PER_DAY - length);
       end = start + length;
+    } else if (state.mode === "resize-start") {
+      start = clamp(Math.round((state.originStart + delta) / snap) * snap, 0, state.originEnd - snap);
     } else {
       end = clamp(Math.round((state.originEnd + delta) / snap) * snap, state.originStart + snap, MINUTES_PER_DAY);
     }
@@ -215,7 +223,11 @@ export function DayTimeline({
     return () => el.removeEventListener("touchmove", onTouchMove);
   }, []);
 
-  const onBlockPointerDown = (e: React.PointerEvent, block: PlanBlock, mode: "move" | "resize") => {
+  /**
+   * A block: a mouse drags right away; a finger holds briefly first (a quick swipe
+   * over a block – or its edges – still scrolls the day).
+   */
+  const onBlockPointerDown = (e: React.PointerEvent, block: PlanBlock, mode: Exclude<DragMode, "create">) => {
     if (e.button !== 0 || overview) return;
     e.stopPropagation();
     suppressClickUntil.current = 0;
@@ -230,11 +242,6 @@ export function DayTimeline({
     } as NonNullable<typeof pending.current>;
     pending.current = p;
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-
-    if (mode === "resize") {
-      beginDrag(p);
-      return;
-    }
     if (p.fingerLike) {
       p.timer = window.setTimeout(() => {
         if (pending.current === p) beginDrag(p);
@@ -563,21 +570,26 @@ export function DayTimeline({
                   </button>
                 )}
               </div>
-              {/* Resize handle */}
+              {/* Resize handles: the end, and the start where the block is tall enough to keep
+                  room for grabbing it in the middle (the top one leaves the done circle free). */}
+              {!overview && h >= 40 && (
+                <div
+                  aria-hidden="true"
+                  data-resize="start"
+                  className="absolute -top-1 right-10 left-0 flex h-4 cursor-ns-resize items-center justify-center"
+                  onPointerDown={(e) => onBlockPointerDown(e, block, "resize-start")}
+                >
+                  <span className={handleBar(style.bar, active?.mode === "resize-start")} />
+                </div>
+              )}
               {!overview && (
                 <div
                   aria-hidden="true"
-                  className="absolute inset-x-0 -bottom-1 flex h-4 cursor-ns-resize touch-none items-center justify-center"
-                  onPointerDown={(e) => onBlockPointerDown(e, block, "resize")}
+                  data-resize="end"
+                  className="absolute right-0 -bottom-1 left-0 flex h-4 cursor-ns-resize items-center justify-center"
+                  onPointerDown={(e) => onBlockPointerDown(e, block, "resize-end")}
                 >
-                  <span
-                    className={cn(
-                      "h-1 w-8 rounded-full opacity-0 transition-opacity",
-                      style.bar,
-                      "group-hover:opacity-60",
-                      active && "opacity-80",
-                    )}
-                  />
+                  <span className={handleBar(style.bar, active?.mode === "resize-end")} />
                 </div>
               )}
               {active && (

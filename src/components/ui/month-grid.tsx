@@ -15,6 +15,7 @@ import {
 } from "@/lib/date";
 import { SELECTED_DAY, type Tone, TODAY_RING, TODAY_RING_STRONG, TODAY_TEXT, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
+import { ColorDots } from "./color-dots";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -161,18 +162,11 @@ export function MonthGrid({
               <span className={cn(!isToday && !(isSelected && !quietSelection) && extra?.numberClassName)}>
                 {date.getDate()}
               </span>
-              <span className="flex h-1 items-center gap-0.5">
-                {extra?.marker}
-                {colors.slice(0, extra?.marker ? 2 : 3).map((c, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "size-1 rounded-full",
-                      isSelected && !isToday && !quietSelection ? "bg-current opacity-70" : c,
-                    )}
-                  />
-                ))}
-              </span>
+              <ColorDots
+                size={4}
+                leading={extra?.marker}
+                colors={colors.map((c) => (isSelected && !isToday && !quietSelection ? "bg-current opacity-70" : c))}
+              />
             </button>
           );
         })}
