@@ -7,7 +7,7 @@
  * cookie, so the server already renders the bar in the right order.
  */
 
-export type SectionId = "planner" | "shopping" | "backlog" | "notes" | "weather";
+export type SectionId = "planner" | "shopping" | "backlog" | "notes" | "weather" | "media";
 export type PhoneHome = "middle" | "left";
 /** Floating cards with a margin, or attached to the screen edges. */
 export type NavStyle = "floating" | "attached";
@@ -24,14 +24,14 @@ export type NavigationPreferences = {
   railStyle: NavStyle;
 };
 
-export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather"];
-/** Weather is reached from the home screen on phones. */
+export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather", "media"];
+/** Weather and Media are reached from the home screen on phones. */
 export const PHONE_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes"];
 
 export const DEFAULT_NAVIGATION: NavigationPreferences = {
   phone: ["shopping", "backlog", "planner", "notes"],
   phoneHome: "middle",
-  rail: ["planner", "shopping", "backlog", "notes", "weather"],
+  rail: ["planner", "shopping", "backlog", "notes", "weather", "media"],
   phoneStyle: "floating",
   railStyle: "floating",
 };
@@ -50,11 +50,20 @@ export function parseNavigation(value: unknown): NavigationPreferences {
   return {
     phone: orderOf(nav.phone, PHONE_SECTIONS) ?? DEFAULT_NAVIGATION.phone,
     phoneHome: nav.phoneHome === "left" ? "left" : DEFAULT_NAVIGATION.phoneHome,
-    rail: orderOf(nav.rail, RAIL_SECTIONS) ?? DEFAULT_NAVIGATION.rail,
+    rail: orderOf(nav.rail, RAIL_SECTIONS) ?? withNewSections(nav.rail) ?? DEFAULT_NAVIGATION.rail,
     // (Earlier one shared `style` for both.)
     phoneStyle: navStyle(nav.phoneStyle ?? nav.style),
     railStyle: navStyle(nav.railStyle ?? nav.style),
   };
+}
+
+/** A rail order saved before Media existed keeps its order, with Media added at the end. */
+function withNewSections(value: unknown): SectionId[] | null {
+  const before = orderOf(
+    value,
+    RAIL_SECTIONS.filter((s) => s !== "media"),
+  );
+  return before ? [...before, "media"] : null;
 }
 
 function navStyle(value: unknown): NavStyle {

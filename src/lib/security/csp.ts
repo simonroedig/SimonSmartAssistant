@@ -5,6 +5,11 @@ export const WEATHER_HOSTS = [
   "https://air-quality-api.open-meteo.com",
 ];
 
+/** My Media's lookups: TVmaze (series, episodes) and Wikipedia (films) – free, no keys. */
+export const MEDIA_HOSTS = ["https://api.tvmaze.com", "https://en.wikipedia.org"];
+/** …and where their posters come from. */
+export const MEDIA_IMAGE_HOSTS = ["https://static.tvmaze.com", "https://upload.wikimedia.org"];
+
 function supabaseOrigins(supabaseUrl: string): string[] {
   if (!supabaseUrl) return [];
   try {
@@ -19,7 +24,7 @@ function supabaseOrigins(supabaseUrl: string): string[] {
 /**
  * Strict, nonce-based Content Security Policy. Scripts only run when they carry
  * the per-request nonce (Next.js adds it to its own scripts automatically), and
- * the page may only connect to Supabase and the weather API.
+ * the page may only connect to Supabase, the weather API and the media lookups.
  */
 export function buildContentSecurityPolicy({
   nonce,
@@ -33,7 +38,7 @@ export function buildContentSecurityPolicy({
   /** Only ask browsers to upgrade requests when the page itself is served over HTTPS. */
   https?: boolean;
 }): string {
-  const connect = ["'self'", ...supabaseOrigins(supabaseUrl), ...WEATHER_HOSTS];
+  const connect = ["'self'", ...supabaseOrigins(supabaseUrl), ...WEATHER_HOSTS, ...MEDIA_HOSTS];
   if (isDev) connect.push("ws:", "http://127.0.0.1:*", "http://localhost:*");
 
   const directives: Record<string, string[]> = {
@@ -41,7 +46,7 @@ export function buildContentSecurityPolicy({
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(isDev ? ["'unsafe-eval'"] : [])],
     // Inline style attributes are needed by animation libraries and React.
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "blob:", "data:"],
+    "img-src": ["'self'", "blob:", "data:", ...MEDIA_IMAGE_HOSTS],
     "font-src": ["'self'"],
     "connect-src": connect,
     "manifest-src": ["'self'"],

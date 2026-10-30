@@ -23,6 +23,8 @@ export type DevicePrefs = {
   screensaverDelay: number;
   /** Android launcher: a button next to the apps search for the apps used last. */
   recentApps: boolean;
+  /** TV: the remote's arrow keys move between buttons, with a clear focus frame. */
+  remote: boolean;
 };
 
 export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
@@ -34,6 +36,7 @@ export const DEFAULT_DEVICE_PREFS: DevicePrefs = {
   screensaver: "night",
   screensaverDelay: 2,
   recentApps: false,
+  remote: false,
 };
 
 export const DEVICE_STORAGE_KEY = "ssa:device";
@@ -65,6 +68,13 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
       prefs.kiosk = on;
       prefs.keyboard = on;
       if (on && typeof prefs.scale !== "number") prefs.scale = 1.1;
+      localStorage.setItem(deviceKey, JSON.stringify(prefs));
+    }
+
+    // The TV: ?tv=1 turns on remote control (?tv=0 off) for this browser.
+    const tvParam = params.get("tv");
+    if (tvParam === "1" || tvParam === "0") {
+      prefs.remote = tvParam === "1";
       localStorage.setItem(deviceKey, JSON.stringify(prefs));
     }
 
@@ -106,6 +116,7 @@ export function applyDeviceState(deviceKey: string, sunKey: string): void {
     root.classList.toggle("dark", dark);
     root.dataset.design = design;
     root.classList.toggle("kiosk", prefs.kiosk === true);
+    root.classList.toggle("tv", prefs.remote === true);
     root.dataset.phase = phase;
     // Aurora Sky: the sky as it was last drawn, until the page computes it anew.
     if (design === "sky") {

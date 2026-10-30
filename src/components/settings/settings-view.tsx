@@ -182,6 +182,9 @@ export function SettingsView() {
                 label="Wall display mode"
               />
             </Row>
+            <Row label="TV remote" hint="The arrow keys move between buttons (for a TV browser); also ?tv=1">
+              <Switch checked={device.remote} onCheckedChange={(remote) => setDevice({ remote })} label="TV remote" />
+            </Row>
             <Row label="On-screen keyboard" hint="Built-in keyboard (QWERTY with ä, ö, ü, ß) for touch screens">
               <Switch
                 checked={device.keyboard}

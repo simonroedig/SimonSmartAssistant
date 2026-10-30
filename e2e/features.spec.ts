@@ -345,14 +345,13 @@ test("backlog: due dates from the quick picks and the built-in calendar", async 
   const row = page.locator("li", { hasText: title });
   await expect(row.getByText(/^(Next week|Tomorrow)$/)).toBeVisible();
 
-  // Pick the 15th of next month in our own calendar (no native date picker needed).
+  // Pick the 15th of the following month in our own calendar (no native date picker
+  // needed). It opens at the due date's month – late in a month, "next week" is already
+  // in the next one – so the month is read from the calendar itself.
   await page.getByRole("button", { name: title, exact: true }).click();
   await dialog.getByRole("button", { name: "Pick date" }).click();
   await dialog.getByRole("button", { name: "Next month" }).click();
-  const next = new Date();
-  next.setDate(1);
-  next.setMonth(next.getMonth() + 1);
-  const month = next.toLocaleString("en-GB", { month: "long" });
+  const month = (await dialog.getByRole("heading", { level: 3 }).first().innerText()).split(" ")[0];
   await dialog.getByRole("button", { name: new RegExp(`, 15 ${month}$`) }).click();
   await expect(dialog.getByRole("button", { name: /^15 / })).toBeVisible();
   await dialog.getByRole("button", { name: "Save" }).click();

@@ -151,3 +151,128 @@ export function watchConsole(page: Page) {
   page.on("pageerror", (err) => problems.push(err.message));
   return problems;
 }
+
+/** A poster: a coloured SVG with the title (the real ones come from TVmaze/Wikipedia). */
+function posterSvg(title: string, hue: number) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="210" height="295" viewBox="0 0 210 295">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue} 70% 55%)"/><stop offset="1" stop-color="hsl(${hue + 40} 60% 30%)"/></linearGradient></defs>
+<rect width="210" height="295" fill="url(#g)"/><text x="105" y="160" font-family="sans-serif" font-size="22" font-weight="700" fill="white" text-anchor="middle">${title}</text></svg>`;
+}
+
+const SHOWS = [
+  {
+    id: 107,
+    name: "Bob's Burgers",
+    premiered: "2011-01-09",
+    hue: 20,
+    summary: "<p>Bob runs Bob's Burgers with his wife and three kids.</p>",
+  },
+  {
+    id: 112,
+    name: "South Park",
+    premiered: "1997-08-13",
+    hue: 200,
+    summary: "<p>Four boys in a quiet mountain town.</p>",
+  },
+];
+
+/** TVmaze and Wikipedia, answered locally: two shows with three seasons each, two films. */
+export async function mockMedia(page: Page) {
+  await page.route("https://static.tvmaze.com/**", (route) => {
+    const show = SHOWS.find((s) => route.request().url().includes(`/${s.id}.`)) ?? SHOWS[0];
+    return route.fulfill({ contentType: "image/svg+xml", body: posterSvg(show.name, show.hue) });
+  });
+  await page.route("https://upload.wikimedia.org/**", (route) => {
+    const film = route.request().url().includes("Substance") ? "The Substance" : "American Beauty";
+    return route.fulfill({ contentType: "image/svg+xml", body: posterSvg(film, film === "The Substance" ? 330 : 0) });
+  });
+  await page.route("https://api.tvmaze.com/**", (route) => {
+    const url = new URL(route.request().url());
+    const episodes = url.pathname.match(/^\/shows\/(\d+)\/episodes$/);
+    if (episodes) {
+      const id = Number(episodes[1]);
+      const list = [];
+      for (let season = 1; season <= 3; season++) {
+        for (let number = 1; number <= (season === 3 ? 4 : 13); number++) {
+          list.push({
+            id: id * 1000 + season * 100 + number,
+            season,
+            number,
+            name: `${id === 107 ? "Burger" : "Town"} story ${season}.${number}`,
+            airdate: `${2010 + season}-0${Math.min(9, Math.ceil(number / 2))}-1${number % 10}`,
+            runtime: 22,
+            summary: `<p>Season ${season}, episode ${number}: something &amp; more happens.</p>`,
+          });
+        }
+      }
+      // One special without a number (left out), and one episode still to come.
+      list.push({
+        id: id * 1000 + 999,
+        season: 1,
+        number: null,
+        name: "Special",
+        airdate: "2012-12-24",
+        runtime: 22,
+        summary: null,
+      });
+      list.push({
+        id: id * 1000 + 399,
+        season: 3,
+        number: 5,
+        name: "Not out yet",
+        airdate: "2099-01-01",
+        runtime: 22,
+        summary: null,
+      });
+      return route.fulfill({ json: list });
+    }
+    const q = (url.searchParams.get("q") ?? "").toLowerCase();
+    const hits = SHOWS.filter((s) =>
+      s.name.toLowerCase().replace(/'/g, "").includes(q.replace(/'/g, "").split(" ")[0]),
+    );
+    return route.fulfill({
+      json: hits.map((s) => ({
+        score: 1,
+        show: {
+          id: s.id,
+          name: s.name,
+          premiered: s.premiered,
+          summary: s.summary,
+          image: { medium: `https://static.tvmaze.com/uploads/images/medium_portrait/${s.id}.jpg` },
+        },
+      })),
+    });
+  });
+  await page.route("https://en.wikipedia.org/**", (route) => {
+    const url = new URL(route.request().url());
+    const films: Record<string, { description: string; extract: string; image: string }> = {
+      "The Substance": {
+        description: "2024 film by Coralie Fargeat",
+        extract: "The Substance is a 2024 body horror film.",
+        image: "https://upload.wikimedia.org/wikipedia/en/Substance.png",
+      },
+      "American Beauty (1999 film)": {
+        description: "1999 film by Sam Mendes",
+        extract: "American Beauty is a 1999 American black comedy-drama film.",
+        image: "https://upload.wikimedia.org/wikipedia/en/Beauty.png",
+      },
+    };
+    if (url.pathname === "/w/api.php") {
+      const q = (url.searchParams.get("srsearch") ?? "").toLowerCase();
+      const titles = Object.keys(films).filter((t) => q.includes(t.toLowerCase().split(" (")[0]));
+      return route.fulfill({ json: { query: { search: titles.map((title) => ({ title })) } } });
+    }
+    const title = decodeURIComponent(url.pathname.split("/").pop() ?? "").replace(/_/g, " ");
+    const film = films[title];
+    if (!film) return route.fulfill({ status: 404, json: {} });
+    return route.fulfill({
+      json: {
+        type: "standard",
+        title,
+        description: film.description,
+        extract: film.extract,
+        thumbnail: { source: film.image },
+      },
+    });
+  });
+}

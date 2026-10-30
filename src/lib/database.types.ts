@@ -84,6 +84,58 @@ export type Database = {
         };
         Relationships: [];
       };
+      media_titles: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: string;
+          last_watched_at: string | null;
+          poster_url: string | null;
+          sources: NonNullable<Json>;
+          summary: string | null;
+          title: string;
+          tvmaze_id: number | null;
+          updated_at: string;
+          user_id: string;
+          watched: boolean;
+          watched_episodes: string[];
+          year: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind: string;
+          last_watched_at?: string | null;
+          poster_url?: string | null;
+          sources?: NonNullable<Json>;
+          summary?: string | null;
+          title: string;
+          tvmaze_id?: number | null;
+          updated_at?: string;
+          user_id?: string;
+          watched?: boolean;
+          watched_episodes?: string[];
+          year?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          last_watched_at?: string | null;
+          poster_url?: string | null;
+          sources?: NonNullable<Json>;
+          summary?: string | null;
+          title?: string;
+          tvmaze_id?: number | null;
+          updated_at?: string;
+          user_id?: string;
+          watched?: boolean;
+          watched_episodes?: string[];
+          year?: number | null;
+        };
+        Relationships: [];
+      };
       note_categories: {
         Row: {
           color: string;

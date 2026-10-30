@@ -65,6 +65,9 @@ wall a moment later.
 - **Notes** – Keep-style notes with coloured categories, pinning, a trash, and a **vault** whose notes
   only open with a PIN.
 - **Weather** – the current conditions, hourly curve, 7-day forecast, UV, air quality and pollen.
+- **Media** – the series and films I watch online, with my own links to them: the next episode is one
+  tap away (a link to one episode is enough), seasons with episode summaries, ticking off what I've
+  seen, plus live TV channels and handy links. A TV browser can be driven with the remote (`?tv=1`).
 - **Six designs** (Aurora, Aurora Sky, Studio, Tactile, Block, Doodle), each in light and dark, chosen per device.
 
 <table>
@@ -97,6 +100,7 @@ wall a moment later.
 | Wall display | Raspberry Pi 5, Chromium in kiosk mode, set up by one script |
 | Hosting | Vercel, with a daily keep-alive cron |
 | Weather | Open-Meteo (forecast, geocoding, air quality) |
+| Media info | TVmaze (series, episodes) and Wikipedia (films) – free, no keys |
 | Tests | Vitest (unit and database security), Playwright (end-to-end), all in CI |
 
 **A few things I cared about:**

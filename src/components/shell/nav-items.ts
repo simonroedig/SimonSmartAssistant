@@ -3,6 +3,7 @@ import {
   CloudSun,
   House,
   ListTodo,
+  Popcorn,
   Settings2,
   ShoppingBasket,
   StickyNote,
@@ -19,6 +20,7 @@ export const SHOPPING_ITEM: NavItem = { href: "/shopping", label: "Shopping", ic
 export const BACKLOG_ITEM: NavItem = { href: "/todos", label: "Backlog", icon: ListTodo, tone: "yellow" };
 export const NOTES_ITEM: NavItem = { href: "/notes", label: "Notes", icon: StickyNote, tone: "orange" };
 export const WEATHER_ITEM: NavItem = { href: "/weather", label: "Weather", icon: CloudSun, tone: "sky" };
+export const MEDIA_ITEM: NavItem = { href: "/media", label: "Media", icon: Popcorn, tone: "fuchsia" };
 export const SETTINGS_ITEM: NavItem = { href: "/settings", label: "Settings", icon: Settings2, tone: "slate" };
 
 /** The sections that can be ordered in Settings (Home and Settings keep their place). */
@@ -28,6 +30,7 @@ export const SECTION_ITEMS: Record<SectionId, NavItem> = {
   backlog: BACKLOG_ITEM,
   notes: NOTES_ITEM,
   weather: WEATHER_ITEM,
+  media: MEDIA_ITEM,
 };
 
 export function navItem(id: SectionId | "home"): NavItem {

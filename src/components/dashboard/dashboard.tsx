@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2 } from "lucide-react";
+import { Popcorn, Settings2 } from "lucide-react";
 import { NotesBoard } from "@/components/notes/notes-board";
 import { TodayCard } from "@/components/planner/today-card";
 import { AppLink } from "@/components/shell/app-link";
@@ -28,6 +28,14 @@ export function Dashboard() {
         {/* Aurora Sky looks at this to put the sky around the clock. */}
         <div data-sky-window className="flex items-start gap-3 px-2 pt-2 md:pt-1">
           <ClockHero className="flex-1" compact={!wide} />
+          {/* Phones: My Media sits here, beside Settings (the tab bar has no room for it). */}
+          <AppLink
+            href="/media"
+            aria-label="Media"
+            className="-mt-1 -mr-1.5 grid size-12 shrink-0 place-items-center rounded-2xl text-fuchsia-600 transition-colors hover:bg-surface-hover active:bg-surface-hover md:hidden dark:text-fuchsia-300"
+          >
+            <Popcorn className="size-[1.6rem]" strokeWidth={1.9} />
+          </AppLink>
           <AppLink
             href="/settings"
             aria-label="Settings"

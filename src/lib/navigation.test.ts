@@ -4,7 +4,15 @@ import { DEFAULT_NAVIGATION, navigationFromCookie, parseNavigation, phoneTabs, r
 describe("navigation order", () => {
   it("puts Home in the middle of the tab bar by default", () => {
     expect(phoneTabs(DEFAULT_NAVIGATION)).toEqual(["shopping", "backlog", "home", "planner", "notes"]);
-    expect(railItems(DEFAULT_NAVIGATION)).toEqual(["home", "planner", "shopping", "backlog", "notes", "weather"]);
+    expect(railItems(DEFAULT_NAVIGATION)).toEqual([
+      "home",
+      "planner",
+      "shopping",
+      "backlog",
+      "notes",
+      "weather",
+      "media",
+    ]);
   });
 
   it("or on the left", () => {
@@ -36,6 +44,17 @@ describe("navigation order", () => {
       phone: ["notes", "planner", "backlog", "shopping"],
       phoneHome: "left",
     });
+  });
+
+  it("adds Media to a rail order saved before it existed (under Weather by default)", () => {
+    expect(parseNavigation({ rail: ["notes", "planner", "shopping", "backlog", "weather"] }).rail).toEqual([
+      "notes",
+      "planner",
+      "shopping",
+      "backlog",
+      "weather",
+      "media",
+    ]);
   });
 
   it("floats the menus unless attached – phone and rail each on their own", () => {

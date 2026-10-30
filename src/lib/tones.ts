@@ -2,7 +2,7 @@
  * One colour per section, used for the navigation, card headers and accents.
  * Home and the generic UI use the violet accent.
  */
-export type Tone = "accent" | "rose" | "emerald" | "amber" | "yellow" | "orange" | "sky" | "slate";
+export type Tone = "accent" | "rose" | "emerald" | "amber" | "yellow" | "orange" | "sky" | "fuchsia" | "slate";
 
 export const TONE_STYLES: Record<
   Tone,
@@ -47,6 +47,12 @@ export const TONE_STYLES: Record<
     soft: "bg-sky-500/14",
     solid: "bg-sky-500 text-white dark:text-sky-950",
   },
+  // My Media.
+  fuchsia: {
+    text: "text-fuchsia-600 dark:text-fuchsia-300",
+    soft: "bg-fuchsia-500/12 dark:bg-fuchsia-400/14",
+    solid: "bg-fuchsia-500 text-white dark:bg-fuchsia-300 dark:text-fuchsia-950",
+  },
   slate: {
     text: "text-slate-500 dark:text-slate-300",
     soft: "bg-slate-500/12 dark:bg-slate-400/14",
@@ -81,6 +87,8 @@ export const TOAST_TONE = {
     "[--toast-action:var(--color-yellow-400)] [--toast-action-fg:var(--color-yellow-950)] dark:[--toast-action:var(--color-yellow-300)]",
   orange:
     "[--toast-action:var(--color-orange-400)] [--toast-action-fg:var(--color-orange-950)] dark:[--toast-action:var(--color-orange-300)]",
+  fuchsia:
+    "[--toast-action:var(--color-fuchsia-500)] [--toast-action-fg:white] dark:[--toast-action:var(--color-fuchsia-300)] dark:[--toast-action-fg:var(--color-fuchsia-950)]",
 } as const;
 
 export const TODAY_COLOR = "text-today";
@@ -96,6 +104,7 @@ export const FIELD_FOCUS = {
     "[--field-focus:color-mix(in_oklab,var(--color-yellow-400)_80%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-yellow-300)_75%,transparent)]",
   rose: "[--field-focus:color-mix(in_oklab,var(--color-rose-500)_55%,transparent)]",
   orange: "[--field-focus:color-mix(in_oklab,var(--color-orange-400)_65%,transparent)]",
+  fuchsia: "[--field-focus:color-mix(in_oklab,var(--color-fuchsia-500)_55%,transparent)]",
   /** Searches: a quiet grey. */
   quiet: "[--field-focus:var(--text-faint)]",
 } as const;

@@ -212,6 +212,13 @@
     outline-offset: 2px;
   }
 
+  /* TV remote: the focus has to be seen from the sofa. */
+  .tv :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 7px color-mix(in oklab, var(--accent) 28%, transparent);
+  }
+
   button,
   [role="button"] {
     cursor: pointer;

@@ -30,6 +30,7 @@ const TABLES = [
   "birthdays",
   "blocked_apps",
   "note_categories",
+  "media_titles",
 ] as const;
 
 /** The PIN the tests leave the vault of the e2e user (dev@example.com) with. */
@@ -533,5 +534,44 @@ describe("database security", () => {
       const { error: invalid } = await alice.client.from("birthdays").insert(bad);
       expect(invalid?.code, bad.name).toBe("23514");
     }
+  });
+  it("keeps My Media private and only stores web links", async () => {
+    const source = { label: "Stream", url: "https://example.com/show/season/{season}/episode/{episode}" };
+    const { data: show, error } = await alice.client
+      .from("media_titles")
+      .insert({ kind: "series", title: "Bob's Burgers", tvmaze_id: 107, sources: [source], watched_episodes: ["1:1"] })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(show!.user_id).toBe(alice.userId);
+
+    // Nobody else sees, changes or spoofs it.
+    const { data: seenByBob } = await bob.client.from("media_titles").select("*").eq("id", show!.id);
+    expect(seenByBob).toEqual([]);
+    const { data: changedByBob } = await bob.client
+      .from("media_titles")
+      .update({ title: "Hijacked" })
+      .eq("id", show!.id)
+      .select();
+    expect(changedByBob).toEqual([]);
+    const { error: spoofError } = await bob.client
+      .from("media_titles")
+      .insert({ kind: "movie", title: "Spoof", user_id: alice.userId });
+    expect(spoofError?.code).toBe("42501");
+
+    // Links must be web links (nothing a click could run), and the kind must be known.
+    const invalidRows: Database["public"]["Tables"]["media_titles"]["Insert"][] = [
+      { kind: "series", title: "x", sources: [{ label: "x", url: "javascript:alert(1)" }] },
+      { kind: "series", title: "x", sources: [{ label: "no link" }] },
+      { kind: "movie", title: "x", poster_url: "http://insecure.example/poster.jpg" },
+      { kind: "podcast", title: "x" },
+    ];
+    for (const bad of invalidRows) {
+      const { error: invalid } = await alice.client.from("media_titles").insert(bad);
+      expect(invalid?.code, JSON.stringify(bad)).toBe("23514");
+    }
+
+    const { error: deleteError } = await alice.client.from("media_titles").delete().eq("id", show!.id);
+    expect(deleteError).toBeNull();
   });
 });

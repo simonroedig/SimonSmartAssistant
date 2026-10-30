@@ -9,6 +9,9 @@ describe("content security policy", () => {
     expect(csp).toContain(
       "connect-src 'self' https://xyz.supabase.co wss://xyz.supabase.co https://api.open-meteo.com",
     );
+    // My Media looks titles up (no keys) and shows their posters – nothing else.
+    expect(csp).toMatch(/connect-src [^;]* https:\/\/api\.tvmaze\.com https:\/\/en\.wikipedia\.org(;|$)/);
+    expect(csp).toContain("img-src 'self' blob: data: https://static.tvmaze.com https://upload.wikimedia.org;");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toMatch(/upgrade-insecure-requests$/);
   });
