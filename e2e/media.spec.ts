@@ -69,12 +69,32 @@ test("media: a pasted list becomes series, films, live TV and links – each fou
   // Series: the real names (from TVmaze), their posters and the first episode to watch.
   await tab(page, /Series/).click();
   const bob = page.locator("article", { hasText: "Bob's Burgers" });
-  await expect(bob).toContainText("0 of 30 seen");
+  await expect(bob).toContainText("3 seasons · 30 episodes");
   await expect(bob.getByRole("link", { name: "S1 E1" })).toHaveAttribute(
     "href",
     "https://stream.example/watchseries/bobs-burgers-online-free/season/1/episode/1",
   );
   await expect(page.locator("article", { hasText: "South Park" })).toBeVisible();
+
+  // A sideways swipe moves to the next tab (and back), like the notes' categories.
+  const swipe = (from: number, to: number) =>
+    page.getByRole("heading", { name: "Media" }).evaluate(
+      (el, [a, b]) => {
+        const at = (type: string, x: number) =>
+          el.dispatchEvent(
+            new PointerEvent(type, { bubbles: true, pointerId: 9, pointerType: "touch", clientX: x, clientY: 500 }),
+          );
+        at("pointerdown", a);
+        at("pointerup", b);
+      },
+      [from, to],
+    );
+  await swipe(300, 120);
+  await expect(tab(page, /Movies/)).toHaveAttribute("aria-selected", "true");
+  await swipe(120, 300);
+  await expect(tab(page, /Series/)).toHaveAttribute("aria-selected", "true");
+  // Picking a tab never animates its frame (that flashed light on the one just left).
+  expect(await tab(page, /Movies/).evaluate((el) => getComputedStyle(el).transitionProperty)).not.toMatch(/border|all/);
 
   // Films (from Wikipedia), live TV and links in their own tabs.
   await tab(page, /Movies/).click();
@@ -113,12 +133,12 @@ test("media: watch the next episode, tick it off, catch up on earlier ones – w
   await card.getByRole("link", { name: "S1 E1" }).click();
   await (await popup).close();
   await page.getByRole("button", { name: "Seen it" }).click();
-  await expect(card).toContainText("1 of 30 seen");
+  await expect(card).toContainText("Season 1 of 3 · 1 of 13 seen");
   await expect(card.getByRole("link", { name: "S1 E2" })).toHaveAttribute("href", /season\/1\/episode\/2$/);
 
   // ✓ on the card marks the next one.
   await card.getByRole("button", { name: "Mark S1 E2 as seen" }).click();
-  await expect(card).toContainText("2 of 30 seen");
+  await expect(card).toContainText("Season 1 of 3 · 2 of 13 seen");
 
   // The episode list: summaries open on a tap; ticking a later one offers the ones before.
   await page.getByRole("button", { name: "Open Bob's Burgers" }).click();
@@ -134,7 +154,7 @@ test("media: watch the next episode, tick it off, catch up on earlier ones – w
   await dialog.getByRole("button", { name: "Mark season seen" }).click();
   await expect(dialog.getByRole("link", { name: "Watch S2 E1" })).toBeVisible();
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(card).toContainText("13 of 30 seen");
+  await expect(card).toContainText("Season 2 of 3 · 0 of 13 seen");
 
   // Another site as a spare: it moves to the front with one tap.
   await page.getByRole("button", { name: "Open Bob's Burgers" }).click();
@@ -203,4 +223,18 @@ test("media: in the rail under Weather, and on the phone's home screen beside Se
   expect(m.x).toBeLessThan(s.x);
   await media.click();
   await expect(page.getByRole("heading", { name: "Media" })).toBeVisible();
+});
+
+test("media: the poster colour is only looked up for posters", async ({ page }) => {
+  await page.goto("/media");
+  // Signed in, but not a poster site: refused without fetching anything.
+  for (const url of [
+    "https://example.com/a.jpg",
+    "http://static.tvmaze.com/a.jpg",
+    "https://static.tvmaze.com:8443/a.jpg",
+    "nonsense",
+  ]) {
+    const res = await page.request.get(`/api/media/color?url=${encodeURIComponent(url)}`);
+    expect(res.status(), url).toBe(400);
+  }
 });

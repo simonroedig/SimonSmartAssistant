@@ -4,7 +4,7 @@ import { Check, Film, Link2, type LucideIcon, Play, Radio, Tv, X } from "lucide-
 import { Button } from "@/components/ui/button";
 import type { MediaTitle } from "@/data/core";
 import { episodeKey, formatEpisode, type MediaKind } from "@/lib/media";
-import { TONE_STYLES } from "@/lib/tones";
+import { textOn } from "@/lib/poster-color";
 import { cn } from "@/lib/utils";
 import { seenMessage, useMediaActions } from "./use-media-actions";
 import { useWatching, type Watching } from "./use-watching";
@@ -18,7 +18,19 @@ export const KIND_LABEL: Record<MediaKind, string> = {
 
 export const KIND_ICON: Record<MediaKind, LucideIcon> = { series: Tv, movie: Film, channel: Radio, link: Link2 };
 
-const fuchsia = TONE_STYLES.fuchsia;
+/** A title's colours (see .media-tone in globals.css): its poster's, or fuchsia. */
+export const MEDIA_TONE = {
+  solid: "bg-(--m) text-(--m-fg)",
+  soft: "bg-(--m)/15",
+  text: "text-(--m-text)",
+  ring: "ring-(--m)/60",
+};
+
+/** Put on the element with `media-tone`: the title's own colour, if it has one. */
+export function mediaStyle(color: string | null | undefined): React.CSSProperties | undefined {
+  if (!color || !/^#[0-9a-f]{6}$/.test(color)) return undefined;
+  return { "--m-own": color, "--m-own-fg": textOn(color) } as React.CSSProperties;
+}
 
 /**
  * The big "Watch" button: opens the link in a new tab (without telling the site where
@@ -48,7 +60,7 @@ export function WatchButton({
     );
   }
   return (
-    <Button asChild variant="primary" className={cn("ui-action", fuchsia.solid, className)}>
+    <Button asChild variant="primary" className={cn("ui-action", MEDIA_TONE.solid, className)}>
       <a
         href={href}
         target="_blank"
@@ -66,9 +78,9 @@ export function WatchButton({
 
 export function ProgressBar({ value, className }: { value: number; className?: string }) {
   return (
-    <div className={cn("h-1.5 overflow-hidden rounded-full bg-surface-sunken", className)}>
+    <div className={cn("h-1.5 overflow-hidden rounded-full bg-(--m)/15", className)}>
       <div
-        className={cn("h-full rounded-full transition-[width] duration-500", fuchsia.solid)}
+        className={cn("h-full rounded-full bg-(--m) transition-[width] duration-500")}
         style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%` }}
       />
     </div>
@@ -90,16 +102,20 @@ export function WatchingBanner({ media }: { media: MediaTitle[] }) {
   return (
     <div
       role="status"
-      className={cn("mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-(--radius-card) px-4 py-3", fuchsia.soft)}
+      style={mediaStyle(title.color)}
+      className={cn(
+        "media-tone mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-(--radius-card) px-4 py-3",
+        MEDIA_TONE.soft,
+      )}
     >
-      <Play className={cn("size-4 shrink-0 fill-current", fuchsia.text)} />
+      <Play className={cn("size-4 shrink-0 fill-current", MEDIA_TONE.text)} />
       <p className="min-w-0 flex-1 text-[0.95rem]">
         Watched <span className="font-semibold">{what}</span>?
       </p>
       <div className="flex gap-2">
         <Button
           size="sm"
-          className={cn("ui-action", fuchsia.solid)}
+          className={cn("ui-action", MEDIA_TONE.solid)}
           variant="primary"
           onClick={() => {
             if (episode)

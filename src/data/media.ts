@@ -73,6 +73,7 @@ export function useAddMedia() {
         user_id: "",
         watched_episodes: [],
         last_watched_at: null,
+        color: null,
         created_at: now,
         updated_at: now,
       }));
@@ -93,6 +94,7 @@ export type MediaPatch = Partial<
     | "watched"
     | "watched_episodes"
     | "last_watched_at"
+    | "color"
   >
 > & { sources?: MediaSource[] };
 

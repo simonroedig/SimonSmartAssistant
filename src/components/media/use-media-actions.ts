@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import type { MediaTitle } from "@/data/core";
 import { useEpisodes, useUpdateMedia } from "@/data/media";
@@ -41,7 +41,20 @@ export function useSeriesState(title: MediaTitle) {
   }
   const aired = episodes?.filter((e) => isAired(e, today)) ?? [];
   const seen = episodes ? aired.filter((e) => watched.has(episodeKey(e.season, e.number))).length : watched.size;
+  // Where you are, by season: the one of the next episode (or the last one when all is seen).
+  const seasons = [...new Set(aired.map((e) => e.season))];
+  const current = next?.aired ? next.season : (seasons.at(-1) ?? null);
+  const inSeason = current == null ? [] : aired.filter((e) => e.season === current);
   return {
+    seasonCount: seasons.length,
+    season:
+      current == null
+        ? null
+        : {
+            number: current,
+            seen: inSeason.filter((e) => watched.has(episodeKey(e.season, e.number))).length,
+            total: inSeason.length,
+          },
     episodes,
     loading: title.tvmaze_id != null && query.isPending,
     failed: query.isError,
@@ -108,4 +121,30 @@ export function useMediaActions() {
 
 export function seenMessage(season: number, episode: number): string {
   return `${formatEpisode(season, episode)} seen`;
+}
+
+/** Posters whose colour is being asked for (once per title and page load). */
+const asked = new Set<string>();
+
+/**
+ * Finds a title's colour from its poster once (on the server – the poster sites
+ * don't let pages read their pixels) and keeps it with the title.
+ */
+export function usePosterColor(title: MediaTitle) {
+  const update = useUpdateMedia();
+  const { id, poster_url: poster, color, user_id: saved } = title;
+  useEffect(() => {
+    // Not yet saved (an optimistic row), no poster, or already known.
+    if (!poster || color !== null || !saved || asked.has(`${id}:${poster}`)) return;
+    asked.add(`${id}:${poster}`);
+    void fetch(`/api/media/color?url=${encodeURIComponent(poster)}`)
+      .then((res) => (res.ok ? (res.json() as Promise<{ color: string | null }>) : null))
+      .then((body) => {
+        if (body) update.mutate({ id, patch: { color: body.color ?? "none" } });
+      })
+      .catch(() => {
+        // Offline or the poster is gone: tried again on the next visit.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, poster, color, saved]);
 }

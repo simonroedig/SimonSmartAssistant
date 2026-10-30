@@ -299,6 +299,20 @@
   box-shadow: var(--shadow-card);
 }
 
+/* My Media: each series and film in its poster's colour (--m-own, set on the element),
+   the section's fuchsia without one. --m fills buttons (text --m-fg on it), --m-text
+   is the colour as text on the page. */
+.media-tone {
+  --m: var(--m-own, var(--color-fuchsia-500));
+  --m-fg: var(--m-own-fg, #ffffff);
+  --m-text: color-mix(in oklab, var(--m) 80%, black);
+}
+.dark .media-tone {
+  --m: var(--m-own, var(--color-fuchsia-300));
+  --m-fg: var(--m-own-fg, var(--color-fuchsia-950));
+  --m-text: color-mix(in oklab, var(--m) 62%, white);
+}
+
 /* A sunken well: text fields, switch and segment tracks, chips, quiet boxes. */
 @utility well {
   border: 1px solid var(--line);

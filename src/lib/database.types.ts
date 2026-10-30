@@ -86,6 +86,7 @@ export type Database = {
       };
       media_titles: {
         Row: {
+          color: string | null;
           created_at: string;
           id: string;
           kind: string;
@@ -103,6 +104,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          color?: string | null;
           created_at?: string;
           id?: string;
           kind: string;
@@ -119,6 +121,7 @@ export type Database = {
           year?: number | null;
         };
         Update: {
+          color?: string | null;
           created_at?: string;
           id?: string;
           kind?: string;

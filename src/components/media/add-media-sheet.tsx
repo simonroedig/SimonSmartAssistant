@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AutoTextarea, Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { type MediaTitle, newId } from "@/data/core";
 import { type Found, lookUp, type MediaInput, useAddMedia, useUpdateMedia } from "@/data/media";
 import {
@@ -227,10 +228,7 @@ function AddForm({
                   setChosenKind(k);
                   setFound(null);
                 }}
-                className={cn(
-                  "flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium transition-colors",
-                  kind === k ? cn(fuchsia.soft, fuchsia.text, "font-semibold") : "text-muted well hover:text-fg",
-                )}
+                className={cn(CHIP, kind === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE)}
               >
                 <Icon className="size-4" />
                 {KIND_LABEL[k]}
@@ -280,7 +278,8 @@ function AddForm({
         )}
       </div>
 
-      {!many && lookupKind && (
+      {/* Once there is a link: the show (or film) it names – picked already, another one a search away. */}
+      {!many && lookupKind && first && (
         <div>
           <Label>{lookupKind === "series" ? "Which show" : "Which film"}</Label>
           <LookUp

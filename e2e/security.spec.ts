@@ -21,6 +21,11 @@ test.describe("signed out", () => {
     expect(res.status()).toBe(401);
     const keepalive = await request.get("/api/keepalive");
     expect(keepalive.status()).toBe(401);
+    // The poster colour fetches posters for signed-in users only.
+    const color = await request.get(
+      `/api/media/color?url=${encodeURIComponent("https://static.tvmaze.com/uploads/images/medium_portrait/1.jpg")}`,
+    );
+    expect(color.status()).toBe(401);
   });
 
   test("responses carry strict security headers", async ({ request }) => {

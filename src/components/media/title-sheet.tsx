@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import type { MediaTitle } from "@/data/core";
 import { type Found, searchFilms, searchShows, useDeleteMedia } from "@/data/media";
 import { formatDayMonthYear, fromDayKey } from "@/lib/date";
@@ -39,7 +40,7 @@ import {
 } from "@/lib/media";
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-import { KIND_LABEL, WatchButton } from "./media-parts";
+import { KIND_LABEL, MEDIA_TONE, mediaStyle, WatchButton } from "./media-parts";
 import { Poster } from "./poster";
 import { useMediaActions, useSeriesState, watchUrl } from "./use-media-actions";
 
@@ -66,7 +67,7 @@ export function TitleSheet({ title, onClose }: { title: MediaTitle | null; onClo
 function Details({ title, onClose }: { title: MediaTitle; onClose: () => void }) {
   const kind = title.kind as MediaKind;
   return (
-    <div className={cn("flex flex-col gap-6", FIELD_FOCUS.fuchsia)}>
+    <div style={mediaStyle(title.color)} className={cn("media-tone flex flex-col gap-6", FIELD_FOCUS.fuchsia)}>
       {(kind === "series" || kind === "movie") && <About title={title} />}
       {kind === "series" && <SeriesProgress title={title} />}
       {kind === "movie" && <MovieProgress title={title} />}
@@ -192,10 +193,7 @@ function SeriesProgress({ title }: { title: MediaTitle }) {
                   type="button"
                   aria-pressed={s === shown}
                   onClick={() => setSeason(s)}
-                  className={cn(
-                    "flex h-9 shrink-0 items-center gap-1 rounded-full px-3.5 text-sm font-medium transition-colors",
-                    s === shown ? cn(fuchsia.soft, fuchsia.text, "font-semibold") : "text-muted well hover:text-fg",
-                  )}
+                  className={cn(CHIP, "gap-1", s === shown ? cn(MEDIA_TONE.soft, MEDIA_TONE.text, CHIP_ON) : CHIP_IDLE)}
                 >
                   {all && <Check className="size-3.5" />}
                   {s}
@@ -206,7 +204,10 @@ function SeriesProgress({ title }: { title: MediaTitle }) {
           {catchUp.length > 0 && (
             <div
               role="status"
-              className={cn("mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-4 py-2.5", fuchsia.soft)}
+              className={cn(
+                "mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl px-4 py-2.5",
+                MEDIA_TONE.soft,
+              )}
             >
               <p className="min-w-0 flex-1 text-sm">
                 {catchUp.length} earlier {catchUp.length === 1 ? "episode isn't" : "episodes aren't"} marked yet.
@@ -214,7 +215,7 @@ function SeriesProgress({ title }: { title: MediaTitle }) {
               <Button
                 size="sm"
                 variant="primary"
-                className={cn("ui-action", fuchsia.solid)}
+                className={cn("ui-action", MEDIA_TONE.solid)}
                 onClick={() => {
                   setSeen(title, catchUp, true);
                   setCatchUp([]);
@@ -320,7 +321,7 @@ function EpisodeList({
                 <span
                   className={cn(
                     "grid size-6 place-items-center rounded-full border-2 transition-colors",
-                    seen ? cn("border-transparent", fuchsia.solid) : "border-line-strong",
+                    seen ? cn("border-transparent", MEDIA_TONE.solid) : "border-line-strong",
                   )}
                 >
                   {seen && <Check className="size-3.5" strokeWidth={3} />}
@@ -357,7 +358,7 @@ function EpisodeList({
                   aria-label={`Play ${formatEpisode(e.season, e.number)}`}
                   className={cn(
                     "grid size-9 shrink-0 place-items-center rounded-full transition-colors",
-                    fuchsia.text,
+                    MEDIA_TONE.text,
                     "hover:bg-surface-hover",
                   )}
                 >
@@ -509,7 +510,8 @@ function Edit({ title }: { title: MediaTitle }) {
             initial={title.title}
             year={title.year}
             onPick={(found) => {
-              update.mutate({ id: title.id, patch: { ...found } });
+              // A new poster: its colour is found anew.
+              update.mutate({ id: title.id, patch: { ...found, color: null } });
               setName(found.title);
               setLookup(false);
             }}
@@ -543,6 +545,11 @@ export function LookUp({
 }) {
   const [query, setQuery] = useState(initial);
   const [submitted, setSubmitted] = useState(initial);
+  // Searches as you type (a moment after the last key).
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSubmitted(query.trim()), 450);
+    return () => window.clearTimeout(timer);
+  }, [query]);
   const results = useQuery({
     queryKey: ["media-lookup", kind, submitted, year],
     queryFn: () => (kind === "series" ? searchShows(submitted) : searchFilms(submitted, year)),
@@ -558,23 +565,24 @@ export function LookUp({
   }, [best]);
   return (
     <div>
-      <form
-        className="flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSubmitted(query);
-        }}
-      >
+      {/* Not a form of its own: it sits inside the add form, and Enter here only searches. */}
+      <div className="flex gap-2">
         <Input
           aria-label={kind === "series" ? "Search TVmaze" : "Search Wikipedia"}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            setSubmitted(query.trim());
+          }}
+          enterKeyHint="search"
           placeholder={kind === "series" ? "Search the show" : "Search the film"}
         />
-        <Button type="submit" variant="secondary" size="icon" aria-label="Search">
+        <Button variant="secondary" size="icon" aria-label="Search" onClick={() => setSubmitted(query.trim())}>
           <Search />
         </Button>
-      </form>
+      </div>
       <div className="mt-2 flex flex-col gap-1.5">
         {results.isFetching && <div className="skeleton h-20 rounded-2xl" />}
         {results.isError && <p className="px-1 text-sm text-muted">The lookup isn&apos;t reachable right now.</p>}

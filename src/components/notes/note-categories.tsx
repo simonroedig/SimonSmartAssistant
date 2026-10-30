@@ -12,6 +12,8 @@ import { positionForMove } from "@/lib/ordering";
 import { PALETTE, PALETTE_COLORS, type PaletteColor } from "@/lib/palette";
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
+import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
+import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 
 /**
  * What the notes page shows: everything (but the vault), the vault, the notes
@@ -20,43 +22,6 @@ import { cn } from "@/lib/utils";
 export type NoteFilter = "all" | "vault" | "none" | { category: string };
 
 export const VAULT_TONE = TONE_STYLES.slate;
-
-const CHIP =
-  "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium whitespace-nowrap transition-colors select-none [-webkit-touch-callout:none]";
-const CHIP_IDLE = "text-muted well hover:text-fg";
-// Picked: tinted, with a thin ring in its colour – clear even for a grey category on a light page.
-const CHIP_ON = "font-semibold ring-[1.5px] ring-current/45 ring-inset";
-
-/**
- * Keeps the picked chip of a sideways-scrolling row in view, a page margin
- * away from the screen's edge. When the row's start (or end) can show it, the
- * row goes all the way there – back to how the page opens on All, and at the
- * last chip with + and the pencil in sight, so it's clear there's no more.
- */
-function useScrollToPressed(key: unknown) {
-  const row = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = row.current;
-    if (!el) return;
-    const chips = [...el.querySelectorAll<HTMLElement>("[aria-pressed]")];
-    const index = chips.findIndex((c) => c.getAttribute("aria-pressed") === "true");
-    if (index < 0) return;
-    const margin = parseFloat(getComputedStyle(el).paddingLeft) || 16;
-    const rowBox = el.getBoundingClientRect();
-    const box = chips[index].getBoundingClientRect();
-    const left = box.left - rowBox.left + el.scrollLeft;
-    const right = left + box.width;
-    const end = el.scrollWidth - el.clientWidth;
-    let target: number;
-    if (index === 0 || right + margin <= el.clientWidth) target = 0;
-    else if (index === chips.length - 1 || left - margin >= end) target = end;
-    else if (left - margin < el.scrollLeft) target = left - margin;
-    else if (right + margin > el.scrollLeft + el.clientWidth) target = right + margin - el.clientWidth;
-    else return;
-    el.scrollTo({ left: Math.max(0, Math.min(end, target)), behavior: "smooth" });
-  }, [key]);
-  return row;
-}
 
 /** A note's category, small and in its colour. */
 export function CategoryTag({ category, className }: { category: NoteCategory; className?: string }) {
