@@ -119,7 +119,7 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
       aria-hidden="true"
       style={style}
       className={cn(
-        "ui-pill pointer-events-none absolute rounded-2xl transition-[transform,opacity,background-color] ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "ui-pill pointer-events-none absolute rounded-(--pill-radius) transition-[transform,opacity,background-color] ease-[cubic-bezier(0.22,1,0.36,1)]",
         // Quick on the phone's bar (often tapped back and forth), calmer in the side bar.
         axis === "x" ? "duration-200" : "duration-300",
         axis === "x" ? "inset-y-0 left-0" : "inset-x-0 top-0",
@@ -146,7 +146,7 @@ function PagesPill({ pages, isCurrent }: { pages: NavItem[][]; isCurrent: (href:
       aria-hidden="true"
       style={{ left: `${Math.max(0, page) * share + Math.max(0, index) * width}%`, width: `${width}%` }}
       className={cn(
-        "ui-pill pointer-events-none absolute inset-y-0 rounded-2xl transition-[left,width,opacity,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "ui-pill pointer-events-none absolute inset-y-0 rounded-(--pill-radius) transition-[left,width,opacity,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
         tone.soft,
         page < 0 && "opacity-0",
       )}
@@ -176,11 +176,11 @@ function RailLink({
       onClick={() => onNavigate(target)}
       style={{ height: `${RAIL_ITEM_REM}rem` }}
       className={cn(
-        "group relative flex w-full flex-col items-center justify-center gap-1 rounded-2xl text-[0.68rem] font-medium transition-colors",
+        "group relative flex w-full flex-col items-center justify-center gap-1 rounded-(--pill-radius) text-[0.68rem] font-medium transition-colors",
         active ? "text-fg" : "text-muted hover:text-fg",
       )}
     >
-      {pill && active && <span className={cn("ui-pill absolute inset-0 rounded-2xl", tone.soft)} />}
+      {pill && active && <span className={cn("ui-pill absolute inset-0 rounded-(--pill-radius)", tone.soft)} />}
       <Icon
         className={cn("relative size-6 transition-opacity", tone.text, !active && "opacity-75 group-hover:opacity-100")}
         strokeWidth={active ? 2.2 : 1.9}
@@ -214,7 +214,10 @@ function NavRail({
       data-attached={attached ? "" : undefined}
       className={cn(
         "fixed z-40 hidden w-[4.75rem] flex-col items-center px-1.5 py-4 glass md:flex",
-        attached ? "inset-y-0 left-0" : "inset-y-(--gutter) left-(--gutter) rounded-(--radius-card)",
+        // The highlight's corners follow the bar's (its radius less the padding), so they run alike.
+        attached
+          ? "inset-y-0 left-0 [--pill-radius:1rem]"
+          : "inset-y-(--gutter) left-(--gutter) rounded-(--radius-card) [--pill-radius:max(0.5rem,calc(var(--radius-card)-0.375rem))]",
       )}
     >
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
@@ -258,7 +261,7 @@ function TabLink({
       data-home-tab={anchor ? "" : undefined}
       onClick={() => onNavigate(target)}
       className={cn(
-        "relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[0.65rem] font-medium transition-colors active:scale-95",
+        "relative flex flex-1 flex-col items-center gap-0.5 rounded-(--pill-radius) py-2 text-[0.65rem] font-medium transition-colors active:scale-95",
         active ? "text-fg" : "text-muted",
       )}
     >
@@ -347,9 +350,10 @@ function BottomNav({
       className={cn(
         "fixed z-40 flex p-1.5 bar md:hidden",
         // Floating: as wide as the cards (px-4), just above the gesture bar.
+        // The highlight's corners follow the bar's (its radius less the padding), so they run alike.
         attached
-          ? "inset-x-0 bottom-0 pb-[calc(var(--safe-bottom)+0.375rem)]"
-          : "inset-x-4 bottom-[calc(var(--safe-bottom)+0.75rem)] rounded-(--radius-bar)",
+          ? "inset-x-0 bottom-0 pb-[calc(var(--safe-bottom)+0.375rem)] [--pill-radius:1rem]"
+          : "inset-x-4 bottom-[calc(var(--safe-bottom)+0.75rem)] rounded-(--radius-bar) [--pill-radius:max(0.5rem,calc(var(--radius-bar)-0.375rem))]",
       )}
     >
       {more ? (
