@@ -26,6 +26,9 @@ export const MEDIA_TONE = {
   ring: "ring-(--m)/60",
 };
 
+/** Focused fields in the title's colour (on an element with `media-tone`). */
+export const MEDIA_FIELD_FOCUS = "[--field-focus:color-mix(in_oklab,var(--m)_60%,transparent)]";
+
 /** Put on the element with `media-tone`: the title's own colour, if it has one. */
 export function mediaStyle(color: string | null | undefined): React.CSSProperties | undefined {
   if (!color || !/^#[0-9a-f]{6}$/.test(color)) return undefined;

@@ -207,7 +207,7 @@ function AddForm({
 
   return (
     <form
-      className={cn("flex flex-col gap-5", FIELD_FOCUS.fuchsia)}
+      className={cn("media-tone flex flex-col gap-5", FIELD_FOCUS.fuchsia)}
       onSubmit={(e) => {
         e.preventDefault();
         if (many) void addMany();

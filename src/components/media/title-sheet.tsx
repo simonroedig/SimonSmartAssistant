@@ -39,13 +39,10 @@ import {
   sourcesOf,
   toEpisodeTemplate,
 } from "@/lib/media";
-import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-import { KIND_LABEL, MEDIA_TONE, mediaStyle, WatchButton } from "./media-parts";
+import { KIND_LABEL, MEDIA_FIELD_FOCUS, MEDIA_TONE, mediaStyle, WatchButton } from "./media-parts";
 import { Poster } from "./poster";
 import { useMediaActions, useSeriesState, watchUrl } from "./use-media-actions";
-
-const fuchsia = TONE_STYLES.fuchsia;
 
 /** Details of a title: what it's about, where to watch it, how far you are – and editing it. */
 export function TitleSheet({ title, onClose }: { title: MediaTitle | null; onClose: () => void }) {
@@ -68,7 +65,8 @@ export function TitleSheet({ title, onClose }: { title: MediaTitle | null; onClo
 function Details({ title, onClose }: { title: MediaTitle; onClose: () => void }) {
   const kind = title.kind as MediaKind;
   return (
-    <div style={mediaStyle(title.color)} className={cn("media-tone flex flex-col gap-6", FIELD_FOCUS.fuchsia)}>
+    // Everything in the title's colour – the frame of a focused field too.
+    <div style={mediaStyle(title.color)} className={cn("media-tone flex flex-col gap-6", MEDIA_FIELD_FOCUS)}>
       {(kind === "series" || kind === "movie") && <About title={title} />}
       {kind === "series" && <SeriesProgress title={title} />}
       {kind === "movie" && <MovieProgress title={title} />}
@@ -625,7 +623,7 @@ export function LookUp({
                 onClick={() => onPick(found)}
                 className={cn(
                   "flex items-center gap-3 rounded-2xl p-2 text-left transition-colors well hover:bg-surface-hover",
-                  on && cn("ring-2 ring-inset", "ring-fuchsia-500/60"),
+                  on && cn("ring-2 ring-inset", MEDIA_TONE.ring),
                 )}
               >
                 <Poster src={found.poster_url} title={found.title} kind={kind} className="w-10 rounded-lg" />
@@ -635,7 +633,7 @@ export function LookUp({
                     {[found.year, found.summary?.slice(0, 80)].filter(Boolean).join(" · ")}
                   </span>
                 </span>
-                {on && <Check className={cn("size-4 shrink-0", fuchsia.text)} />}
+                {on && <Check className={cn("size-4 shrink-0", MEDIA_TONE.text)} />}
               </button>
             );
           })}

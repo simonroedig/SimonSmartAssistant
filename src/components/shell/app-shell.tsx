@@ -119,10 +119,36 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
       aria-hidden="true"
       style={style}
       className={cn(
-        "ui-pill pointer-events-none absolute rounded-2xl transition-[transform,opacity,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "ui-pill pointer-events-none absolute rounded-2xl transition-[transform,opacity,background-color] ease-[cubic-bezier(0.22,1,0.36,1)]",
+        // Quick on the phone's bar (often tapped back and forth), calmer in the side bar.
+        axis === "x" ? "duration-200" : "duration-300",
         axis === "x" ? "inset-y-0 left-0" : "inset-x-0 top-0",
         tone.soft,
         index < 0 && "opacity-0",
+      )}
+    />
+  );
+}
+
+/**
+ * The highlight of a tab bar with two pages side by side: placed by page and tab, so
+ * going from a tab on one page to one on the other slides it across, not in from the edge.
+ */
+function PagesPill({ pages, isCurrent }: { pages: NavItem[][]; isCurrent: (href: string) => boolean }) {
+  const page = pages.findIndex((list) => list.some((item) => isCurrent(item.href)));
+  const list = pages[Math.max(0, page)];
+  const index = list.findIndex((item) => isCurrent(item.href));
+  const share = 100 / pages.length;
+  const width = share / list.length;
+  const tone = TONE_STYLES[list[Math.max(0, index)].tone];
+  return (
+    <span
+      aria-hidden="true"
+      style={{ left: `${Math.max(0, page) * share + Math.max(0, index) * width}%`, width: `${width}%` }}
+      className={cn(
+        "ui-pill pointer-events-none absolute inset-y-0 rounded-2xl transition-[left,width,opacity,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        tone.soft,
+        page < 0 && "opacity-0",
       )}
     />
   );
@@ -229,6 +255,7 @@ function TabLink({
     <AppLink
       href={target}
       aria-current={active ? "page" : undefined}
+      data-home-tab={anchor ? "" : undefined}
       onClick={() => onNavigate(target)}
       className={cn(
         "relative flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-2 text-[0.65rem] font-medium transition-colors active:scale-95",
@@ -272,9 +299,29 @@ function BottomNav({
     if (Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: "instant" });
   }, [more, onMorePage]);
 
-  const tabs = (list: NavItem[]) => (
-    <div className="relative flex w-full shrink-0 snap-start">
-      <SlidingPill index={list.findIndex((item) => isCurrent(item.href))} items={list} axis="x" />
+  // Swiped back to the first page from Media, Weather or Settings: straight on to Home (or
+  // the apps, whichever Home shows) – what you'd tap next anyway. Only a swipe by hand,
+  // not the bar settling on the page of where you are.
+  const swiped = useRef(false);
+  const onMoreNow = useRef(onMorePage);
+  useEffect(() => {
+    onMoreNow.current = onMorePage;
+  });
+  useEffect(() => {
+    const el = pager.current;
+    if (!el || !more) return;
+    const settled = () => {
+      if (!swiped.current) return;
+      swiped.current = false;
+      if (el.scrollLeft < 4 && onMoreNow.current) el.querySelector<HTMLElement>("[data-home-tab]")?.click();
+    };
+    el.addEventListener("scrollend", settled);
+    return () => el.removeEventListener("scrollend", settled);
+  }, [more]);
+
+  const tabs = (list: NavItem[], pill = true, className = "w-full") => (
+    <div className={cn("relative flex shrink-0 snap-start", className)}>
+      {pill && <SlidingPill index={list.findIndex((item) => isCurrent(item.href))} items={list} axis="x" />}
       {list.map((item) =>
         item.href === "/" ? (
           <TabLink
@@ -307,14 +354,20 @@ function BottomNav({
     >
       {more ? (
         <>
-          {/* Two pages side by side: swipe the bar for the second (it snaps to either) – no page dots. */}
+          {/* Two pages side by side: swipe the bar for the second (it snaps to either) – no page dots.
+              Up and down still go to the page behind (a scroll may start on the bar). */}
           <div
             ref={pager}
             data-tab-pages
-            className="no-scrollbar flex flex-1 [touch-action:pan-x] snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+            onPointerDown={() => (swiped.current = true)}
+            className="no-scrollbar flex flex-1 [touch-action:manipulation] snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
           >
-            {tabs(items)}
-            {tabs(MORE_ITEMS)}
+            {/* One highlight for both pages: it glides from the tab you were on, wherever it is. */}
+            <div className="relative flex w-[200%] shrink-0">
+              <PagesPill pages={[items, MORE_ITEMS]} isCurrent={isCurrent} />
+              {tabs(items, false, "w-1/2")}
+              {tabs(MORE_ITEMS, false, "w-1/2")}
+            </div>
           </div>
         </>
       ) : (

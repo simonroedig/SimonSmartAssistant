@@ -115,12 +115,80 @@ test("menu: the phone's tab bar can swipe to Media, Weather and Settings (instea
   await bar.getByRole("link", { name: "Media", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Media" })).toBeVisible();
   // On one of its pages the bar opens on that second page.
-  await page.goto("/weather");
   await expect.poll(() => inView("Weather")).toBe(true);
+  await bar.getByRole("link", { name: "Weather", exact: true }).click();
+  await expect(page).toHaveURL(/\/weather$/);
   await expect(bar.getByRole("link", { name: "Weather", exact: true })).toHaveAttribute("aria-current", "page");
+  // One highlight for both pages, quick: from Weather back to Home it glides back from the
+  // second page (not in from the left edge, where a page's own highlight would wait).
+  const pill = bar.locator(".ui-pill");
+  await expect(pill).toHaveCount(1);
+  expect(parseFloat(await pill.evaluate((el) => (el as HTMLElement).style.left))).toBeGreaterThanOrEqual(50);
+  expect(await pill.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe("0.2s");
+  await pages.evaluate((el) => el.scrollTo({ left: 0, behavior: "instant" }));
+  await bar.getByRole("link", { name: "Home", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect
+    .poll(async () => parseFloat(await pill.evaluate((el) => (el as HTMLElement).style.left)))
+    .toBeLessThan(50);
 
   // And off again.
   await openSettings(page);
   await saved(page, () => more.click());
   await expect(more).toHaveAttribute("aria-checked", "false");
+});
+
+test("menu: with the second page, a scroll that starts on the tab bar still scrolls the page", async ({ browser }) => {
+  const context = await browser.newContext({
+    storageState: "e2e/.auth/user.json",
+    hasTouch: true,
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await mockWeather(page);
+  await setPhoneMore(page, true);
+  await page.goto("/");
+  const bar = page.locator("[data-tabbar]");
+  await expect(bar.locator("[data-tab-pages]")).toBeVisible();
+  await page.waitForTimeout(500);
+  const cdp = await context.newCDPSession(page);
+  const touch = (type: "touchStart" | "touchMove" | "touchEnd", x: number, y: number) =>
+    cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y, id: 1 }] });
+  const box = (await bar.boundingBox())!;
+  const y = box.y + box.height / 2;
+
+  // Up from the bar: the home screen scrolls.
+  await touch("touchStart", 195, y);
+  for (let i = 1; i <= 10; i++) await touch("touchMove", 195, y - i * 40);
+  await touch("touchEnd", 0, 0);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+
+  // Sideways on the bar: its second page.
+  await touch("touchStart", 330, y);
+  for (let i = 1; i <= 8; i++) await touch("touchMove", 330 - i * 35, y);
+  await touch("touchEnd", 0, 0);
+  await expect.poll(() => bar.locator("[data-tab-pages]").evaluate((el) => el.scrollLeft)).toBeGreaterThan(300);
+
+  // From Media, a swipe back to the first page goes straight home – the next tap anyway.
+  await bar.getByRole("link", { name: "Media", exact: true }).tap();
+  await expect(page).toHaveURL(/\/media$/);
+  await page.waitForTimeout(400);
+  await touch("touchStart", 60, y);
+  for (let i = 1; i <= 8; i++) await touch("touchMove", 60 + i * 35, y);
+  await touch("touchEnd", 0, 0);
+  await expect(page).toHaveURL(/\/$/);
+  // On Home, a look at the second page and back goes nowhere.
+  await page.waitForTimeout(400);
+  await touch("touchStart", 330, y);
+  for (let i = 1; i <= 8; i++) await touch("touchMove", 330 - i * 35, y);
+  await touch("touchEnd", 0, 0);
+  await page.waitForTimeout(400);
+  await touch("touchStart", 60, y);
+  for (let i = 1; i <= 8; i++) await touch("touchMove", 60 + i * 35, y);
+  await touch("touchEnd", 0, 0);
+  await page.waitForTimeout(600);
+  await expect(page).toHaveURL(/\/$/);
+
+  await setPhoneMore(page, false);
+  await context.close();
 });
