@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ListTodo, MapPin, Moon } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlanBlock } from "@/data/core";
 import { useNow } from "@/hooks/use-now";
 import { layoutBlocks } from "@/lib/planner-layout";
@@ -16,6 +16,17 @@ const LABEL_HEIGHT = 26; // px a sleep label needs, incl. its padding
 const LONG_PRESS_MS = 280;
 
 type DragMode = "move" | "resize-start" | "resize-end" | "create";
+
+/** "Bedtime 23:30" / "Wake up 07:00" inside a sleep shade (an empty slot keeps the other in place). */
+function SleepLabel({ text }: { text: string | null }) {
+  if (!text) return <span />;
+  return (
+    <span className="flex items-center gap-1.5 text-xs font-medium text-faint">
+      <Moon className="size-3.5" />
+      {text}
+    </span>
+  );
+}
 
 /** The little bar on a block's edge: shown on hover, and while that edge is dragged. */
 const handleBar = (bar: string, dragged: boolean) =>
@@ -361,48 +372,62 @@ export function DayTimeline({
             style={{ top: y(MINUTES_PER_DAY) - 9, left: GUTTER }}
           >
             <span className="rounded-full border border-line bg-surface-strong px-2 py-px text-[0.65rem] font-semibold tracking-wide text-muted uppercase">
-              Midnight
+              {/* Going to bed right at midnight: one marker says both. */}
+              {sleepRanges.some(([start]) => start === MINUTES_PER_DAY) ? "Midnight · Bedtime" : "Midnight"}
             </span>
             <span className="h-px flex-1 border-t border-dashed border-line-strong" />
           </div>
         )}
 
-        {/* Sleep */}
+        {/* Sleep: "Bedtime" where it starts, "Wake up" where it ends – inside the shade when
+            there's room (and no block there), otherwise as a marker on its edge. */}
         {sleepRanges.map(([s, e]) => {
           const from = Math.max(s, rangeStart);
           const to = Math.min(e, rangeEnd);
           const top = y(from);
           const bottom = y(to);
           if (bottom - top <= 0) return null;
-          // The label ("Bedtime 23:00", "Sleep until 07:00") sits at the top of the shade –
-          // unless a block covers that spot; then at the bottom, and with both taken, not at all.
+          // A night that began yesterday has no bedtime on this day; the evening's runs past the view.
+          const bed = s > 0 && s >= rangeStart ? `Bedtime ${formatMinutes(s % MINUTES_PER_DAY)}` : null;
+          const wake = s < 12 * 60 && e <= MINUTES_PER_DAY && e <= rangeEnd ? `Wake up ${formatMinutes(e)}` : null;
           const labelMin = LABEL_HEIGHT / pxPerMin;
-          const labelAt =
-            bottom - top <= 28
-              ? null
-              : !occupied(from, from + labelMin)
-                ? "top"
-                : !occupied(to - labelMin, to)
-                  ? "bottom"
-                  : null;
+          const room = bottom - top;
+          const topFree = !occupied(from, from + labelMin);
+          const bottomFree = !occupied(to - labelMin, to);
+          let atTop: string | null = null;
+          let atBottom: string | null = null;
+          let edge: { at: number; text: string } | null = null;
+          if (room > 28) {
+            // Wake up at the bottom – or, with a block there, at the top if that's free.
+            if (wake && bottomFree) atBottom = wake;
+            else if (wake && topFree && !bed) atTop = wake;
+            if (bed && topFree && !atTop && (!atBottom || room >= 2 * LABEL_HEIGHT + 4)) atTop = bed;
+          } else {
+            // A short shade (the home screen shows just a bit of the night): its edge gets the label.
+            edge = wake ? { at: e, text: wake } : bed ? { at: s, text: bed } : null;
+          }
           return (
-            <div
-              key={`${s}-${e}`}
-              className={cn(
-                "pointer-events-none absolute right-2 flex rounded-xl sleep-shade px-3",
-                labelAt === "bottom" ? "items-end pb-1.5" : "items-start pt-1.5",
+            <Fragment key={`${s}-${e}`}>
+              <div
+                className="pointer-events-none absolute right-2 flex flex-col justify-between rounded-xl sleep-shade px-3 py-1.5"
+                style={{ top, height: room, left: GUTTER }}
+              >
+                <SleepLabel text={atTop} />
+                <SleepLabel text={atBottom} />
+              </div>
+              {edge && !(edge.at === MINUTES_PER_DAY && rangeEnd > MINUTES_PER_DAY) && (
+                <div
+                  className="pointer-events-none absolute right-2 z-[5] flex items-center"
+                  style={{ top: y(edge.at) - 9, left: GUTTER }}
+                >
+                  <span className="flex items-center gap-1 rounded-full border border-line bg-surface-strong px-2 py-px text-[0.65rem] font-semibold text-muted">
+                    <Moon className="size-3" />
+                    {edge.text}
+                  </span>
+                  <span className="h-px flex-1 border-t border-dashed border-line-strong" />
+                </div>
               )}
-              style={{ top, height: bottom - top, left: GUTTER }}
-            >
-              {labelAt && (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-faint">
-                  <Moon className="size-3.5" />
-                  {e <= MINUTES_PER_DAY && s < 12 * 60
-                    ? `Sleep until ${formatMinutes(e)}`
-                    : `Bedtime ${formatMinutes(s % MINUTES_PER_DAY)}`}
-                </span>
-              )}
-            </div>
+            </Fragment>
           );
         })}
 
@@ -547,7 +572,9 @@ export function DayTimeline({
                     <span className="mt-1 line-clamp-2 text-[0.72rem] opacity-60">{block.notes}</span>
                   )}
                 </div>
-                {h >= 30 && (
+                {/* Ticking off happens in the planner (or the block's editor) – the home screen's
+                    squeezed overview leaves the circles out. */}
+                {h >= 30 && !overview && (
                   <button
                     type="button"
                     aria-label={block.done ? "Mark as not done" : "Mark as done"}
@@ -557,7 +584,8 @@ export function DayTimeline({
                       vibrate(8);
                       onToggleDone(block);
                     }}
-                    className="m-1 grid size-8 shrink-0 place-items-center self-start rounded-full"
+                    // Above the top edge's handle, which reaches over it.
+                    className="relative z-20 m-1 grid size-8 shrink-0 place-items-center self-start rounded-full"
                   >
                     <span
                       className={cn(
@@ -571,12 +599,12 @@ export function DayTimeline({
                 )}
               </div>
               {/* Resize handles: the end, and the start where the block is tall enough to keep
-                  room for grabbing it in the middle (the top one leaves the done circle free). */}
+                  room for grabbing it in the middle – both centred (the done circle lies above). */}
               {!overview && h >= 40 && (
                 <div
                   aria-hidden="true"
                   data-resize="start"
-                  className="absolute -top-1 right-10 left-0 flex h-4 cursor-ns-resize items-center justify-center"
+                  className="absolute inset-x-0 -top-1 flex h-4 cursor-ns-resize items-center justify-center"
                   onPointerDown={(e) => onBlockPointerDown(e, block, "resize-start")}
                 >
                   <span className={handleBar(style.bar, active?.mode === "resize-start")} />
@@ -586,7 +614,7 @@ export function DayTimeline({
                 <div
                   aria-hidden="true"
                   data-resize="end"
-                  className="absolute right-0 -bottom-1 left-0 flex h-4 cursor-ns-resize items-center justify-center"
+                  className="absolute inset-x-0 -bottom-1 flex h-4 cursor-ns-resize items-center justify-center"
                   onPointerDown={(e) => onBlockPointerDown(e, block, "resize-end")}
                 >
                   <span className={handleBar(style.bar, active?.mode === "resize-end")} />

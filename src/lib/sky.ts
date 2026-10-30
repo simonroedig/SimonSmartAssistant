@@ -7,6 +7,8 @@
  * puts them on <html> and src/app/designs.css draws the sky from them.
  */
 
+import { moonLight } from "./moon";
+
 export type SkyWeather = "clear" | "partly" | "overcast" | "fog" | "rain" | "snow" | "storm";
 
 /** WMO weather code (Open-Meteo) → what the sky shows. */
@@ -52,6 +54,8 @@ export type SkyInput = {
   temperature?: number | null;
   dark: boolean;
   layout: SkyLayout;
+  /** The moon's phase (0 new, 0.5 full – see src/lib/moon.ts); a full moon without it. */
+  moon?: number;
 };
 
 type RGB = [number, number, number];
@@ -132,7 +136,16 @@ function palette(minutes: number, sunrise: number, sunset: number, dark: boolean
 
 export type Sky = { vars: Record<string, string>; weather: SkyWeather; isDay: boolean };
 
-export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, dark, layout }: SkyInput): Sky {
+export function computeSky({
+  minutes,
+  sunrise,
+  sunset,
+  weather: w,
+  temperature,
+  dark,
+  layout,
+  moon = 0.5,
+}: SkyInput): Sky {
   const up = sunrise;
   const down = sunset > sunrise ? sunset : sunrise + 600;
   const colours = palette(minutes, up, down, dark);
@@ -198,6 +211,19 @@ export function computeSky({ minutes, sunrise, sunset, weather: w, temperature, 
     } else {
       const clear = w === "clear" || w === "partly";
       const disc = land ? 1.5 : 2.2;
+      // Its phase: the night sky's own colour covers the unlit part – from the left while
+      // it waxes (lit on the right), from the right while it wanes.
+      const lit = moonLight(moon);
+      if (lit < 0.97) {
+        // The sky right there: its gradient at the moon's height, with the moon's glow on it.
+        const at = gy / (H * 0.6);
+        const sky = at <= 1 ? mix(top, mid, clamp(at, 0, 1)) : mix(mid, hor, clamp((gy - H * 0.6) / (H * 0.4), 0, 1));
+        const shade = mix(sky, glow, clear ? 0.2 : 0.07);
+        const shift = 2 * disc * lit * (moon < 0.5 ? -1 : 1);
+        body.push(
+          `radial-gradient(circle at calc(${pct(gx)} + ${shift.toFixed(2)}vmax) ${pct(gy)}, ${rgb(shade)} 0 ${(disc * 1.01).toFixed(2)}vmax, ${rgb(shade, 0)} ${(disc * 1.12).toFixed(2)}vmax)`,
+        );
+      }
       body.push(
         `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb([240, 243, 255], clear ? 0.95 : 0.3)} 0 ${disc}vmax, ${rgb(glow, clear ? 0.22 : 0.08)} ${disc + 0.15}vmax, transparent ${disc * 7}vmax)`,
       );

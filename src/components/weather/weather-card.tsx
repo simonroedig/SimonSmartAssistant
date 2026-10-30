@@ -92,7 +92,12 @@ export function WeatherCard({ className, days = 7 }: { className?: string; days?
       {header}
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-3">
         <div className="flex items-center gap-3 px-5">
-          <WeatherIcon code={data.current.code} isDay={data.current.isDay} className="-my-2 -ml-2 size-24" />
+          <WeatherIcon
+            code={data.current.code}
+            isDay={data.current.isDay}
+            at={data.current.time}
+            className="-my-2 -ml-2 size-24"
+          />
           <div className="min-w-0">
             <div className="ui-display text-[3.6rem] leading-none font-light tracking-tight tabular">
               {Math.round(data.current.temperature)}°

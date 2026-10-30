@@ -298,6 +298,14 @@ test("planner: a bedtime after midnight is shown at the end of the same day", as
   await expect(page.getByText("Midnight", { exact: true })).toHaveCount(0);
 });
 
+test("home: the squeezed day plan shows when you wake up, and leaves ticking off to the planner", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const card = page.locator("section", { has: page.getByRole("button", { name: "Add a block" }) }).first();
+  await expect(card.getByText(/^Wake up \d\d:\d\d$/)).toBeVisible();
+  await expect(card.getByRole("button", { name: /^Mark as (not )?done$/ })).toHaveCount(0);
+});
+
 test("planner: a block where the night starts or ends never sits on the sleep label", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/planner?day=2030-01-15");
@@ -310,20 +318,21 @@ test("planner: a block where the night starts or ends never sits on the sleep la
     await expect(page.getByRole("dialog")).toBeHidden();
   };
 
-  // A Tuesday: asleep until 07:00, bedtime 23:30. Both labels sit at the top of their shade.
-  const morning = page.getByText("Sleep until 07:00");
+  // A Tuesday: asleep until 07:00, bedtime 23:30 – the night ends with "Wake up", the evening
+  // starts with "Bedtime".
+  const morning = page.getByText("Wake up 07:00");
   await expect(morning).toBeAttached();
   await expect(page.getByText("Bedtime 23:30")).toBeAttached();
 
-  // A block at midnight takes the top of the night: the label moves to its bottom (07:00).
+  // A block at midnight sits at the top of the night: the label stays at its bottom (07:00).
   await addAt(0, "Night owl");
   const block = page.locator('[role="button"]', { hasText: "Night owl" }).first();
   await expect(block).toContainText("00:00");
   const shade = page.locator(".sleep-shade", { has: morning });
-  await expect(shade).toHaveClass(/items-end/);
   const label = (await morning.boundingBox())!;
   const night = (await shade.boundingBox())!;
   expect(night.y + night.height - (label.y + label.height)).toBeLessThan(12);
+  expect(label.y).toBeGreaterThan((await block.boundingBox())!.y + (await block.boundingBox())!.height);
 
   // A block at bedtime fills the short evening shade: no label rather than one under the block.
   await addAt(23 * 60 + 30, "Late show");

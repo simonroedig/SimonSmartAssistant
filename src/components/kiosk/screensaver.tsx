@@ -84,7 +84,12 @@ export function Screensaver() {
             <div className="text-xl font-light text-white/30 md:text-2xl">{formatLongDate(now)}</div>
             {current && (
               <div className="mt-4 flex items-center gap-2 text-2xl font-light text-white/30">
-                <WeatherIcon code={current.code} isDay={current.isDay} className="size-12 opacity-50" />
+                <WeatherIcon
+                  code={current.code}
+                  isDay={current.isDay}
+                  at={current.time}
+                  className="size-12 opacity-50"
+                />
                 <span className="tabular">{Math.round(current.temperature)}°</span>
               </div>
             )}

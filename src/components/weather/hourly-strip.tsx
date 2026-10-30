@@ -78,6 +78,7 @@ export function HourlyStrip({
             <WeatherIcon
               code={h.code}
               isDay={h.isDay}
+              at={h.time}
               className={cn("size-10", sleep?.asleep && !now && "opacity-60")}
             />
             <span

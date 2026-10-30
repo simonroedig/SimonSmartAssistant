@@ -186,7 +186,12 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
         <div className="flex flex-col gap-4">
           <Card className="overflow-hidden p-6">
             <div className="flex items-center gap-4">
-              <WeatherIcon code={data.current.code} isDay={data.current.isDay} className="-m-3 size-32" />
+              <WeatherIcon
+                code={data.current.code}
+                isDay={data.current.isDay}
+                at={data.current.time}
+                className="-m-3 size-32"
+              />
               <div>
                 <div className="ui-display text-7xl leading-none font-extralight tracking-tight tabular">
                   {Math.round(data.current.temperature)}°

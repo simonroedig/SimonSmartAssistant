@@ -100,7 +100,7 @@ export function HourlyChart({
                   isNow={isNow}
                   className={cn("text-[0.7rem]", isNow ? TODAY_TEXT : "text-muted")}
                 />
-                <WeatherIcon code={h.code} isDay={h.isDay} className="size-9" />
+                <WeatherIcon code={h.code} isDay={h.isDay} at={h.time} className="size-9" />
               </div>
             );
           })}

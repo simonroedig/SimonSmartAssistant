@@ -45,7 +45,12 @@ export function WeatherSummary({ className }: { className?: string }) {
   return (
     <Card className={cn("overflow-hidden", className)}>
       <AppLink href="/weather" className="flex items-center gap-2 px-4 pt-3" aria-label="Open the weather">
-        <WeatherIcon code={data.current.code} isDay={data.current.isDay} className="-my-1 -ml-1 size-16 shrink-0" />
+        <WeatherIcon
+          code={data.current.code}
+          isDay={data.current.isDay}
+          at={data.current.time}
+          className="-my-1 -ml-1 size-16 shrink-0"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="ui-display text-[2.6rem] leading-none font-light tracking-tight tabular">

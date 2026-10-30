@@ -8,6 +8,7 @@ import { useDevicePrefs } from "@/hooks/use-device-prefs";
 import { useNow } from "@/hooks/use-now";
 import { toDayKey } from "@/lib/date";
 import { readSunTimes, SKY_STORAGE_KEY } from "@/lib/device";
+import { moonPhase } from "@/lib/moon";
 import { CALM_LAYOUT, computeSky, SKY_VARS, skyWeather, type SkyLayout } from "@/lib/sky";
 import { isoToMinutes } from "@/lib/weather/open-meteo";
 
@@ -55,6 +56,7 @@ function Sky() {
       temperature: fresh ? forecast.current.temperature : null,
       dark,
       layout,
+      moon: moonPhase(now),
     });
     const root = document.documentElement;
     for (const [name, value] of Object.entries(sky.vars)) root.style.setProperty(name, value);
