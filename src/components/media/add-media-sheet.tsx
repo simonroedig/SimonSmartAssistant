@@ -321,7 +321,7 @@ function AddForm({
         type="submit"
         size="lg"
         variant="primary"
-        className={cn("ui-action", fuchsia.solid)}
+        className={cn("ui-action shadow-[0_2px_6px_-2px_rgb(0_0_0/0.3)]", fuchsia.solid)}
         disabled={busy || (many ? valid.length === 0 : !(shownName.trim() || first))}
       >
         <Plus /> {busy ? "Adding…" : many ? `Add ${valid.length}` : "Add"}

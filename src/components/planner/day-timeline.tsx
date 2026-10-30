@@ -69,6 +69,8 @@ export type DayTimelineProps = {
    * scrolling, and blocks can only be opened – never moved or resized by accident.
    */
   overview?: boolean;
+  /** The home screen's plan: no done circles (ticking off happens in the planner). */
+  hideDone?: boolean;
   className?: string;
 };
 
@@ -94,6 +96,7 @@ export function DayTimeline({
   keepVisible,
   scrollKey,
   overview = false,
+  hideDone = false,
   className,
 }: DayTimelineProps) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -416,16 +419,14 @@ export function DayTimeline({
                 <SleepLabel text={atBottom} />
               </div>
               {edge && !(edge.at === MINUTES_PER_DAY && rangeEnd > MINUTES_PER_DAY) && (
-                <div
-                  className="pointer-events-none absolute right-2 z-[5] flex items-center"
-                  style={{ top: y(edge.at) - 9, left: GUTTER }}
+                // The same quiet grey text as inside a shade: under the night's end, above its start.
+                <span
+                  className="pointer-events-none absolute z-[5] flex items-center gap-1.5 text-xs font-medium text-faint"
+                  style={{ top: edge.at === e ? y(edge.at) + 4 : y(edge.at) - 20, left: GUTTER + 12 }}
                 >
-                  <span className="flex items-center gap-1 rounded-full border border-line bg-surface-strong px-2 py-px text-[0.65rem] font-semibold text-muted">
-                    <Moon className="size-3" />
-                    {edge.text}
-                  </span>
-                  <span className="h-px flex-1 border-t border-dashed border-line-strong" />
-                </div>
+                  <Moon className="size-3.5" />
+                  {edge.text}
+                </span>
               )}
             </Fragment>
           );
@@ -574,7 +575,7 @@ export function DayTimeline({
                 </div>
                 {/* Ticking off happens in the planner (or the block's editor) – the home screen's
                     squeezed overview leaves the circles out. */}
-                {h >= 30 && !overview && (
+                {h >= 30 && !overview && !hideDone && (
                   <button
                     type="button"
                     aria-label={block.done ? "Mark as not done" : "Mark as done"}

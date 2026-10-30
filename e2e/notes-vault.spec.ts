@@ -345,7 +345,8 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   for (const name of added) {
     await editCategory(page, name);
     await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
+    // The list behind it may still be sliding away: no sheet left at all.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   }
   await context.close();
 });

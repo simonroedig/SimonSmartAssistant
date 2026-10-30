@@ -60,7 +60,12 @@ export function WatchButton({
     );
   }
   return (
-    <Button asChild variant="primary" className={cn("ui-action", MEDIA_TONE.solid, className)}>
+    // A plain small shadow: the primary button's glow is the accent's – a light haze in Aurora Sky.
+    <Button
+      asChild
+      variant="primary"
+      className={cn("ui-action shadow-[0_2px_6px_-2px_rgb(0_0_0/0.3)]", MEDIA_TONE.solid, className)}
+    >
       <a
         href={href}
         target="_blank"
@@ -115,7 +120,7 @@ export function WatchingBanner({ media }: { media: MediaTitle[] }) {
       <div className="flex gap-2">
         <Button
           size="sm"
-          className={cn("ui-action", MEDIA_TONE.solid)}
+          className={cn("ui-action shadow-[0_2px_6px_-2px_rgb(0_0_0/0.3)]", MEDIA_TONE.solid)}
           variant="primary"
           onClick={() => {
             if (episode)

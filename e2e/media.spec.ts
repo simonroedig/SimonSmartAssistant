@@ -93,6 +93,28 @@ test("media: a pasted list becomes series, films, live TV and links – each fou
   await expect(tab(page, /Movies/)).toHaveAttribute("aria-selected", "true");
   await swipe(120, 300);
   await expect(tab(page, /Series/)).toHaveAttribute("aria-selected", "true");
+  // Links come first, as a small icon – one swipe the other way.
+  expect(
+    await page
+      .getByRole("tab")
+      .evaluateAll((tabs) => tabs.map((t) => t.getAttribute("aria-label") ?? (t as HTMLElement).innerText.trim())),
+  ).toEqual(["Links", "Series", "Movies", "Live TV"]);
+  await swipe(120, 300);
+  await expect(tab(page, /Links/)).toHaveAttribute("aria-selected", "true");
+  // While the list slides in nothing sticks out sideways (the page, tab bar included, would wobble).
+  const widths = await page.evaluate(async () => {
+    const seen: number[] = [];
+    for (let i = 0; i < 12; i++) {
+      seen.push(document.documentElement.scrollWidth - window.innerWidth);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    return seen;
+  });
+  expect(Math.max(...widths)).toBeLessThanOrEqual(0);
+  await swipe(300, 120);
+  await expect(tab(page, /Series/)).toHaveAttribute("aria-selected", "true");
+  // The title and the tabs stay put: only the list scrolls, never the page.
+  expect(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight + 1)).toBe(true);
   // Picking a tab never animates its frame (that flashed light on the one just left).
   expect(await tab(page, /Movies/).evaluate((el) => getComputedStyle(el).transitionProperty)).not.toMatch(/border|all/);
 

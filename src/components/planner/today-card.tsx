@@ -172,6 +172,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
           <DayTimeline
             className={cn("[touch-action:pan-y] px-2 pb-3", fit && "h-full")}
             overview={!fit}
+            hideDone
             blocks={planner.dayBlocks}
             sleepRanges={planner.sleepRanges}
             hourHeight={hourHeight}

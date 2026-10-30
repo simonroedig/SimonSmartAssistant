@@ -215,7 +215,7 @@ function SeriesProgress({ title }: { title: MediaTitle }) {
               <Button
                 size="sm"
                 variant="primary"
-                className={cn("ui-action", MEDIA_TONE.solid)}
+                className={cn("ui-action shadow-[0_2px_6px_-2px_rgb(0_0_0/0.3)]", MEDIA_TONE.solid)}
                 onClick={() => {
                   setSeen(title, catchUp, true);
                   setCatchUp([]);

@@ -304,6 +304,9 @@ test("home: the squeezed day plan shows when you wake up, and leaves ticking off
   const card = page.locator("section", { has: page.getByRole("button", { name: "Add a block" }) }).first();
   await expect(card.getByText(/^Wake up \d\d:\d\d$/)).toBeVisible();
   await expect(card.getByRole("button", { name: /^Mark as (not )?done$/ })).toHaveCount(0);
+  // On the wall display (and PC) too, where the plan fills its card.
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(card.getByRole("button", { name: /^Mark as (not )?done$/ })).toHaveCount(0);
 });
 
 test("planner: a block where the night starts or ends never sits on the sleep label", async ({ page }) => {

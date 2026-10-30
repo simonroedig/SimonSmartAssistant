@@ -3,7 +3,7 @@
 import { Check, ExternalLink, MoreHorizontal, Pencil } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { PageBody, PageHeader } from "@/components/shell/page-header";
+import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
@@ -25,6 +25,12 @@ import { seenMessage, useMediaActions, usePosterColor, useSeriesState, watchUrl 
 const fuchsia = TONE_STYLES.fuchsia;
 
 const TAB_LABEL: Record<MediaKind, string> = { series: "Series", movie: "Movies", channel: "Live TV", link: "Links" };
+
+/**
+ * The tabs from left to right: Links first, as a small icon (like the notes' vault) –
+ * one swipe away from Series, which the page opens on.
+ */
+const TABS: MediaKind[] = ["link", "series", "movie", "channel"];
 
 const EMPTY: Record<MediaKind, string> = {
   series: "No series yet. Add one with + – a link to any episode is enough.",
@@ -65,13 +71,13 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
   // The list slides in from the side the picked tab is on.
   const [shown, setShown] = useState({ tab, direction: 1 });
   if (shown.tab !== tab) {
-    setShown({ tab, direction: MEDIA_KINDS.indexOf(tab) < MEDIA_KINDS.indexOf(shown.tab) ? -1 : 1 });
+    setShown({ tab, direction: TABS.indexOf(tab) < TABS.indexOf(shown.tab) ? -1 : 1 });
   }
   // Phones: swipe sideways through the tabs (no wrapping round), like the notes' categories.
   const phone = useMediaQuery("(max-width: 767px)");
   const swipe = useSwipe(
     (direction) => {
-      const next = MEDIA_KINDS[MEDIA_KINDS.indexOf(tab) + direction];
+      const next = TABS[TABS.indexOf(tab) + direction];
       if (next) changeTab(next);
     },
     phone && !adding && openId === null,
@@ -79,77 +85,90 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
   const row = useScrollToPressed(tab);
 
   return (
-    // Sideways moves are the page's (swipes), up and down scroll.
-    <div className="min-h-[calc(100dvh-var(--page-bottom))] [touch-action:pan-y] md:min-h-dvh" {...swipe}>
-      <PageHeader title="Media" subtitle="Series, films and live TV – where to watch and how far you are" />
-      {/* Room at the end for the + button. */}
-      <PageBody className={cn(FIELD_FOCUS.fuchsia, "pb-28 md:pb-28")}>
-        <WatchingBanner media={all} />
-        <div
-          ref={row}
-          role="tablist"
-          aria-label="Media"
-          className="-mx-4 mb-4 no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0"
-        >
-          {MEDIA_KINDS.map((k) => {
-            const Icon = KIND_ICON[k];
-            const count = all.filter((m) => m.kind === k).length;
-            return (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={tab === k}
-                onClick={() => changeTab(k)}
-                className={cn(
-                  CHIP,
-                  "md:h-10 md:px-4 md:text-[0.95rem]",
-                  tab === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE,
-                )}
-              >
-                <Icon className="size-4" />
-                {TAB_LABEL[k]}
-                {count > 0 && <span className="text-xs tabular opacity-60 max-md:hidden">{count}</span>}
-              </button>
-            );
-          })}
-        </div>
+    // Phones: the title and the tabs stay; only the list below them scrolls (like the notes).
+    // Sideways moves are the page's (swipes); nothing may stick out sideways while a
+    // list slides in, or the whole page – tab bar included – would wobble.
+    <FillPage>
+      <div
+        className="flex [touch-action:pan-y] flex-col overflow-x-clip max-md:min-h-0 max-md:flex-1 md:min-h-dvh"
+        {...swipe}
+      >
+        <PageHeader title="Media" subtitle="Series, films and live TV – where to watch and how far you are" />
+        <PageBody className={cn(FIELD_FOCUS.fuchsia, FILL_BODY, "md:pb-28")}>
+          <WatchingBanner media={all} />
+          <div
+            ref={row}
+            role="tablist"
+            aria-label="Media"
+            className="-mx-4 mb-4 no-scrollbar flex gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0"
+          >
+            {TABS.map((k) => {
+              const Icon = KIND_ICON[k];
+              const count = all.filter((m) => m.kind === k).length;
+              const iconOnly = k === "link";
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === k}
+                  aria-label={iconOnly ? TAB_LABEL[k] : undefined}
+                  title={iconOnly ? TAB_LABEL[k] : undefined}
+                  onClick={() => changeTab(k)}
+                  className={cn(
+                    CHIP,
+                    iconOnly ? "w-9 justify-center px-0 md:w-10" : "md:h-10 md:px-4 md:text-[0.95rem]",
+                    "md:h-10",
+                    tab === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE,
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {!iconOnly && TAB_LABEL[k]}
+                  {!iconOnly && count > 0 && <span className="text-xs tabular opacity-60 max-md:hidden">{count}</span>}
+                </button>
+              );
+            })}
+          </div>
 
-        <motion.div
-          key={tab}
-          initial={{ opacity: 0, x: shown.direction * 28 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-        >
-          {media.isPending ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="skeleton h-36 rounded-(--radius-card)" />
-              ))}
-            </div>
-          ) : items.length === 0 ? (
-            <Card className="items-center gap-3 px-6 py-12 text-center">
-              {(() => {
-                const Icon = KIND_ICON[tab];
-                return <Icon className={cn("size-10", fuchsia.text)} />;
-              })()}
-              <p className="max-w-sm text-sm text-muted">{EMPTY[tab]}</p>
-            </Card>
-          ) : tab === "series" ? (
-            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-              {[...items].sort(byLastWatched).map((s) => (
-                <SeriesCard key={s.id} title={s} onOpen={() => setOpenId(s.id)} />
-              ))}
-            </div>
-          ) : tab === "movie" ? (
-            <MovieGrid movies={items} onOpen={(m) => setOpenId(m.id)} />
-          ) : tab === "channel" ? (
-            <ChannelGrid channels={items} onEdit={(c) => setOpenId(c.id)} />
-          ) : (
-            <LinkList links={items} onEdit={(l) => setOpenId(l.id)} />
-          )}
-        </motion.div>
-      </PageBody>
+          {/* Phones: this part scrolls (room at its end for the + button). */}
+          <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-24">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, x: shown.direction * 28 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              {media.isPending ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="skeleton h-36 rounded-(--radius-card)" />
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <Card className="items-center gap-3 px-6 py-12 text-center">
+                  {(() => {
+                    const Icon = KIND_ICON[tab];
+                    return <Icon className={cn("size-10", fuchsia.text)} />;
+                  })()}
+                  <p className="max-w-sm text-sm text-muted">{EMPTY[tab]}</p>
+                </Card>
+              ) : tab === "series" ? (
+                <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                  {[...items].sort(byLastWatched).map((s) => (
+                    <SeriesCard key={s.id} title={s} onOpen={() => setOpenId(s.id)} />
+                  ))}
+                </div>
+              ) : tab === "movie" ? (
+                <MovieGrid movies={items} onOpen={(m) => setOpenId(m.id)} />
+              ) : tab === "channel" ? (
+                <ChannelGrid channels={items} onEdit={(c) => setOpenId(c.id)} />
+              ) : (
+                <LinkList links={items} onEdit={(l) => setOpenId(l.id)} />
+              )}
+            </motion.div>
+          </div>
+        </PageBody>
+      </div>
 
       <Fab
         aria-label="Add to Media"
@@ -162,7 +181,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
       />
       <AddMediaSheet open={adding} kind={tab} media={all} onClose={() => setAdding(false)} onAdded={changeTab} />
       <TitleSheet title={open} onClose={() => setOpenId(null)} />
-    </div>
+    </FillPage>
   );
 }
 
@@ -227,7 +246,7 @@ function SeriesCard({ title, onOpen }: { title: MediaTitle; onOpen: () => void }
                   href={watchUrl(title, next)}
                   onClick={() => touch(title)}
                   watching={{ id: title.id, title: title.title, season: next.season, episode: next.number }}
-                  className="min-w-0 flex-1 sm:max-w-60"
+                  className="min-w-0 flex-1"
                 >
                   {formatEpisode(next.season, next.number)}
                 </WatchButton>
