@@ -302,7 +302,10 @@ test("home: the squeezed day plan shows when you wake up, and leaves ticking off
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const card = page.locator("section", { has: page.getByRole("button", { name: "Add a block" }) }).first();
-  await expect(card.getByText(/^Wake up \d\d:\d\d$/)).toBeVisible();
+  const wake = card.getByText(/^Wake up \d\d:\d\d$/);
+  await expect(wake).toBeVisible();
+  // Inside the night's grey, like on the wall display.
+  await expect(card.locator(".sleep-shade").filter({ hasText: /^Wake up \d\d:\d\d$/ })).toHaveCount(1);
   await expect(card.getByRole("button", { name: /^Mark as (not )?done$/ })).toHaveCount(0);
   // On the wall display (and PC) too, where the plan fills its card.
   await page.setViewportSize({ width: 1920, height: 1080 });

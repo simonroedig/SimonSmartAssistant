@@ -17,6 +17,7 @@ import {
   sampleLink,
   sourcesOf,
 } from "@/lib/media";
+import { textOn } from "@/lib/poster-color";
 import { TOAST_TONE } from "@/lib/tones";
 
 /** An episode to watch: from TVmaze, or (without its list) just its numbers. */
@@ -92,8 +93,11 @@ export function useMediaActions() {
       },
     });
     if (message) {
+      // Undo in the series' own colour (fuchsia without one).
+      const own = /^#[0-9a-f]{6}$/.test(title.color ?? "") ? title.color! : null;
       toast(message, {
-        classNames: { toast: TOAST_TONE.fuchsia },
+        classNames: { toast: own ? "" : TOAST_TONE.fuchsia },
+        style: own ? ({ "--toast-action": own, "--toast-action-fg": textOn(own) } as React.CSSProperties) : undefined,
         action: {
           label: "Undo",
           onClick: () =>

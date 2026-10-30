@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ExternalLink, MoreHorizontal, Pencil } from "lucide-react";
+import { Check, ExternalLink, MoreHorizontal, Pencil, TriangleAlert } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
@@ -13,7 +13,15 @@ import { useMedia } from "@/data/media";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
-import { episodeKey, formatEpisode, linkLabel, MEDIA_KINDS, type MediaKind, sourcesOf } from "@/lib/media";
+import {
+  episodeKey,
+  formatEpisode,
+  hasEpisodeSlots,
+  linkLabel,
+  MEDIA_KINDS,
+  type MediaKind,
+  sourcesOf,
+} from "@/lib/media";
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { AddMediaSheet } from "./add-media-sheet";
@@ -192,6 +200,9 @@ function SeriesCard({ title, onOpen }: { title: MediaTitle; onOpen: () => void }
   const next = state.next;
   const ready = next && next.aired;
   const season = state.season;
+  // A link to the series' page (not to an episode) can't open each episode by itself.
+  const primary = sourcesOf(title.sources)[0];
+  const seriesPageOnly = !!primary && !hasEpisodeSlots(primary.url);
   // Where you are, by season – "S12 · 3 of 13 seen" says more than "151 of 333".
   const where =
     state.total == null
@@ -229,6 +240,12 @@ function SeriesCard({ title, onOpen }: { title: MediaTitle; onOpen: () => void }
         <p className="mt-0.5 truncate text-xs text-muted tabular">{where}</p>
         {season && state.seen > 0 && !state.caughtUp && season.total > 0 && (
           <ProgressBar value={season.seen / season.total} className="mt-2" />
+        )}
+        {seriesPageOnly && (
+          <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-300">
+            <TriangleAlert className="size-3.5 shrink-0" />
+            <span className="truncate">Link to the series page only</span>
+          </p>
         )}
         <div className="mt-auto pt-3">
           {state.loading ? (

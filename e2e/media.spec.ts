@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mockMedia, mockWeather } from "./helpers";
+import { mockMedia, mockWeather, setPhoneMore } from "./helpers";
 
 // Example links (answered locally – nothing leaves the test).
 const SERIES_A = "https://stream.example/watchseries/bobs-burgers-online-free/season/1/episode/1";
@@ -189,6 +189,32 @@ test("media: watch the next episode, tick it off, catch up on earlier ones – w
   );
 });
 
+test("media: a link to the series' page is flagged – a link to one episode replaces it and opens each one", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await clearMedia(page);
+  await page.getByRole("button", { name: "Add to Media" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/Link/).fill("https://stream.example/watchseries/south-park-online-free");
+  await expect(dialog.getByText("The series page only – paste a link to one episode")).toBeVisible();
+  await expect(dialog.getByLabel("Name")).toHaveValue("South Park");
+  await dialog.getByRole("button", { name: "Add", exact: true }).click();
+  const card = page.locator("article", { hasText: "South Park" });
+  await expect(card).toContainText("Link to the series page only");
+
+  await page.getByRole("button", { name: "Open South Park" }).click();
+  await expect(dialog.getByText("The series page only – paste a link to one episode")).toBeVisible();
+  await dialog.getByLabel("Add a link").fill(SERIES_B);
+  await dialog.getByRole("button", { name: "Add the link" }).click();
+  // The episode link took the series page's place.
+  await expect(dialog.getByText("Opens each episode directly")).toBeVisible();
+  await expect(dialog.getByText("The series page only – paste a link to one episode")).toHaveCount(0);
+  await expect(dialog.getByRole("link", { name: "Watch S1 E1" })).toHaveAttribute("href", SERIES_B);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(card).not.toContainText("Link to the series page only");
+});
+
 test("media: films are ticked off, and the TV remote moves between them with the arrow keys", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await clearMedia(page);
@@ -210,6 +236,8 @@ test("media: films are ticked off, and the TV remote moves between them with the
   // The TV: ?tv=1 turns on the remote; the arrows move the focus from tile to tile.
   await page.goto("/media?tab=movie&tv=1");
   await expect(page.locator("html")).toHaveClass(/\btv\b/);
+  // (The films are there before the remote is used – after the reload they load again.)
+  await expect(tiles).toHaveCount(2);
   await page.getByRole("tab", { name: /Movies/ }).focus();
   await page.keyboard.press("ArrowDown");
   await expect(tiles.first()).toBeFocused();
@@ -220,12 +248,15 @@ test("media: films are ticked off, and the TV remote moves between them with the
   await page.keyboard.press("Enter");
   await expect(dialog.getByRole("link", { name: "Watch" })).toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await page.waitForTimeout(300); // let the closed sheet give its history entry back
   await page.goto("/media?tv=0");
   await expect(page.locator("html")).not.toHaveClass(/\btv\b/);
 });
 
 test("media: in the rail under Weather, and on the phone's home screen beside Settings", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await setPhoneMore(page, false);
   await page.goto("/");
   const rail = page.getByRole("navigation", { name: "Main" }).first();
   const labels = await rail.getByRole("link").allInnerTexts();

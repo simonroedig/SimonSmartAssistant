@@ -18,11 +18,16 @@ const LONG_PRESS_MS = 280;
 type DragMode = "move" | "resize-start" | "resize-end" | "create";
 
 /** "Bedtime 23:30" / "Wake up 07:00" inside a sleep shade (an empty slot keeps the other in place). */
-function SleepLabel({ text }: { text: string | null }) {
+function SleepLabel({ text, compact = false }: { text: string | null; compact?: boolean }) {
   if (!text) return <span />;
   return (
-    <span className="flex items-center gap-1.5 text-xs font-medium text-faint">
-      <Moon className="size-3.5" />
+    <span
+      className={cn(
+        "flex items-center gap-1.5 font-medium text-faint",
+        compact ? "text-[0.68rem] leading-none" : "text-xs",
+      )}
+    >
+      <Moon className={compact ? "size-3" : "size-3.5"} />
       {text}
     </span>
   );
@@ -400,23 +405,28 @@ export function DayTimeline({
           let atTop: string | null = null;
           let atBottom: string | null = null;
           let edge: { at: number; text: string } | null = null;
-          if (room > 28) {
+          // A short shade (the home screen shows just a bit of the night) still holds its
+          // label, a little smaller; only a sliver gets it beside its edge.
+          const compact = room <= 28;
+          if (room >= 16) {
             // Wake up at the bottom – or, with a block there, at the top if that's free.
             if (wake && bottomFree) atBottom = wake;
             else if (wake && topFree && !bed) atTop = wake;
             if (bed && topFree && !atTop && (!atBottom || room >= 2 * LABEL_HEIGHT + 4)) atTop = bed;
           } else {
-            // A short shade (the home screen shows just a bit of the night): its edge gets the label.
             edge = wake ? { at: e, text: wake } : bed ? { at: s, text: bed } : null;
           }
           return (
             <Fragment key={`${s}-${e}`}>
               <div
-                className="pointer-events-none absolute right-2 flex flex-col justify-between rounded-xl sleep-shade px-3 py-1.5"
+                className={cn(
+                  "pointer-events-none absolute right-2 flex flex-col rounded-xl sleep-shade px-3",
+                  compact ? "justify-center py-0.5" : "justify-between py-1.5",
+                )}
                 style={{ top, height: room, left: GUTTER }}
               >
-                <SleepLabel text={atTop} />
-                <SleepLabel text={atBottom} />
+                {(!compact || atTop) && <SleepLabel text={atTop} compact={compact} />}
+                {(!compact || atBottom) && <SleepLabel text={atBottom} compact={compact} />}
               </div>
               {edge && !(edge.at === MINUTES_PER_DAY && rangeEnd > MINUTES_PER_DAY) && (
                 // The same quiet grey text as inside a shade: under the night's end, above its start.

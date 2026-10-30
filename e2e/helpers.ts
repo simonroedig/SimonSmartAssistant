@@ -276,3 +276,19 @@ export async function mockMedia(page: Page) {
     });
   });
 }
+
+/** Sets the phone's "More in the tab bar" (a synced setting – tests must not rely on what an earlier one left). */
+export async function setPhoneMore(page: Page, on: boolean) {
+  const loaded = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/user_settings") && r.request().method() === "GET",
+  );
+  await page.goto("/settings");
+  await loaded;
+  const toggle = page.getByRole("switch", { name: "More in the tab bar" });
+  if ((await toggle.getAttribute("aria-checked")) === String(on)) return;
+  const saved = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/user_settings") && r.request().method() !== "GET",
+  );
+  await toggle.click();
+  await saved;
+}

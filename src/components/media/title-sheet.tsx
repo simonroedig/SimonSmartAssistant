@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Search,
   Trash2,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -385,7 +386,13 @@ function Sources({ title }: { title: MediaTitle }) {
     const raw = draft.trim();
     if (!isWebLink(raw)) return;
     const url = kind === "series" ? (toEpisodeTemplate(raw) ?? raw) : raw;
-    save([...sources, { label: linkLabel(url), url }]);
+    const source = { label: linkLabel(url), url };
+    // An episode link for a site whose link was only the series page takes its place.
+    const stale =
+      kind === "series" && hasEpisodeSlots(url)
+        ? sources.findIndex((s) => s.label === source.label && !hasEpisodeSlots(s.url))
+        : -1;
+    save(stale >= 0 ? sources.map((s, i) => (i === stale ? source : s)) : [...sources, source]);
     setDraft("");
   };
 
@@ -404,9 +411,8 @@ function Sources({ title }: { title: MediaTitle }) {
                     <span className="ml-1.5 text-xs font-normal text-faint">used first</span>
                   )}
                 </p>
-                <p className="truncate text-xs text-faint">
-                  {hasEpisodeSlots(s.url) ? "Finds each episode by itself" : s.url.replace(/^https?:\/\//, "")}
-                </p>
+                <p className="truncate text-xs text-faint">{sampleLink(s.url).replace(/^https?:\/\//, "")}</p>
+                {kind === "series" && <EpisodeLinkStatus url={s.url} />}
               </div>
               <a
                 href={sampleLink(s.url)}
@@ -471,11 +477,7 @@ function Sources({ title }: { title: MediaTitle }) {
           <Plus />
         </Button>
       </form>
-      {kind === "series" && sources.length === 0 && (
-        <p className="mt-1.5 px-1 text-xs text-faint">
-          A link to one episode is enough – the season and episode are filled in for every other one.
-        </p>
-      )}
+      {kind === "series" && <EpisodeLinkHint />}
     </div>
   );
 }
@@ -522,6 +524,29 @@ function Edit({ title }: { title: MediaTitle }) {
           </Button>
         ))}
     </div>
+  );
+}
+
+/** Whether a series link leads to each episode – or only to the series' page. */
+export function EpisodeLinkStatus({ url }: { url: string }) {
+  return hasEpisodeSlots(url) ? (
+    <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">
+      <Check className="size-3.5" /> Opens each episode directly
+    </p>
+  ) : (
+    <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-300">
+      <TriangleAlert className="size-3.5 shrink-0" /> The series page only – paste a link to one episode
+    </p>
+  );
+}
+
+/** How to give a series its link: one episode's, from which every other one follows. */
+export function EpisodeLinkHint() {
+  return (
+    <p className="mt-1.5 px-1 text-xs text-faint">
+      Paste the link of <span className="font-semibold text-muted underline">one episode</span> (e.g. season 1, episode
+      1) – the link of every other episode is worked out from it.
+    </p>
   );
 }
 

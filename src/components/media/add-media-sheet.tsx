@@ -23,7 +23,7 @@ import {
 import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { KIND_ICON, KIND_LABEL } from "./media-parts";
-import { LookUp } from "./title-sheet";
+import { EpisodeLinkHint, EpisodeLinkStatus, LookUp } from "./title-sheet";
 
 const fuchsia = TONE_STYLES.fuchsia;
 
@@ -271,11 +271,7 @@ function AddForm({
             })}
           </ul>
         )}
-        {kind === "series" && !many && (
-          <p className="mt-1.5 px-1 text-xs text-faint">
-            A link to one episode is enough – the season and episode are filled in for every other one.
-          </p>
-        )}
+        {kind === "series" && !many && (first ? <EpisodeLinkStatus url={first.source.url} /> : <EpisodeLinkHint />)}
       </div>
 
       {/* Once there is a link: the show (or film) it names – picked already, another one a search away. */}

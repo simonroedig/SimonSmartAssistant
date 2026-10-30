@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mockWeather } from "./helpers";
+import { mockWeather, setPhoneMore } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await mockWeather(page);
@@ -27,6 +27,7 @@ const labels = (page: Page, nav: "first" | "last") =>
 
 test("menu: the order of the phone's tab bar and of the side bar is set in Settings", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await setPhoneMore(page, false);
   await openSettings(page);
   const phone = page.getByRole("group", { name: "Phone tab bar" });
 
@@ -80,4 +81,46 @@ test("menu: the order of the phone's tab bar and of the side bar is set in Setti
   await expect
     .poll(() => labels(page, "first"))
     .toEqual(["Home", "Planner", "Shopping", "Backlog", "Notes", "Weather", "Media", "Settings"]);
+});
+
+test("menu: the phone's tab bar can swipe to Media, Weather and Settings (instead of the icons on Home)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await setPhoneMore(page, false);
+  const more = page.getByRole("switch", { name: "More in the tab bar" });
+
+  // Off: Media and Settings sit at the top of Home.
+  await page.goto("/");
+  await expect(page.locator("main").getByRole("link", { name: "Media", exact: true })).toBeVisible();
+  const bar = page.locator("[data-tabbar]");
+  await expect(bar.locator("[data-tab-pages]")).toHaveCount(0);
+
+  // On: the bar has a second page with them, Home loses its icons.
+  await openSettings(page);
+  await saved(page, () => more.click());
+  await page.goto("/");
+  await expect(page.locator("main").getByRole("link", { name: "Media", exact: true })).toHaveCount(0);
+  await expect(page.locator("main").getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
+  const pages = bar.locator("[data-tab-pages]");
+  const inView = async (name: string) => {
+    const b = (await bar.getByRole("link", { name, exact: true }).boundingBox())!;
+    return b.x >= 0 && b.x + b.width <= 390;
+  };
+  expect(await inView("Home")).toBe(true);
+  expect(await inView("Media")).toBe(false);
+  // Swiping the bar (it scrolls sideways and snaps) shows the second page.
+  await pages.evaluate((el) => el.scrollTo({ left: el.clientWidth, behavior: "instant" }));
+  await expect.poll(() => inView("Weather")).toBe(true);
+  await bar.getByRole("link", { name: "Media", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Media" })).toBeVisible();
+  // On one of its pages the bar opens on that second page.
+  await page.goto("/weather");
+  await expect.poll(() => inView("Weather")).toBe(true);
+  await expect(bar.getByRole("link", { name: "Weather", exact: true })).toHaveAttribute("aria-current", "page");
+
+  // And off again.
+  await openSettings(page);
+  await saved(page, () => more.click());
+  await expect(more).toHaveAttribute("aria-checked", "false");
 });

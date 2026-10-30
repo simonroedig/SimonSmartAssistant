@@ -1,17 +1,36 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { LayoutGrid } from "lucide-react";
 import { LauncherSync } from "@/components/launcher/launcher-sync";
 import { useSyncStatus } from "@/components/providers/realtime-provider";
 import { useSettings, useSettingsRow } from "@/data/settings";
 import { setHomeView, useHomeView, useIsLauncher } from "@/lib/launcher";
-import { NAVIGATION_COOKIE, type NavigationPreferences, phoneTabs, railItems, type SectionId } from "@/lib/navigation";
+import {
+  DEFAULT_NAVIGATION,
+  NAVIGATION_COOKIE,
+  type NavigationPreferences,
+  PHONE_MORE,
+  phoneTabs,
+  railItems,
+  type SectionId,
+} from "@/lib/navigation";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
-import { HOME_ITEM, isActive, navItem, SETTINGS_ITEM, type NavItem } from "./nav-items";
+import { HOME_ITEM, isActive, MEDIA_ITEM, navItem, SETTINGS_ITEM, WEATHER_ITEM, type NavItem } from "./nav-items";
+
+const NavigationContext = createContext<NavigationPreferences>(DEFAULT_NAVIGATION);
+
+/** The menu preferences as the shell shows them (right from the first render). */
+export function useNavigationPreferences(): NavigationPreferences {
+  return useContext(NavigationContext);
+}
+
+const MORE_ITEMS: NavItem[] = PHONE_MORE.map((id) =>
+  id === "media" ? MEDIA_ITEM : id === "weather" ? WEATHER_ITEM : SETTINGS_ITEM,
+);
 
 function SyncDot() {
   const status = useSyncStatus();
@@ -229,17 +248,50 @@ function TabLink({
 function BottomNav({
   order,
   attached,
+  more,
   isCurrent,
   onNavigate,
   home,
 }: {
   order: (SectionId | "home")[];
   attached: boolean;
+  /** A second page (swiped to) with Media, Weather and Settings. */
+  more: boolean;
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
   home: { item: NavItem; target: string };
 }) {
   const items = order.map(navItem);
+  const pager = useRef<HTMLDivElement>(null);
+  const onMorePage = more && MORE_ITEMS.some((item) => isCurrent(item.href));
+  // Showing a page of the second set: the bar shows that set (and the first one otherwise).
+  useEffect(() => {
+    const el = pager.current;
+    if (!el || !more) return;
+    const target = onMorePage ? el.clientWidth : 0;
+    if (Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: "instant" });
+  }, [more, onMorePage]);
+
+  const tabs = (list: NavItem[]) => (
+    <div className="relative flex w-full shrink-0 snap-start">
+      <SlidingPill index={list.findIndex((item) => isCurrent(item.href))} items={list} axis="x" />
+      {list.map((item) =>
+        item.href === "/" ? (
+          <TabLink
+            key={item.href}
+            item={home.item}
+            target={home.target}
+            active={isCurrent(item.href)}
+            onNavigate={onNavigate}
+            anchor
+          />
+        ) : (
+          <TabLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
+        ),
+      )}
+    </div>
+  );
+
   return (
     <nav
       aria-label="Main"
@@ -253,23 +305,21 @@ function BottomNav({
           : "inset-x-4 bottom-[calc(var(--safe-bottom)+0.75rem)] rounded-(--radius-bar)",
       )}
     >
-      <div className="relative flex flex-1">
-        <SlidingPill index={items.findIndex((item) => isCurrent(item.href))} items={items} axis="x" />
-        {items.map((item) =>
-          item.href === "/" ? (
-            <TabLink
-              key={item.href}
-              item={home.item}
-              target={home.target}
-              active={isCurrent(item.href)}
-              onNavigate={onNavigate}
-              anchor
-            />
-          ) : (
-            <TabLink key={item.href} item={item} active={isCurrent(item.href)} onNavigate={onNavigate} />
-          ),
-        )}
-      </div>
+      {more ? (
+        <>
+          {/* Two pages side by side: swipe the bar for the second (it snaps to either) – no page dots. */}
+          <div
+            ref={pager}
+            data-tab-pages
+            className="no-scrollbar flex flex-1 [touch-action:pan-x] snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+          >
+            {tabs(items)}
+            {tabs(MORE_ITEMS)}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-1">{tabs(items)}</div>
+      )}
     </nav>
   );
 }
@@ -341,37 +391,40 @@ export function AppShell({
   const home = useHomeSwitch(pathname);
 
   return (
-    <div className="relative min-h-dvh" data-phone-nav={navigation.phoneStyle} data-rail-nav={navigation.railStyle}>
-      {/* Android app: the page shows through the status bar; a soft veil keeps its icons legible. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-(--safe-top) bg-linear-to-b from-(--bg)/70 to-transparent"
-      />
-      {pendingHref && (
-        <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden" role="progressbar" aria-label="Loading">
-          <div className="nav-progress h-full w-1/3 rounded-full bg-accent" />
-        </div>
-      )}
-      <LauncherSync />
-      <NavRail
-        order={railItems(navigation)}
-        attached={navigation.railStyle === "attached"}
-        isCurrent={isCurrent}
-        onNavigate={onNavigate}
-        home={home}
-      />
-      <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-(--rail-space)">
-        {children}
-        {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
-        <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
-      </main>
-      <BottomNav
-        order={phoneTabs(navigation)}
-        attached={navigation.phoneStyle === "attached"}
-        isCurrent={isCurrent}
-        onNavigate={onNavigate}
-        home={home}
-      />
-    </div>
+    <NavigationContext.Provider value={navigation}>
+      <div className="relative min-h-dvh" data-phone-nav={navigation.phoneStyle} data-rail-nav={navigation.railStyle}>
+        {/* Android app: the page shows through the status bar; a soft veil keeps its icons legible. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-(--safe-top) bg-linear-to-b from-(--bg)/70 to-transparent"
+        />
+        {pendingHref && (
+          <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden" role="progressbar" aria-label="Loading">
+            <div className="nav-progress h-full w-1/3 rounded-full bg-accent" />
+          </div>
+        )}
+        <LauncherSync />
+        <NavRail
+          order={railItems(navigation)}
+          attached={navigation.railStyle === "attached"}
+          isCurrent={isCurrent}
+          onNavigate={onNavigate}
+          home={home}
+        />
+        <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-(--rail-space)">
+          {children}
+          {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
+          <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
+        </main>
+        <BottomNav
+          order={phoneTabs(navigation)}
+          attached={navigation.phoneStyle === "attached"}
+          more={navigation.phoneMore}
+          isCurrent={isCurrent}
+          onNavigate={onNavigate}
+          home={home}
+        />
+      </div>
+    </NavigationContext.Provider>
   );
 }
