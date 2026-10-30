@@ -118,7 +118,9 @@ test("media: a pasted list becomes series, films, live TV and links – each fou
   // Picking a tab never animates its frame (that flashed light on the one just left).
   expect(await tab(page, /Movies/).evaluate((el) => getComputedStyle(el).transitionProperty)).not.toMatch(/border|all/);
 
-  // Films (from Wikipedia), live TV and links in their own tabs.
+  // Films (from Wikipedia), live TV and links in their own tabs (a moment after the swipe –
+  // the tap that ends one is swallowed, and a fast machine clicks within that moment).
+  await page.waitForTimeout(150);
   await tab(page, /Movies/).click();
   await expect(page.getByRole("button", { name: "The Substance" })).toContainText("2024");
   await expect(page.getByRole("button", { name: "American Beauty" })).toContainText("1999");
