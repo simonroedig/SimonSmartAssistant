@@ -73,7 +73,8 @@ export function Sheet({
   children: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
-  size?: "sm" | "md" | "lg";
+  /** Width on larger screens; "half" is about half the screen (e.g. for writing notes). */
+  size?: "sm" | "md" | "lg" | "half";
 }) {
   const isPhone = useMediaQuery("(max-width: 767px)");
   const dragControls = useDragControls();
@@ -126,6 +127,7 @@ export function Sheet({
                           size === "sm" && "max-w-md",
                           size === "md" && "max-w-lg",
                           size === "lg" && "max-w-2xl",
+                          size === "half" && "max-w-[min(64rem,max(32rem,50vw))]",
                         ),
                     className,
                   )}

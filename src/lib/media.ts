@@ -174,6 +174,8 @@ export type ParsedLine = {
   query: string;
   year: number | null;
   source: MediaSource;
+  /** The link as pasted. */
+  raw: string;
 };
 
 /**
@@ -209,6 +211,27 @@ export function parseMediaLine(line: string): ParsedLine | null {
     query: name ?? query,
     year,
     source: { label: linkLabel(raw), url: template ?? raw },
+    raw,
+  };
+}
+
+/**
+ * A pasted line read as the kind it was added under (the tab it was added from):
+ * only a series' link becomes one for any episode, only a series or film is looked up.
+ */
+export function lineAs(line: ParsedLine, kind: MediaKind): ParsedLine {
+  if (kind === line.kind) return line;
+  const lookup = kind === "series" || kind === "movie";
+  const { query, year } = lookup ? titleFromLink(line.raw) : { query: "", year: null };
+  return {
+    ...line,
+    kind,
+    query: line.name ?? query,
+    year,
+    source: {
+      label: linkLabel(line.raw),
+      url: kind === "series" ? (toEpisodeTemplate(line.raw) ?? line.raw) : line.raw,
+    },
   };
 }
 

@@ -687,6 +687,7 @@ function NoteEditorSheet({
       onOpenChange={(o) => !o && close()}
       title={note ? "Note" : placement.vault ? "New note in the vault" : "New note"}
       className={FIELD_FOCUS.orange}
+      size="half"
       footer={
         <>
           <Button

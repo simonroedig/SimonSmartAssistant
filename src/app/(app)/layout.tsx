@@ -9,6 +9,7 @@ import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { SkyController } from "@/components/providers/sky-controller";
 import { AppShell } from "@/components/shell/app-shell";
+import { MouseDragScroll } from "@/components/shell/mouse-drag-scroll";
 import { requireUser } from "@/lib/auth/session";
 import { NAVIGATION_COOKIE, navigationFromCookie } from "@/lib/navigation";
 
@@ -27,6 +28,7 @@ export default async function SignedInLayout({ children }: LayoutProps<"/">) {
         <KeepAwake />
         <StillMode />
         <TouchScroll />
+        <MouseDragScroll />
         <RemoteControl />
       </RealtimeProvider>
     </SessionProvider>

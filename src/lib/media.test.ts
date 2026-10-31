@@ -4,6 +4,7 @@ import {
   episodeLink,
   episodesUpTo,
   isAired,
+  lineAs,
   nextEpisode,
   nextFromWatched,
   parseMediaLine,
@@ -92,6 +93,17 @@ describe("reading pasted links", () => {
     });
     expect(parseMediaLine("no link here")).toBeNull();
     expect(parseMediaLine("javascript:alert(1)")).toBeNull();
+  });
+
+  it("reads a link as the kind it's added under – a live channel stays one, only series get episode slots", () => {
+    const episode = parseMediaLine("https://stream.example/watchseries/news-online/season/1/episode/1")!;
+    expect(episode.kind).toBe("series");
+    const asChannel = lineAs(episode, "channel");
+    expect(asChannel).toMatchObject({ kind: "channel", source: { url: episode.raw } });
+    const page = parseMediaLine("https://stream.example/tv/some-news-live")!;
+    expect(lineAs(page, "link").source.url).toBe("https://stream.example/tv/some-news-live");
+    const film = lineAs(parseMediaLine("https://example.com/watch/the-substance-2024")!, "movie");
+    expect(film).toMatchObject({ kind: "movie", query: "the substance", year: 2024 });
   });
 
   it("keeps only web links from stored sources", () => {

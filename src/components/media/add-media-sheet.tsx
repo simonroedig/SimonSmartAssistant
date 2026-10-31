@@ -11,8 +11,8 @@ import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { type MediaTitle, newId } from "@/data/core";
 import { type Found, lookUp, type MediaInput, useAddMedia, useUpdateMedia } from "@/data/media";
 import {
+  lineAs,
   linkLabel,
-  MEDIA_KINDS,
   type MediaKind,
   type MediaSource,
   type ParsedLine,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/media";
 import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-import { KIND_ICON, KIND_LABEL } from "./media-parts";
+import { KIND_ICON, KIND_LABEL, MEDIA_TABS, TAB_LABEL } from "./media-parts";
 import { EpisodeLinkHint, EpisodeLinkStatus, LookUp } from "./title-sheet";
 
 const fuchsia = TONE_STYLES.fuchsia;
@@ -112,9 +112,10 @@ function AddForm({
   const parsed = lines.map(parseMediaLine);
   const valid = parsed.filter((p): p is ParsedLine => p !== null);
   const many = lines.length > 1;
-  const first = parsed[0] ?? null;
-  // What the link looks like, unless picked by hand.
-  const kind: MediaKind = chosenKind ?? first?.kind ?? initialKind;
+  // One link is what the tab it's added from says (or the kind picked here) – a live channel
+  // stays live TV, whatever its address looks like. A pasted list is sorted line by line.
+  const kind: MediaKind = chosenKind ?? initialKind;
+  const first = parsed[0] ? lineAs(parsed[0], kind) : null;
   const lookupKind = kind === "series" || kind === "movie" ? kind : null;
   const guess = first?.name ?? (first?.query ? titleCase(first.query) : "");
   const shownName = name ?? (lookupKind && found ? found.title : guess);
@@ -164,8 +165,9 @@ function AddForm({
     setBusy(true);
     const inputs: MediaInput[] = [];
     let merged = 0;
-    for (const line of valid) {
-      const lineKind = chosenKind ?? line.kind;
+    for (const pasted of valid) {
+      const line = chosenKind ? lineAs(pasted, chosenKind) : pasted;
+      const lineKind = line.kind;
       const hit = lineKind === "series" || lineKind === "movie" ? await lookUp(lineKind, line.query, line.year) : null;
       const title = line.name ?? hit?.title ?? (line.query ? titleCase(line.query) : linkLabel(line.source.url));
       const existing =
@@ -217,21 +219,29 @@ function AddForm({
       <div>
         <Label>What</Label>
         <div className="flex flex-wrap gap-1.5">
-          {MEDIA_KINDS.map((k) => {
+          {/* Like the page's tabs: Links first as an icon, then Series, Movies, Live TV. */}
+          {MEDIA_TABS.map((k) => {
             const Icon = KIND_ICON[k];
+            const iconOnly = k === "link";
             return (
               <button
                 key={k}
                 type="button"
                 aria-pressed={kind === k}
+                aria-label={iconOnly ? TAB_LABEL[k] : undefined}
+                title={iconOnly ? TAB_LABEL[k] : undefined}
                 onClick={() => {
                   setChosenKind(k);
                   setFound(null);
                 }}
-                className={cn(CHIP, kind === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE)}
+                className={cn(
+                  CHIP,
+                  iconOnly && "w-9 justify-center px-0",
+                  kind === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE,
+                )}
               >
                 <Icon className="size-4" />
-                {KIND_LABEL[k]}
+                {!iconOnly && TAB_LABEL[k]}
               </button>
             );
           })}

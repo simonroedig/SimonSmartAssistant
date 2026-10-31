@@ -11,9 +11,19 @@ import { useWatching, type Watching } from "./use-watching";
 
 export const KIND_LABEL: Record<MediaKind, string> = {
   series: "Series",
-  movie: "Film",
+  movie: "Movie",
   channel: "Live TV",
   link: "Link",
+};
+
+/** The page's tabs (and the add sheet's kinds) from left to right: Links first, as a small icon. */
+export const MEDIA_TABS: MediaKind[] = ["link", "series", "movie", "channel"];
+
+export const TAB_LABEL: Record<MediaKind, string> = {
+  series: "Series",
+  movie: "Movies",
+  channel: "Live TV",
+  link: "Links",
 };
 
 export const KIND_ICON: Record<MediaKind, LucideIcon> = { series: Tv, movie: Film, channel: Radio, link: Link2 };

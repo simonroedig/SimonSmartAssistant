@@ -25,20 +25,23 @@ import {
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { AddMediaSheet } from "./add-media-sheet";
-import { KIND_ICON, MEDIA_TONE, mediaStyle, ProgressBar, WatchButton, WatchingBanner } from "./media-parts";
+import {
+  KIND_ICON,
+  MEDIA_TABS,
+  MEDIA_TONE,
+  mediaStyle,
+  ProgressBar,
+  TAB_LABEL,
+  WatchButton,
+  WatchingBanner,
+} from "./media-parts";
 import { Poster } from "./poster";
 import { TitleSheet } from "./title-sheet";
 import { seenMessage, useMediaActions, usePosterColor, useSeriesState, watchUrl } from "./use-media-actions";
 
 const fuchsia = TONE_STYLES.fuchsia;
 
-const TAB_LABEL: Record<MediaKind, string> = { series: "Series", movie: "Movies", channel: "Live TV", link: "Links" };
-
-/**
- * The tabs from left to right: Links first, as a small icon (like the notes' vault) –
- * one swipe away from Series, which the page opens on.
- */
-const TABS: MediaKind[] = ["link", "series", "movie", "channel"];
+const TABS = MEDIA_TABS;
 
 const EMPTY: Record<MediaKind, string> = {
   series: "No series yet. Add one with + – a link to any episode is enough.",

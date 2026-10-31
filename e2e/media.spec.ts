@@ -50,14 +50,14 @@ test("media: a pasted list becomes series, films, live TV and links – each fou
   await page.getByRole("button", { name: "Add to Media" }).click();
   const dialog = page.getByRole("dialog");
   await dialog
-    .getByLabel(/Link/)
+    .getByRole("textbox", { name: /Link/ })
     .fill(
       [SERIES_A, SERIES_B, FILM_A, FILM_B, `Das Erste ${CHANNEL_A}`, `ZDF ${CHANNEL_B}`, `yarrlist ${LINK}`].join("\n"),
     );
   // Each line is recognised before anything is added.
   for (const [name, kind] of [
     ["Bobs Burgers", "Series"],
-    ["The Substance", "Film"],
+    ["The Substance", "Movie"],
     ["ZDF", "Live TV"],
     ["yarrlist", "Link"],
   ]) {
@@ -130,9 +130,13 @@ test("media: a pasted list becomes series, films, live TV and links – each fou
   await tab(page, /Links/).click();
   await expect(page.getByRole("link", { name: /yarrlist/ })).toHaveAttribute("href", LINK);
 
-  // Pasting one again adds nothing twice.
+  // Pasting one again adds nothing twice. Added from the Live TV tab, a link stays live TV.
+  await tab(page, /Live TV/).click();
+  await page.waitForTimeout(150);
   await page.getByRole("button", { name: "Add to Media" }).click();
-  await dialog.getByLabel(/Link/).fill(`ZDF ${CHANNEL_B}`);
+  await dialog.getByRole("textbox", { name: /Link/ }).fill(`ZDF ${CHANNEL_B}`);
+  await expect(dialog.getByRole("button", { name: "Live TV", pressed: true })).toBeVisible();
+  await expect(dialog.getByText(/series page only/)).toHaveCount(0);
   await dialog.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByText("Already there – the link is kept with it")).toBeVisible();
   await tab(page, /Live TV/).click();
@@ -142,9 +146,12 @@ test("media: a pasted list becomes series, films, live TV and links – each fou
 test("media: watch the next episode, tick it off, catch up on earlier ones – with summaries", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await clearMedia(page);
+  // Added from its own tab (a link stays what the tab says).
+  await tab(page, /Series/).click();
+  await page.waitForTimeout(150);
   await page.getByRole("button", { name: "Add to Media" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel(/Link/).fill(SERIES_A);
+  await dialog.getByRole("textbox", { name: /Link/ }).fill(SERIES_A);
   // The show is looked up and picked by itself.
   await expect(dialog.getByRole("button", { name: /Bob's Burgers/, pressed: true })).toBeVisible();
   await expect(dialog.getByLabel("Name")).toHaveValue("Bob's Burgers");
@@ -196,9 +203,12 @@ test("media: a link to the series' page is flagged – a link to one episode rep
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await clearMedia(page);
+  // Added from its own tab (a link stays what the tab says).
+  await tab(page, /Series/).click();
+  await page.waitForTimeout(150);
   await page.getByRole("button", { name: "Add to Media" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel(/Link/).fill("https://stream.example/watchseries/south-park-online-free");
+  await dialog.getByRole("textbox", { name: /Link/ }).fill("https://stream.example/watchseries/south-park-online-free");
   await expect(dialog.getByText("The series page only – paste a link to one episode")).toBeVisible();
   await expect(dialog.getByLabel("Name")).toHaveValue("South Park");
   await dialog.getByRole("button", { name: "Add", exact: true }).click();
@@ -220,14 +230,17 @@ test("media: a link to the series' page is flagged – a link to one episode rep
 test("media: films are ticked off, and the TV remote moves between them with the arrow keys", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await clearMedia(page);
+  // Added from its own tab (a link stays what the tab says).
+  await tab(page, /Movies/).click();
+  await page.waitForTimeout(150);
   await page.getByRole("button", { name: "Add to Media" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel(/Link/).fill(FILM_B);
+  await dialog.getByRole("textbox", { name: /Link/ }).fill(FILM_B);
   await expect(dialog.getByLabel("Name")).toHaveValue("American Beauty");
   await dialog.getByRole("switch", { name: "Already seen" }).click();
   await dialog.getByRole("button", { name: "Add", exact: true }).click();
   await page.getByRole("button", { name: "Add to Media" }).click();
-  await dialog.getByLabel(/Link/).fill(FILM_A);
+  await dialog.getByRole("textbox", { name: /Link/ }).fill(FILM_A);
   await expect(dialog.getByLabel("Name")).toHaveValue("The Substance");
   await dialog.getByRole("button", { name: "Add", exact: true }).click();
   await expect(page.getByRole("button", { name: "American Beauty (seen)" })).toContainText("Seen");

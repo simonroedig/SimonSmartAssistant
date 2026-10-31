@@ -873,3 +873,42 @@ test("week strip: a busy day shows a dot for every block, all inside the day", a
     expect(d.x + d.width).toBeLessThanOrEqual(box.x + box.width);
   }
 });
+
+test("computer: rows that scroll sideways follow a mouse drag; the note editor is half the screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/notes");
+  const row = page.getByRole("group", { name: "Filter notes" });
+  await expect(row).toBeVisible();
+  // Narrow enough that the chips scroll (more categories would do the same).
+  await row.evaluate((el) => {
+    (el as HTMLElement).style.maxWidth = "120px";
+    el.scrollLeft = 0;
+  });
+  const pressed = row.locator("[aria-pressed=true]");
+  const pressedBefore = await pressed.evaluate((el) => el.outerHTML);
+  const box = (await row.boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width - 10, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 8; i++) await page.mouse.move(box.x + box.width - 10 - i * 10, y + 1);
+  await page.mouse.up();
+  expect(await row.evaluate((el) => el.scrollLeft)).toBeGreaterThan(40);
+  // The drag ended on a chip without picking it.
+  expect(await pressed.evaluate((el) => el.outerHTML)).toBe(pressedBefore);
+
+  // A plain click still picks.
+  await row.evaluate((el) => (el.scrollLeft = 0));
+  const all = row.getByRole("button", { name: "All", exact: true });
+  await all.click();
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+
+  // Writing a note on a computer: about half the screen wide.
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  const width = (await dialog.boundingBox())!.width;
+  expect(width).toBeGreaterThan(650);
+  expect(width).toBeLessThan(800);
+});
