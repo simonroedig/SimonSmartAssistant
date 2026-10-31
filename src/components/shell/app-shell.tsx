@@ -258,7 +258,6 @@ function TabLink({
     <AppLink
       href={target}
       aria-current={active ? "page" : undefined}
-      data-home-tab={anchor ? "" : undefined}
       onClick={() => onNavigate(target)}
       className={cn(
         "relative flex flex-1 flex-col items-center gap-0.5 rounded-(--pill-radius) py-2 text-[0.65rem] font-medium transition-colors active:scale-95",
@@ -302,26 +301,6 @@ function BottomNav({
     if (Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: "instant" });
   }, [more, onMorePage]);
 
-  // Swiped back to the first page from Media, Weather or Settings: straight on to Home (or
-  // the apps, whichever Home shows) – what you'd tap next anyway. Only a swipe by hand,
-  // not the bar settling on the page of where you are.
-  const swiped = useRef(false);
-  const onMoreNow = useRef(onMorePage);
-  useEffect(() => {
-    onMoreNow.current = onMorePage;
-  });
-  useEffect(() => {
-    const el = pager.current;
-    if (!el || !more) return;
-    const settled = () => {
-      if (!swiped.current) return;
-      swiped.current = false;
-      if (el.scrollLeft < 4 && onMoreNow.current) el.querySelector<HTMLElement>("[data-home-tab]")?.click();
-    };
-    el.addEventListener("scrollend", settled);
-    return () => el.removeEventListener("scrollend", settled);
-  }, [more]);
-
   const tabs = (list: NavItem[], pill = true, className = "w-full") => (
     <div className={cn("relative flex shrink-0 snap-start", className)}>
       {pill && <SlidingPill index={list.findIndex((item) => isCurrent(item.href))} items={list} axis="x" />}
@@ -363,7 +342,6 @@ function BottomNav({
           <div
             ref={pager}
             data-tab-pages
-            onPointerDown={() => (swiped.current = true)}
             className="no-scrollbar flex flex-1 [touch-action:manipulation] snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
           >
             {/* One highlight for both pages: it glides from the tab you were on, wherever it is. */}

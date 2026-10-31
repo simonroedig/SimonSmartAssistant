@@ -169,26 +169,6 @@ test("menu: with the second page, a scroll that starts on the tab bar still scro
   await touch("touchEnd", 0, 0);
   await expect.poll(() => bar.locator("[data-tab-pages]").evaluate((el) => el.scrollLeft)).toBeGreaterThan(300);
 
-  // From Media, a swipe back to the first page goes straight home – the next tap anyway.
-  await bar.getByRole("link", { name: "Media", exact: true }).tap();
-  await expect(page).toHaveURL(/\/media$/);
-  await page.waitForTimeout(400);
-  await touch("touchStart", 60, y);
-  for (let i = 1; i <= 8; i++) await touch("touchMove", 60 + i * 35, y);
-  await touch("touchEnd", 0, 0);
-  await expect(page).toHaveURL(/\/$/);
-  // On Home, a look at the second page and back goes nowhere.
-  await page.waitForTimeout(400);
-  await touch("touchStart", 330, y);
-  for (let i = 1; i <= 8; i++) await touch("touchMove", 330 - i * 35, y);
-  await touch("touchEnd", 0, 0);
-  await page.waitForTimeout(400);
-  await touch("touchStart", 60, y);
-  for (let i = 1; i <= 8; i++) await touch("touchMove", 60 + i * 35, y);
-  await touch("touchEnd", 0, 0);
-  await page.waitForTimeout(600);
-  await expect(page).toHaveURL(/\/$/);
-
   await setPhoneMore(page, false);
   await context.close();
 });
