@@ -660,10 +660,18 @@ function NoteEditorSheet({
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const deleted = useRef(false);
 
-  // New notes start typing right away.
+  // New notes start typing right away – unless a field (the title) was tapped already.
   useEffect(() => {
     if (state?.mode !== "create") return;
-    const id = window.setTimeout(() => bodyRef.current?.focus(), 120);
+    const id = window.setTimeout(() => {
+      const body = bodyRef.current;
+      const active = document.activeElement;
+      const typing =
+        active !== body &&
+        !!body?.closest("[role='dialog']")?.contains(active) &&
+        !!active?.matches("input, textarea, [contenteditable='true']");
+      if (body && !typing) body.focus();
+    }, 120);
     return () => window.clearTimeout(id);
   }, [state?.mode]);
 

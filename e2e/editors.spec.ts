@@ -99,7 +99,11 @@ test("note editor: Done once there is text; its text can be copied (without the 
   const dialog = page.getByRole("dialog");
   const done = dialog.getByRole("button", { name: "Done" });
   await expect(done).toBeDisabled();
+  // Tapping the title right away keeps it there: typing doesn't jump to the note.
   await dialog.getByLabel("Title").fill("Only a title");
+  await page.waitForTimeout(300);
+  await expect(dialog.getByLabel("Title")).toBeFocused();
+  await expect(dialog.getByLabel("Title")).toHaveValue("Only a title");
   await expect(done).toBeDisabled();
   await dialog.getByLabel("Note", { exact: true }).fill("Door code 1234");
   await expect(done).toBeEnabled();
