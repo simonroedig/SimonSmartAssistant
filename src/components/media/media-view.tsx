@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ExternalLink, MoreHorizontal, Pencil, TriangleAlert } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
@@ -9,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { Fab } from "@/components/ui/fab";
 import type { MediaTitle } from "@/data/core";
-import { useMedia } from "@/data/media";
+import { useLiveStatus, useMedia } from "@/data/media";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
@@ -17,6 +18,7 @@ import {
   episodeKey,
   formatEpisode,
   hasEpisodeSlots,
+  isLive,
   linkLabel,
   MEDIA_KINDS,
   type MediaKind,
@@ -28,10 +30,12 @@ import { AddMediaSheet } from "./add-media-sheet";
 import {
   KIND_ICON,
   MEDIA_TABS,
+  type MediaTab,
   MEDIA_TONE,
   mediaStyle,
   ProgressBar,
   TAB_LABEL,
+  tabOf,
   WatchButton,
   WatchingBanner,
 } from "./media-parts";
@@ -43,15 +47,25 @@ const fuchsia = TONE_STYLES.fuchsia;
 
 const TABS = MEDIA_TABS;
 
-const EMPTY: Record<MediaKind, string> = {
+const EMPTY: Record<MediaTab, string> = {
   series: "No series yet. Add one with + – a link to any episode is enough.",
   movie: "No films yet. Add one with +.",
-  channel: "No channels yet. Add one with + (name and link).",
+  channel: "Nothing live yet. Add TV channels or streams (YouTube, TikTok …) with +.",
   link: "No links yet – keep the sites you use here, one tap away.",
 };
 
 export function isMediaKind(value: unknown): value is MediaKind {
   return typeof value === "string" && (MEDIA_KINDS as string[]).includes(value);
+}
+
+/** The tab in the address (`?tab=live` too). */
+function tabFrom(value: string | undefined): MediaTab {
+  if (value === "live") return "channel";
+  return isMediaKind(value) ? tabOf(value) : "series";
+}
+
+function inTab(m: MediaTitle, tab: MediaTab) {
+  return tab === "channel" ? isLive(m.kind) : m.kind === tab;
 }
 
 /** Recently watched first, then the newest. */
@@ -60,20 +74,20 @@ function byLastWatched(a: MediaTitle, b: MediaTitle) {
 }
 
 /**
- * My Media: series (with where you are and what's next), films, live TV and handy
+ * My Media: series (with where you are and what's next), films, TV and streams, and handy
  * links. Built for the phone, the PC and – with big targets and arrow-key focus –
  * the TV.
  */
 export function MediaView({ initialTab }: { initialTab?: string }) {
   const media = useMedia();
   const all = media.data ?? [];
-  const [tab, setTab] = useState<MediaKind>(isMediaKind(initialTab) ? initialTab : "series");
+  const [tab, setTab] = useState<MediaTab>(tabFrom(initialTab));
   const [openId, setOpenId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const open = all.find((m) => m.id === openId) ?? null;
-  const items = all.filter((m) => m.kind === tab);
+  const items = all.filter((m) => inTab(m, tab));
 
-  const changeTab = (next: MediaKind) => {
+  const changeTab = (next: MediaTab) => {
     setTab(next);
     // In the address, so reloading (or the TV's browser coming back) keeps the tab.
     window.history.replaceState(window.history.state, "", next === "series" ? "/media" : `/media?tab=${next}`);
@@ -104,7 +118,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
         className="flex [touch-action:pan-y] flex-col overflow-x-clip max-md:min-h-0 max-md:flex-1 md:min-h-dvh"
         {...swipe}
       >
-        <PageHeader title="Media" subtitle="Series, films and live TV – where to watch and how far you are" />
+        <PageHeader title="Media" subtitle="Series, films, TV and streams – where to watch and how far you are" />
         <PageBody className={cn(FIELD_FOCUS.fuchsia, FILL_BODY, "md:pb-28")}>
           <WatchingBanner media={all} />
           <div
@@ -115,7 +129,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
           >
             {TABS.map((k) => {
               const Icon = KIND_ICON[k];
-              const count = all.filter((m) => m.kind === k).length;
+              const count = all.filter((m) => inTab(m, k)).length;
               const iconOnly = k === "link";
               return (
                 <button
@@ -172,7 +186,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
               ) : tab === "movie" ? (
                 <MovieGrid movies={items} onOpen={(m) => setOpenId(m.id)} />
               ) : tab === "channel" ? (
-                <ChannelGrid channels={items} onEdit={(c) => setOpenId(c.id)} />
+                <LiveView items={items} onEdit={(c) => setOpenId(c.id)} />
               ) : (
                 <LinkList links={items} onEdit={(l) => setOpenId(l.id)} />
               )}
@@ -190,7 +204,13 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
           fuchsia.solid,
         )}
       />
-      <AddMediaSheet open={adding} kind={tab} media={all} onClose={() => setAdding(false)} onAdded={changeTab} />
+      <AddMediaSheet
+        open={adding}
+        kind={tab}
+        media={all}
+        onClose={() => setAdding(false)}
+        onAdded={(kind) => changeTab(tabOf(kind))}
+      />
       <TitleSheet title={open} onClose={() => setOpenId(null)} />
     </FillPage>
   );
@@ -348,48 +368,90 @@ function MovieTile({ movie: m, onOpen }: { movie: MediaTitle; onOpen: () => void
   );
 }
 
-function ChannelGrid({ channels, onEdit }: { channels: MediaTitle[]; onEdit: (c: MediaTitle) => void }) {
-  const { touch } = useMediaActions();
+/** Live: TV channels (always on air) and streams (only now and then) – each under its own heading. */
+function LiveView({ items, onEdit }: { items: MediaTitle[]; onEdit: (c: MediaTitle) => void }) {
+  const groups: { kind: "channel" | "stream"; label: string }[] = [
+    { kind: "channel", label: "TV" },
+    { kind: "stream", label: "Streams" },
+  ];
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
-      {channels.map((c) => {
-        const url = sourcesOf(c.sources)[0]?.url ?? null;
+    <div className="flex flex-col gap-6">
+      {groups.map(({ kind, label }) => {
+        const list = items.filter((m) => m.kind === kind);
+        if (list.length === 0) return null;
+        const Icon: LucideIcon = KIND_ICON[kind];
         return (
-          <Card key={c.id} as="article" className="overflow-hidden p-0">
-            {url ? (
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => touch(c)}
-                className="flex h-32 flex-col justify-between p-4 transition-colors hover:bg-surface-hover"
-              >
-                <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-500 uppercase dark:text-rose-300">
-                  <span className="size-2 animate-pulse rounded-full bg-current" /> Live
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-xl font-semibold tracking-tight">{c.title}</span>
-                  <span className="block truncate text-xs text-faint">{linkLabel(url)}</span>
-                </span>
-              </a>
-            ) : (
-              <button type="button" onClick={() => onEdit(c)} className="flex h-32 flex-col justify-end p-4 text-left">
-                <span className="truncate text-xl font-semibold">{c.title}</span>
-                <span className="text-xs text-faint">No link yet</span>
-              </button>
-            )}
-            <button
-              type="button"
-              aria-label={`Edit ${c.title}`}
-              onClick={() => onEdit(c)}
-              className="absolute top-2 right-2 grid size-9 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </Card>
+          <section key={kind} aria-label={label}>
+            <h2 className="mb-2.5 flex items-center gap-2 px-1 text-sm font-semibold text-muted">
+              <Icon className={cn("size-4", fuchsia.text)} /> {label}
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+              {list.map((c) => (
+                <LiveCard key={c.id} item={c} onEdit={() => onEdit(c)} />
+              ))}
+            </div>
+          </section>
         );
       })}
     </div>
+  );
+}
+
+/**
+ * A TV channel or stream. "Live" only while it is on air: TV unless its site is down,
+ * a stream once its page says so – nothing while that isn't known.
+ */
+function LiveCard({ item: c, onEdit }: { item: MediaTitle; onEdit: () => void }) {
+  const { touch } = useMediaActions();
+  const url = sourcesOf(c.sources)[0]?.url ?? null;
+  const status = useLiveStatus(url).data;
+  const state = status?.state ?? "unknown";
+  const onAir = c.kind === "channel" ? state !== "offline" : state === "live";
+  const offline = state === "offline";
+  return (
+    <Card as="article" className="overflow-hidden p-0">
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => touch(c)}
+          data-live={onAir ? "live" : offline ? "offline" : "unknown"}
+          className="flex h-32 flex-col justify-between p-4 transition-colors hover:bg-surface-hover"
+        >
+          {onAir ? (
+            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-500 uppercase dark:text-rose-300">
+              <span className="size-2 animate-pulse rounded-full bg-current" /> Live
+            </span>
+          ) : offline ? (
+            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-faint uppercase">
+              <span className="size-2 rounded-full bg-current" /> Offline
+            </span>
+          ) : (
+            <span className="h-4" />
+          )}
+          <span className={cn("min-w-0", offline && "opacity-70")}>
+            <span className="block truncate text-xl font-semibold tracking-tight">{c.title}</span>
+            <span className="block truncate text-xs text-faint">
+              {onAir && status?.title ? status.title : linkLabel(url)}
+            </span>
+          </span>
+        </a>
+      ) : (
+        <button type="button" onClick={onEdit} className="flex h-32 flex-col justify-end p-4 text-left">
+          <span className="truncate text-xl font-semibold">{c.title}</span>
+          <span className="text-xs text-faint">No link yet</span>
+        </button>
+      )}
+      <button
+        type="button"
+        aria-label={`Edit ${c.title}`}
+        onClick={onEdit}
+        className="absolute top-2 right-2 grid size-9 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+      >
+        <MoreHorizontal className="size-4" />
+      </button>
+    </Card>
   );
 }
 

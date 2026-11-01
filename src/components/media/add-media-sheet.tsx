@@ -11,8 +11,10 @@ import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { type MediaTitle, newId } from "@/data/core";
 import { type Found, lookUp, type MediaInput, useAddMedia, useUpdateMedia } from "@/data/media";
 import {
+  isLive,
   lineAs,
   linkLabel,
+  liveKindOf,
   type MediaKind,
   type MediaSource,
   type ParsedLine,
@@ -20,9 +22,10 @@ import {
   sourcesOf,
   titleCase,
 } from "@/lib/media";
+import { streamName } from "@/lib/live";
 import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-import { KIND_ICON, KIND_LABEL, MEDIA_TABS, TAB_LABEL } from "./media-parts";
+import { KIND_ICON, KIND_LABEL, MEDIA_TABS, TAB_LABEL, tabOf } from "./media-parts";
 import { EpisodeLinkHint, EpisodeLinkStatus, LookUp } from "./title-sheet";
 
 const fuchsia = TONE_STYLES.fuchsia;
@@ -31,6 +34,7 @@ const PLACEHOLDER: Record<MediaKind, string> = {
   series: "Paste a link to any episode",
   movie: "Paste the film's link",
   channel: "Name and link, e.g. ZDF https://…",
+  stream: "A channel's live link, e.g. youtube.com/@…/live",
   link: "Paste a link",
 };
 
@@ -72,8 +76,10 @@ function sameAs(
   found: Found | null,
   url?: string,
 ): MediaTitle | null {
-  if (kind === "channel" || kind === "link") {
-    return url ? (media.find((m) => m.kind === kind && sourcesOf(m.sources).some((s) => s.url === url)) ?? null) : null;
+  if (isLive(kind) || kind === "link") {
+    // TV or stream: the same link is the same, either way.
+    const same = (m: MediaTitle) => (isLive(kind) ? isLive(m.kind) : m.kind === kind);
+    return url ? (media.find((m) => same(m) && sourcesOf(m.sources).some((s) => s.url === url)) ?? null) : null;
   }
   return (
     media.find(
@@ -100,6 +106,8 @@ function AddForm({
   const update = useUpdateMedia();
   const [text, setText] = useState("");
   const [chosenKind, setChosenKind] = useState<MediaKind | null>(null);
+  /** Live: TV or a stream, if picked by hand (else by the link). */
+  const [chosenLive, setChosenLive] = useState<"channel" | "stream" | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [found, setFound] = useState<Found | null>(null);
   const [seen, setSeen] = useState(false);
@@ -112,12 +120,18 @@ function AddForm({
   const parsed = lines.map(parseMediaLine);
   const valid = parsed.filter((p): p is ParsedLine => p !== null);
   const many = lines.length > 1;
+  /** Live as TV or a stream: as picked, else by the link (YouTube, TikTok … are streams). */
+  const live = (base: MediaKind, raw: string | null): MediaKind =>
+    isLive(base) ? (chosenLive ?? (raw ? liveKindOf(raw) : base)) : base;
   // One link is what the tab it's added from says (or the kind picked here) – a live channel
-  // stays live TV, whatever its address looks like. A pasted list is sorted line by line.
-  const kind: MediaKind = chosenKind ?? initialKind;
+  // stays live, whatever its address looks like. A pasted list is sorted line by line.
+  const kind: MediaKind = live(chosenKind ?? initialKind, parsed[0]?.raw ?? null);
+  const lineKind = (p: ParsedLine): MediaKind => live(chosenKind ?? p.kind, p.raw);
   const first = parsed[0] ? lineAs(parsed[0], kind) : null;
   const lookupKind = kind === "series" || kind === "movie" ? kind : null;
-  const guess = first?.name ?? (first?.query ? titleCase(first.query) : "");
+  const guess =
+    first?.name ??
+    (first?.query ? titleCase(first.query) : kind === "stream" && first ? (streamName(first.raw) ?? "") : "");
   const shownName = name ?? (lookupKind && found ? found.title : guess);
 
   const done = (added: MediaKind, count: number, merged: number) => {
@@ -166,15 +180,16 @@ function AddForm({
     const inputs: MediaInput[] = [];
     let merged = 0;
     for (const pasted of valid) {
-      const line = chosenKind ? lineAs(pasted, chosenKind) : pasted;
-      const lineKind = line.kind;
-      const hit = lineKind === "series" || lineKind === "movie" ? await lookUp(lineKind, line.query, line.year) : null;
+      const line = lineAs(pasted, lineKind(pasted));
+      const kindOfLine = line.kind;
+      const hit =
+        kindOfLine === "series" || kindOfLine === "movie" ? await lookUp(kindOfLine, line.query, line.year) : null;
       const title = line.name ?? hit?.title ?? (line.query ? titleCase(line.query) : linkLabel(line.source.url));
       const existing =
-        sameAs(media, lineKind, title, hit, line.source.url) ??
+        sameAs(media, kindOfLine, title, hit, line.source.url) ??
         sameAs(
           inputs.map((i) => ({ ...i, sources: i.sources }) as unknown as MediaTitle),
-          lineKind,
+          kindOfLine,
           title,
           hit,
           line.source.url,
@@ -193,10 +208,10 @@ function AddForm({
       }
       inputs.push({
         id: newId(),
-        kind: lineKind,
+        kind: kindOfLine,
         title,
         year: hit?.year ?? line.year,
-        tvmaze_id: lineKind === "series" ? (hit?.tvmaze_id ?? null) : null,
+        tvmaze_id: kindOfLine === "series" ? (hit?.tvmaze_id ?? null) : null,
         poster_url: hit?.poster_url ?? null,
         summary: hit?.summary ?? null,
         sources: [line.source],
@@ -219,7 +234,7 @@ function AddForm({
       <div>
         <Label>What</Label>
         <div className="flex flex-wrap gap-1.5">
-          {/* Like the page's tabs: Links first as an icon, then Series, Movies, Live TV. */}
+          {/* Like the page's tabs: Links first as an icon, then Series, Movies, Live. */}
           {MEDIA_TABS.map((k) => {
             const Icon = KIND_ICON[k];
             const iconOnly = k === "link";
@@ -227,7 +242,7 @@ function AddForm({
               <button
                 key={k}
                 type="button"
-                aria-pressed={kind === k}
+                aria-pressed={tabOf(kind) === k}
                 aria-label={iconOnly ? TAB_LABEL[k] : undefined}
                 title={iconOnly ? TAB_LABEL[k] : undefined}
                 onClick={() => {
@@ -237,7 +252,7 @@ function AddForm({
                 className={cn(
                   CHIP,
                   iconOnly && "w-9 justify-center px-0",
-                  kind === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE,
+                  tabOf(kind) === k ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE,
                 )}
               >
                 <Icon className="size-4" />
@@ -246,6 +261,33 @@ function AddForm({
             );
           })}
         </div>
+        {isLive(kind) && (
+          <div role="group" aria-label="Live as" className="mt-2 flex gap-1.5">
+            {(["channel", "stream"] as const).map((k) => {
+              const Icon = KIND_ICON[k];
+              const on = many ? chosenLive === k : kind === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setChosenLive(chosenLive === k && many ? null : k)}
+                  className={cn(CHIP, on ? cn(fuchsia.soft, fuchsia.text, CHIP_ON) : CHIP_IDLE)}
+                >
+                  <Icon className="size-4" />
+                  {k === "channel" ? "TV" : "Stream"}
+                </button>
+              );
+            })}
+            <span className="self-center px-1 text-xs text-faint">
+              {kind === "stream" || (many && chosenLive === "stream")
+                ? "Shows Live only while on air"
+                : many && !chosenLive
+                  ? "By each link"
+                  : "Always on air"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div>
@@ -268,14 +310,14 @@ function AddForm({
         {many && (
           <ul className="mt-2 flex flex-col gap-1">
             {parsed.map((p, i) => {
-              const Icon = p ? KIND_ICON[chosenKind ?? p.kind] : Plus;
+              const Icon = p ? KIND_ICON[lineKind(p)] : Plus;
               return (
                 <li key={i} className="flex items-center gap-2 px-1 text-sm">
                   <Icon className={cn("size-4 shrink-0", p ? fuchsia.text : "text-faint")} />
                   <span className={cn("min-w-0 truncate", !p && "text-faint line-through")}>
                     {p ? (p.name ?? (p.query ? titleCase(p.query) : linkLabel(p.source.url))) : lines[i]}
                   </span>
-                  {p && <span className="shrink-0 text-xs text-faint">{KIND_LABEL[chosenKind ?? p.kind]}</span>}
+                  {p && <span className="shrink-0 text-xs text-faint">{KIND_LABEL[lineKind(p)]}</span>}
                 </li>
               );
             })}
@@ -310,7 +352,15 @@ function AddForm({
             id="media-title"
             value={shownName}
             onChange={(e) => setName(e.target.value)}
-            placeholder={kind === "channel" ? "e.g. ZDF" : kind === "link" ? "e.g. yarrlist" : "Title"}
+            placeholder={
+              kind === "channel"
+                ? "e.g. ZDF"
+                : kind === "stream"
+                  ? "e.g. News5"
+                  : kind === "link"
+                    ? "e.g. yarrlist"
+                    : "Title"
+            }
             maxLength={200}
           />
         </div>

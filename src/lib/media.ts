@@ -1,11 +1,24 @@
 /**
- * My Media: series, films, live TV channels and handy links. Pure helpers –
+ * My Media: series, films, live TV channels and streams, and handy links. Pure helpers –
  * reading a pasted link, building an episode's link from it, and working out
  * what to watch next.
  */
 
-export type MediaKind = "series" | "movie" | "channel" | "link";
-export const MEDIA_KINDS: MediaKind[] = ["series", "movie", "channel", "link"];
+import { isStreamLink } from "./live";
+
+/** `channel` is TV (always on air), `stream` a creator's channel that is live now and then. */
+export type MediaKind = "series" | "movie" | "channel" | "stream" | "link";
+export const MEDIA_KINDS: MediaKind[] = ["series", "movie", "channel", "stream", "link"];
+
+/** Live: TV channels and streams. */
+export function isLive(kind: string): kind is "channel" | "stream" {
+  return kind === "channel" || kind === "stream";
+}
+
+/** Live, as TV or a stream – by the link (YouTube, TikTok … are streams). */
+export function liveKindOf(url: string): "channel" | "stream" {
+  return isStreamLink(url) ? "stream" : "channel";
+}
 
 /** Where to watch: a name and a link (for series it may hold {season} and {episode}). */
 export type MediaSource = { label: string; url: string };
@@ -180,7 +193,7 @@ export type ParsedLine = {
 
 /**
  * One pasted line: a link, optionally with a name before it ("ZDF https://…").
- * Recognises series (a link to an episode), films, live TV and plain links.
+ * Recognises series (a link to an episode), films, live TV, streams and plain links.
  */
 export function parseMediaLine(line: string): ParsedLine | null {
   const match = line.match(/https?:\/\/\S+/i);
@@ -198,7 +211,7 @@ export function parseMediaLine(line: string): ParsedLine | null {
 
   let kind: MediaKind;
   if (/famelack\./.test(url.hostname) || /\/(live|livetv|live-tv|channel|channels|sender)(\/|$)/.test(path)) {
-    kind = "channel";
+    kind = liveKindOf(raw);
   } else if (template) kind = "series";
   else if (/\/(movie|movies|film|films|watchmovie)(\/|-|$)/.test(path)) kind = "movie";
   else if (/\/(watchseries|series|serie|tv-show|tvshow|show|shows|tv)(\/|-|$)/.test(path)) kind = "series";
@@ -221,6 +234,7 @@ export function parseMediaLine(line: string): ParsedLine | null {
  */
 export function lineAs(line: ParsedLine, kind: MediaKind): ParsedLine {
   if (kind === line.kind) return line;
+  if (isLive(kind) && isLive(line.kind)) return { ...line, kind };
   const lookup = kind === "series" || kind === "movie";
   const { query, year } = lookup ? titleFromLink(line.raw) : { query: "", year: null };
   return {

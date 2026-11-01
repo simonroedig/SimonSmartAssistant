@@ -30,6 +30,7 @@ import {
   episodesUpTo,
   formatEpisode,
   hasEpisodeSlots,
+  isLive,
   isWebLink,
   linkLabel,
   type MediaKind,
@@ -70,7 +71,7 @@ function Details({ title, onClose }: { title: MediaTitle; onClose: () => void })
       {(kind === "series" || kind === "movie") && <About title={title} />}
       {kind === "series" && <SeriesProgress title={title} />}
       {kind === "movie" && <MovieProgress title={title} />}
-      {(kind === "channel" || kind === "link") && (
+      {(isLive(kind) || kind === "link") && (
         <WatchButton href={watchUrl(title)} className="self-start" icon={kind === "link" ? ExternalLink : Play}>
           {kind === "link" ? "Open" : "Watch live"}
         </WatchButton>
@@ -396,7 +397,7 @@ function Sources({ title }: { title: MediaTitle }) {
 
   return (
     <div>
-      <Label>{kind === "channel" || kind === "link" ? "Link" : "Where to watch"}</Label>
+      <Label>{isLive(kind) || kind === "link" ? "Link" : "Where to watch"}</Label>
       {sources.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {sources.map((s, i) => (
@@ -503,6 +504,27 @@ function Edit({ title }: { title: MediaTitle }) {
           onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
         />
       </div>
+      {isLive(kind) && (
+        <div>
+          <Label>Live as</Label>
+          <div role="group" aria-label="Live as" className="flex flex-wrap items-center gap-1.5">
+            {(["channel", "stream"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={kind === k}
+                onClick={() => kind !== k && update.mutate({ id: title.id, patch: { kind: k } })}
+                className={cn(CHIP, kind === k ? cn(MEDIA_TONE.soft, MEDIA_TONE.text, CHIP_ON) : CHIP_IDLE)}
+              >
+                {k === "channel" ? "TV" : "Stream"}
+              </button>
+            ))}
+            <span className="px-1 text-xs text-faint">
+              {kind === "stream" ? "Shows Live only while on air" : "Always on air"}
+            </span>
+          </div>
+        </div>
+      )}
       {(kind === "series" || kind === "movie") &&
         (lookup ? (
           <LookUp

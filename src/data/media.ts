@@ -1,6 +1,7 @@
 "use client";
 
 import type { Json } from "@/lib/database.types";
+import { liveCheckFor, type LiveStatus } from "@/lib/live";
 import {
   cleanFilmTitle,
   type Episode,
@@ -262,5 +263,28 @@ export function useEpisodes(tvmazeId: number | null) {
     staleTime: 12 * 60 * 60_000,
     gcTime: 14 * 24 * 60 * 60_000,
     retry: 1,
+  });
+}
+
+/**
+ * Whether a TV channel or stream is on air – asked only while it is shown (the Live
+ * tab), at most every few minutes, and again when coming back to the app later.
+ */
+export function useLiveStatus(url: string | null) {
+  const check = url ? liveCheckFor(url) : null;
+  return useAppQuery<LiveStatus>({
+    queryKey: ["media", "live", url],
+    queryFn: async () => {
+      const res = await fetch(`/api/media/live?url=${encodeURIComponent(url!)}`);
+      if (!res.ok) return { state: "unknown" };
+      return (await res.json()) as LiveStatus;
+    },
+    enabled: !!check,
+    // Only for now: never kept on the device.
+    meta: { persist: false },
+    staleTime: 3 * 60_000,
+    gcTime: 15 * 60_000,
+    refetchOnWindowFocus: true,
+    retry: false,
   });
 }

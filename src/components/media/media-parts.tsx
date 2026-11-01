@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Film, Link2, type LucideIcon, Play, Radio, Tv, X } from "lucide-react";
+import { Check, Film, Link2, type LucideIcon, Play, Radio, Tv, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MediaTitle } from "@/data/core";
 import { episodeKey, formatEpisode, type MediaKind } from "@/lib/media";
@@ -12,21 +12,37 @@ import { useWatching, type Watching } from "./use-watching";
 export const KIND_LABEL: Record<MediaKind, string> = {
   series: "Series",
   movie: "Movie",
-  channel: "Live TV",
+  channel: "TV",
+  stream: "Stream",
   link: "Link",
 };
 
-/** The page's tabs (and the add sheet's kinds) from left to right: Links first, as a small icon. */
-export const MEDIA_TABS: MediaKind[] = ["link", "series", "movie", "channel"];
+/**
+ * The page's tabs (and the add sheet's kinds) from left to right: Links first, as a small
+ * icon. "channel" is the Live tab: TV channels and streams.
+ */
+export type MediaTab = "link" | "series" | "movie" | "channel";
+export const MEDIA_TABS: MediaTab[] = ["link", "series", "movie", "channel"];
 
-export const TAB_LABEL: Record<MediaKind, string> = {
+export const TAB_LABEL: Record<MediaTab, string> = {
   series: "Series",
   movie: "Movies",
-  channel: "Live TV",
+  channel: "Live",
   link: "Links",
 };
 
-export const KIND_ICON: Record<MediaKind, LucideIcon> = { series: Tv, movie: Film, channel: Radio, link: Link2 };
+/** The tab a kind is shown in (streams with TV, under Live). */
+export function tabOf(kind: MediaKind): MediaTab {
+  return kind === "stream" ? "channel" : kind;
+}
+
+export const KIND_ICON: Record<MediaKind, LucideIcon> = {
+  series: Tv,
+  movie: Film,
+  channel: Radio,
+  stream: Video,
+  link: Link2,
+};
 
 /** A title's colours (see .media-tone in globals.css): its poster's, or fuchsia. */
 export const MEDIA_TONE = {
