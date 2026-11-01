@@ -11,6 +11,7 @@ const CHANNEL_B = "https://famelack.com/tv/de/second";
 const LINK = "https://list.example/";
 const STREAM_ON = "https://www.youtube.com/@News5de/live";
 const STREAM_OFF = "https://www.youtube.com/c/AgendaFreeTV/live";
+const STREAM_UNSURE = "https://www.youtube.com/WELTVideoTV/live";
 
 test.beforeEach(async ({ page, context }) => {
   await mockWeather(page);
@@ -25,11 +26,13 @@ test.beforeEach(async ({ page, context }) => {
     const url = new URL(route.request().url()).searchParams.get("url") ?? "";
     const status = url.includes("News5de")
       ? { state: "live", title: "Breaking news now" }
-      : url.includes("famelack.com/tv/de/second")
-        ? { state: "offline" }
-        : url.includes("famelack")
-          ? { state: "live" }
-          : { state: "offline" };
+      : url.includes("WELTVideoTV")
+        ? { state: "unknown" }
+        : url.includes("famelack.com/tv/de/second")
+          ? { state: "offline" }
+          : url.includes("famelack")
+            ? { state: "live" }
+            : { state: "offline" };
     return route.fulfill({ json: status });
   });
 });
@@ -180,6 +183,7 @@ test("media: live – TV is on air unless its site is down, a stream only while 
   for (const [name, link, as] of [
     ["News5", STREAM_ON, "Stream"],
     ["AgendaFreeTV", STREAM_OFF, "Stream"],
+    ["WELT", STREAM_UNSURE, "Stream"],
     ["Das Erste", CHANNEL_A, "TV"],
     ["ZDF", CHANNEL_B, "TV"],
   ]) {
@@ -203,6 +207,10 @@ test("media: live – TV is on air unless its site is down, a stream only while 
   const agenda = streams.getByRole("link", { name: /AgendaFreeTV/ });
   await expect(agenda).toHaveAttribute("data-live", "offline");
   await expect(agenda).toContainText("Offline");
+  // Couldn't tell: maybe on air.
+  const welt = streams.getByRole("link", { name: /WELT/ });
+  await expect(welt).toHaveAttribute("data-live", "maybe");
+  await expect(welt).toContainText("Live?");
   // TV is live – unless its site is down.
   await expect(tv.getByRole("link", { name: /Das Erste/ })).toHaveAttribute("data-live", "live");
   await expect(tv.getByRole("link", { name: /ZDF/ })).toHaveAttribute("data-live", "offline");

@@ -8,7 +8,10 @@ export type LiveState = "live" | "offline" | "unknown";
 export type LiveStatus = { state: LiveState; title?: string | null };
 
 export type LiveCheck =
-  { platform: "youtube"; url: string } | { platform: "tiktok"; user: string } | { platform: "famelack"; url: string };
+  /** `streams`: the channel's list of live streams – asked when its /live page can't tell. */
+  | { platform: "youtube"; url: string; streams?: string }
+  | { platform: "tiktok"; user: string }
+  | { platform: "famelack"; url: string };
 
 const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com"]);
 const TIKTOK_HOSTS = new Set(["tiktok.com", "www.tiktok.com", "m.tiktok.com"]);
@@ -54,7 +57,8 @@ export function liveCheckFor(link: string): LiveCheck | null {
     else if (parts.length === 1 || (parts.length === 2 && parts[1] === "live")) channel = [parts[0]];
     if (!channel || channel.some((p) => !/^@?[\w.%-]+$/.test(p))) return null;
     if (["watch", "shorts", "results", "playlist", "feed", "embed", "live"].includes(channel[0])) return null;
-    return { platform: "youtube", url: `https://www.youtube.com/${channel.join("/")}/live` };
+    const base = `https://www.youtube.com/${channel.join("/")}`;
+    return { platform: "youtube", url: `${base}/live`, streams: `${base}/streams` };
   }
 
   if (TIKTOK_HOSTS.has(host)) {
@@ -78,21 +82,55 @@ function decodeHtml(text: string): string {
 /**
  * A YouTube /live (or watch) page: on air when it is a video page that says it is
  * live now. A channel's page instead (nothing on air) or an announced stream is
- * offline; anything else (a consent page, a changed layout) is unknown.
+ * offline. A video page that doesn't say (YouTube often leaves that out for a server
+ * asking) is unknown, with the video's id to look it up in the channel's streams.
  */
-export function youtubeLiveFromHtml(html: string): LiveStatus {
+export function youtubeLiveFromHtml(html: string, now = Date.now()): LiveStatus & { videoId?: string } {
   const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? null;
   if (!canonical) return { state: "unknown" };
   if (!/youtube\.com\/watch\?v=/.test(canonical)) {
     // The channel's own page: nothing live just now.
     return /youtube\.com\/(@|channel\/|c\/|user\/)/.test(canonical) ? { state: "offline" } : { state: "unknown" };
   }
-  const title = html.match(/<meta name="title" content="([^"]*)"/)?.[1] ?? null;
-  if (/"isLiveNow":\s*true/.test(html)) return { state: "live", title: title ? decodeHtml(title) : null };
-  // A video page, but not live now: announced, or a past stream.
-  return /"isLiveNow":\s*false|"isUpcoming":\s*true|"isLiveContent":\s*(true|false)/.test(html)
-    ? { state: "offline" }
-    : { state: "unknown" };
+  const videoId = canonical.match(/[?&]v=([\w-]{6,20})/)?.[1];
+  const rawTitle = html.match(/<meta name="title" content="([^"]*)"/)?.[1] ?? null;
+  const title = rawTitle ? decodeHtml(rawTitle) : null;
+  // The player's own word, if it's there.
+  if (/"isLiveNow":\s*true/.test(html)) return { state: "live", title };
+  if (/"isLiveNow":\s*false/.test(html)) return { state: "offline" };
+  if (/"isUpcoming":\s*true|"upcomingEventData"/.test(html)) return { state: "offline" };
+  if (/"videoDetails":\{[^}]*"isLive":\s*true/.test(html)) return { state: "live", title };
+  // The page's broadcast details: started and not ended is on air.
+  if (/itemprop="isLiveBroadcast" content="True"/i.test(html)) {
+    const start = Date.parse(html.match(/itemprop="startDate" content="([^"]+)"/)?.[1] ?? "");
+    const ended = /itemprop="endDate"/.test(html);
+    if (!ended && start <= now) return { state: "live", title };
+    if (ended || start > now) return { state: "offline" };
+  }
+  return { state: "unknown", title, videoId };
+}
+
+/**
+ * The channel's list of streams: is this video marked as live there (or announced)?
+ * Only the part right after the video's id is read.
+ */
+export function youtubeLiveFromStreams(html: string, videoId: string, title?: string | null): LiveStatus {
+  const at = html.indexOf(`"videoId":"${videoId}"`);
+  if (at < 0) return { state: "unknown", title };
+  // Up to the next video in the list.
+  let end = Math.min(html.length, at + 8000);
+  const ids = /"videoId":"([\w-]+)"/g;
+  ids.lastIndex = at + 1;
+  for (let m = ids.exec(html); m && m.index < end; m = ids.exec(html)) {
+    if (m[1] !== videoId) {
+      end = m.index;
+      break;
+    }
+  }
+  const part = html.slice(at, end);
+  if (/"upcomingEventData"|"style":"UPCOMING"/.test(part)) return { state: "offline" };
+  if (/"style":"LIVE"|BADGE_STYLE_TYPE_LIVE_NOW|"isLive":true/.test(part)) return { state: "live", title };
+  return { state: "unknown", title };
 }
 
 /** TikTok's answer about a user's live room: status 2 is on air. */

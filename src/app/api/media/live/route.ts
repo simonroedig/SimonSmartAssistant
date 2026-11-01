@@ -1,5 +1,12 @@
 import { isEmailAllowed } from "@/lib/auth/allowlist";
-import { liveCheckFor, type LiveCheck, type LiveStatus, tiktokLiveFromJson, youtubeLiveFromHtml } from "@/lib/live";
+import {
+  liveCheckFor,
+  type LiveCheck,
+  type LiveStatus,
+  tiktokLiveFromJson,
+  youtubeLiveFromHtml,
+  youtubeLiveFromStreams,
+} from "@/lib/live";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +30,17 @@ async function readText(res: Response): Promise<string> {
 async function ask(check: LiveCheck): Promise<LiveStatus> {
   const signal = AbortSignal.timeout(8000);
   if (check.platform === "youtube") {
-    const res = await fetch(check.url, {
-      // Skips the cookie consent page.
-      headers: { ...BROWSER_HEADERS, Cookie: "SOCS=CAI; CONSENT=YES+1" },
-      signal,
-    });
+    // Skips the cookie consent page.
+    const headers = { ...BROWSER_HEADERS, Cookie: "SOCS=CAI; CONSENT=YES+1" };
+    const res = await fetch(check.url, { headers, signal });
     if (!res.ok) return { state: "unknown" };
-    return youtubeLiveFromHtml(await readText(res));
+    const page = youtubeLiveFromHtml(await readText(res));
+    // A video is on the channel's /live page, but the page doesn't say whether it is on
+    // air (or only announced): the channel's list of streams does.
+    if (page.state !== "unknown" || !page.videoId || !check.streams) return { state: page.state, title: page.title };
+    const list = await fetch(check.streams, { headers, signal: AbortSignal.timeout(8000) });
+    if (!list.ok) return { state: "unknown", title: page.title };
+    return youtubeLiveFromStreams(await readText(list), page.videoId, page.title);
   }
   if (check.platform === "tiktok") {
     const url = `https://www.tiktok.com/api-live/user/room/?aid=1988&sourceType=54&uniqueId=${encodeURIComponent(check.user)}`;

@@ -11,6 +11,7 @@ import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { Fab } from "@/components/ui/fab";
 import type { MediaTitle } from "@/data/core";
 import { useLiveStatus, useMedia } from "@/data/media";
+import { liveCheckFor } from "@/lib/live";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
@@ -398,16 +399,30 @@ function LiveView({ items, onEdit }: { items: MediaTitle[]; onEdit: (c: MediaTit
 }
 
 /**
- * A TV channel or stream. "Live" only while it is on air: TV unless its site is down,
- * a stream once its page says so – nothing while that isn't known.
+ * A TV channel or stream: "Live" when it is surely on air, "Offline" when surely not,
+ * and "Live?" when it couldn't be told (or can't be asked). TV counts as on air while
+ * it is being asked, a stream shows nothing until then.
  */
 function LiveCard({ item: c, onEdit }: { item: MediaTitle; onEdit: () => void }) {
   const { touch } = useMediaActions();
   const url = sourcesOf(c.sources)[0]?.url ?? null;
-  const status = useLiveStatus(url).data;
-  const state = status?.state ?? "unknown";
-  const onAir = c.kind === "channel" ? state !== "offline" : state === "live";
-  const offline = state === "offline";
+  const query = useLiveStatus(url);
+  const status = query.data;
+  const askable = !!url && liveCheckFor(url) !== null;
+  const shown: "live" | "offline" | "maybe" | null =
+    status?.state === "live" || status?.state === "offline"
+      ? status.state
+      : !askable
+        ? c.kind === "channel"
+          ? "live"
+          : "maybe"
+        : query.isSuccess || query.isError
+          ? "maybe"
+          : c.kind === "channel"
+            ? "live"
+            : null;
+  const onAir = shown === "live";
+  const offline = shown === "offline";
   return (
     <Card as="article" className="overflow-hidden p-0">
       {url ? (
@@ -416,7 +431,7 @@ function LiveCard({ item: c, onEdit }: { item: MediaTitle; onEdit: () => void })
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => touch(c)}
-          data-live={onAir ? "live" : offline ? "offline" : "unknown"}
+          data-live={shown ?? "asking"}
           className="flex h-32 flex-col justify-between p-4 transition-colors hover:bg-surface-hover"
         >
           {onAir ? (
@@ -427,13 +442,20 @@ function LiveCard({ item: c, onEdit }: { item: MediaTitle; onEdit: () => void })
             <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-faint uppercase">
               <span className="size-2 rounded-full bg-current" /> Offline
             </span>
+          ) : shown === "maybe" ? (
+            <span
+              title="Couldn't tell right now – it may be on air"
+              className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-600 uppercase dark:text-amber-300"
+            >
+              <span className="size-2 rounded-full bg-current" /> Live?
+            </span>
           ) : (
             <span className="h-4" />
           )}
           <span className={cn("min-w-0", offline && "opacity-70")}>
             <span className="block truncate text-xl font-semibold tracking-tight">{c.title}</span>
             <span className="block truncate text-xs text-faint">
-              {onAir && status?.title ? status.title : linkLabel(url)}
+              {shown !== "offline" && status?.title ? status.title : linkLabel(url)}
             </span>
           </span>
         </a>

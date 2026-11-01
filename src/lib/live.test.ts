@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isStreamLink, liveCheckFor, streamName, tiktokLiveFromJson, youtubeLiveFromHtml } from "./live";
+import {
+  isStreamLink,
+  liveCheckFor,
+  streamName,
+  tiktokLiveFromJson,
+  youtubeLiveFromHtml,
+  youtubeLiveFromStreams,
+} from "./live";
 import { parseMediaLine } from "./media";
 
 describe("live checks", () => {
@@ -18,7 +25,7 @@ describe("live checks", () => {
       ["https://m.youtube.com/channel/UC123abc/live", "https://www.youtube.com/channel/UC123abc/live"],
       ["https://www.youtube.com/watch?v=abcdEFGH123", "https://www.youtube.com/watch?v=abcdEFGH123"],
     ]) {
-      expect(liveCheckFor(link)).toEqual({ platform: "youtube", url });
+      expect(liveCheckFor(link)).toMatchObject({ platform: "youtube", url });
     }
     expect(liveCheckFor("https://www.youtube.com/results?search_query=x")).toBeNull();
     expect(liveCheckFor("https://www.youtube.com/shorts/abc")).toBeNull();
@@ -39,7 +46,7 @@ describe("live checks", () => {
 
   it("reads a YouTube page: live, offline (the channel's page or an announced stream), or unknown", () => {
     const watch = (extra: string) =>
-      `<html><link rel="canonical" href="https://www.youtube.com/watch?v=abc"><meta name="title" content="Breaking &amp; live">${extra}</html>`;
+      `<html><link rel="canonical" href="https://www.youtube.com/watch?v=abc123"><meta name="title" content="Breaking &amp; live">${extra}</html>`;
     expect(youtubeLiveFromHtml(watch('"liveBroadcastDetails":{"isLiveNow":true}'))).toEqual({
       state: "live",
       title: "Breaking & live",
@@ -49,6 +56,41 @@ describe("live checks", () => {
       youtubeLiveFromHtml('<link rel="canonical" href="https://www.youtube.com/channel/UC123"><body>…</body>'),
     ).toEqual({ state: "offline" });
     expect(youtubeLiveFromHtml("<html>Before you continue to YouTube</html>")).toEqual({ state: "unknown" });
+    // The broadcast details when the player's are left out: started and not ended.
+    const broadcast = (dates: string) => watch(`<meta itemprop="isLiveBroadcast" content="True">${dates}`);
+    const now = Date.parse("2026-11-01T20:00:00Z");
+    expect(
+      youtubeLiveFromHtml(broadcast('<meta itemprop="startDate" content="2026-11-01T18:00:00+00:00">'), now).state,
+    ).toBe("live");
+    expect(
+      youtubeLiveFromHtml(broadcast('<meta itemprop="startDate" content="2026-11-02T18:00:00+00:00">'), now).state,
+    ).toBe("offline");
+    expect(
+      youtubeLiveFromHtml(
+        broadcast(
+          '<meta itemprop="startDate" content="2026-11-01T18:00:00+00:00"><meta itemprop="endDate" content="x">',
+        ),
+        now,
+      ).state,
+    ).toBe("offline");
+    // Nothing said at all: unknown – with the video, to look it up in the channel's streams.
+    expect(youtubeLiveFromHtml(watch('"playabilityStatus":{"status":"LOGIN_REQUIRED"}'))).toMatchObject({
+      state: "unknown",
+      videoId: "abc123",
+    });
+  });
+
+  it("finds the video in the channel's streams: live, announced, or can't tell", () => {
+    const item = (id: string, extra: string) => `{"videoId":"${id}","title":"x",${extra},"videoId":"${id}"}`;
+    const list = (a: string, b: string) => `[${item("other1", b)},${item("abc123", a)},${item("other2", b)}]`;
+    expect(youtubeLiveFromStreams(list('"style":"LIVE"', '"style":"DEFAULT"'), "abc123", "T")).toEqual({
+      state: "live",
+      title: "T",
+    });
+    expect(youtubeLiveFromStreams(list('"upcomingEventData":{}', '"style":"LIVE"'), "abc123").state).toBe("offline");
+    // Another video's badge is not this one's.
+    expect(youtubeLiveFromStreams(list('"style":"DEFAULT"', '"style":"LIVE"'), "abc123").state).toBe("unknown");
+    expect(youtubeLiveFromStreams("[]", "abc123").state).toBe("unknown");
   });
 
   it("reads TikTok's answer", () => {
