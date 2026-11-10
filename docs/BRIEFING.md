@@ -25,9 +25,13 @@ Settings → Daily briefing → "Set up in Claude" shows every value with a copy
      Supabase project's host under allowed domains.
    - Environment variables: `BRIEFING_SUPABASE_URL` and `BRIEFING_SUPABASE_KEY` (the
      publishable key – public anyway).
-   - Network secret (or "API credentials" in older apps): the briefing key, for the Supabase
-     host, in the header `x-briefing-key`.
-     The environment adds it to each request, so the key never sits in the task itself.
+   - Repository and setup script: none.
+   - Network secrets → Add secret: allowed websites = the Supabase host, path prefix
+     `/rest/v1/rpc/`, and under custom headers the prefilled `Authorization` renamed to
+     `x-briefing-key` with the prefix emptied (no "Bearer") and the key as value. No
+     `Authorization` header may be left: Supabase would read the key as a login token and
+     turn every call down. The environment adds the header to each request, so the key never
+     sits in the task itself.
 2. **Scheduled task** (claude.ai → Scheduled → New): daily at e.g. 7:43, repository
    SimonSmartAssistant, the Briefing environment, model Sonnet, and these instructions:
 

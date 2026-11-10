@@ -44,6 +44,11 @@ test("daily briefing: set up in Settings, handed in by the task, new on Home unt
   // What to put into Claude is right there to copy.
   await expect(section.getByText("node scripts/briefing.mjs prompt", { exact: false })).toBeVisible();
   await expect(section.getByText("x-briefing-key", { exact: true })).toBeVisible();
+  // On the phone nothing sticks out sideways – long keys and addresses wrap.
+  // (Open by itself right after a new key.)
+  await expect(section.locator("details")).toHaveAttribute("open", "");
+  await expect(section.getByText("/rest/v1/rpc/", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   // The prompt is edited here – the task reads it with its key.
   const prompt = section.getByLabel("Prompt");

@@ -50,7 +50,8 @@ function SyncDot() {
   );
 }
 
-const RAIL_ITEM_REM = 4.25;
+/** A side bar item's height: 4.25rem, less in a low window (set on the rail as --rail-item). */
+const RAIL_ITEM = "var(--rail-item, 4.25rem)";
 const RAIL_GAP_REM = 0.25;
 
 type LinkProps = { item: NavItem; active: boolean; onNavigate: (href: string) => void };
@@ -111,8 +112,8 @@ function SlidingPill({ index, items, axis }: { index: number; items: NavItem[]; 
     axis === "x"
       ? { width: `${100 / items.length}%`, transform: `translateX(${Math.max(0, index) * 100}%)` }
       : {
-          height: `${RAIL_ITEM_REM}rem`,
-          transform: `translateY(${Math.max(0, index) * (RAIL_ITEM_REM + RAIL_GAP_REM)}rem)`,
+          height: RAIL_ITEM,
+          transform: `translateY(calc(${Math.max(0, index)} * (${RAIL_ITEM} + ${RAIL_GAP_REM}rem)))`,
         };
   return (
     <span
@@ -174,7 +175,8 @@ function RailLink({
       href={target}
       aria-current={active ? "page" : undefined}
       onClick={() => onNavigate(target)}
-      style={{ height: `${RAIL_ITEM_REM}rem` }}
+      title={item.label}
+      style={{ height: RAIL_ITEM }}
       className={cn(
         "group relative flex w-full flex-col items-center justify-center gap-1 rounded-(--pill-radius) text-[0.68rem] font-medium transition-colors",
         active ? "text-fg" : "text-muted hover:text-fg",
@@ -182,10 +184,15 @@ function RailLink({
     >
       {pill && active && <span className={cn("ui-pill absolute inset-0 rounded-(--pill-radius)", tone.soft)} />}
       <Icon
-        className={cn("relative size-6 transition-opacity", tone.text, !active && "opacity-75 group-hover:opacity-100")}
+        className={cn(
+          "relative size-6 shrink-0 transition-opacity [@media(max-height:560px)]:size-5",
+          tone.text,
+          !active && "opacity-75 group-hover:opacity-100",
+        )}
         strokeWidth={active ? 2.2 : 1.9}
       />
-      <span className="relative">
+      {/* A very low window: icons only (the name stays for screen readers and as a tooltip). */}
+      <span className="relative [@media(max-height:460px)]:sr-only">
         {item.label}
         {/* Right under the word, so it clearly belongs to Home. */}
         {anchor && <AnchorLine className="-bottom-1.5 left-1/2 -translate-x-1/2" />}
@@ -208,12 +215,16 @@ function NavRail({
   home: { item: NavItem; target: string };
 }) {
   const items = order.map(navItem);
+  // In a low window (e.g. a third of a screen) the items share the height left over,
+  // so Settings and the sync dot stay in view; what doesn't fit even then scrolls.
+  const fit = `clamp(2.5rem, calc((100dvh - 2 * var(--gutter) - 5.75rem) / ${items.length + 1}), 4.25rem)`;
   return (
     <nav
       aria-label="Main"
       data-attached={attached ? "" : undefined}
+      style={{ "--rail-item": fit } as React.CSSProperties}
       className={cn(
-        "fixed z-40 hidden w-[4.75rem] flex-col items-center px-1.5 py-4 glass md:flex",
+        "fixed z-40 hidden w-[4.75rem] flex-col items-center overflow-y-auto px-1.5 py-4 no-scrollbar glass md:flex",
         // The highlight's corners follow the bar's (its radius less the padding), so they run alike.
         attached
           ? "inset-y-0 left-0 [--pill-radius:1rem]"

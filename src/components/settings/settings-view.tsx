@@ -71,7 +71,7 @@ export function SettingsView() {
   return (
     <>
       <PageHeader title="Settings" subtitle={email ?? undefined} />
-      <PageBody className="grid gap-4 xl:grid-cols-2">
+      <PageBody className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
         <div className="flex flex-col gap-4">
           <Section icon={<MapPin />} title="Weather location" description="Used for the forecast and sunrise/sunset.">
             {settingsLoading ? (

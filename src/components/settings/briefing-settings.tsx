@@ -30,9 +30,10 @@ function CopyField({ label, value, multiline = false }: { label: string; value: 
       <p className="mb-1 text-xs font-medium text-muted">{label}</p>
       <div className="flex items-start gap-2 rounded-xl px-3 py-2 well">
         <code
+          // Long keys and addresses wrap anywhere – never wider than a phone.
           className={cn(
-            "min-w-0 flex-1 text-xs leading-relaxed break-all select-all",
-            multiline && "break-words whitespace-pre-wrap",
+            "min-w-0 flex-1 text-xs leading-relaxed [overflow-wrap:anywhere] select-all",
+            multiline && "whitespace-pre-wrap",
           )}
         >
           {value}
@@ -198,28 +199,43 @@ export function BriefingSection() {
                 <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" />
               </summary>
               <ol className="mt-4 flex flex-col gap-5 text-sm">
-                <Step n={1} title="An environment for it (claude.ai/code → environment menu → Add environment)">
-                  <p className="text-muted">
-                    Name it “Briefing”. Network access: Limited (called Custom in older apps), keep the package managers
-                    ticked and add the address below under allowed domains. Environment variables: the two lines below.
-                    Network secrets (or API credentials): the key, for that address, in the header below.
-                  </p>
-                  <CopyField label="Allowed domain / secret's host" value={host} />
+                <Step n={1} title="An environment (claude.ai/code → environment menu → Add environment)">
+                  <ul className="flex list-disc flex-col gap-1 pl-4 text-muted marker:text-faint">
+                    <li>Name: Briefing. Repository and setup script: leave empty.</li>
+                    <li>
+                      Network access: Limited (Custom in older apps), package managers ticked, the address below under
+                      allowed domains.
+                    </li>
+                    <li>Environment variables: the two lines below.</li>
+                  </ul>
+                  <CopyField label="Address (allowed domain)" value={host} />
                   <CopyField
                     label="Environment variables"
                     value={`BRIEFING_SUPABASE_URL=${SUPABASE_URL}\nBRIEFING_SUPABASE_KEY=${SUPABASE_PUBLISHABLE_KEY}`}
                     multiline
                   />
-                  <CopyField label="Secret's header" value={BRIEFING_KEY_HEADER} />
                 </Step>
-                <Step n={2} title="The scheduled task (claude.ai → Scheduled → New)">
+                <Step n={2} title="Its secret (Network secrets → Add secret)">
+                  <ul className="flex list-disc flex-col gap-1 pl-4 text-muted marker:text-faint">
+                    <li>Secret type: leave it. Allowed websites: the address above. Path prefixes: the path below.</li>
+                    <li>
+                      Custom headers: change the header name <span className="font-medium text-fg">Authorization</span>{" "}
+                      to the one below, <span className="font-medium text-fg">empty the Prefix</span> (no “Bearer”),
+                      Value: your key.
+                    </li>
+                    <li>No Authorization header may be left – Supabase would turn every call down.</li>
+                  </ul>
+                  <CopyField label="Path prefix" value="/rest/v1/rpc/" />
+                  <CopyField label="Header name" value={BRIEFING_KEY_HEADER} />
+                </Step>
+                <Step n={3} title="The scheduled task (claude.ai → Scheduled → New)">
                   <p className="text-muted">
-                    Name “Daily briefing”, daily at e.g. 7:43, repository SimonSmartAssistant, the Briefing environment,
-                    model Sonnet. Instructions:
+                    Name “Daily briefing”, daily at e.g. 7:43 (not on the hour), repository SimonSmartAssistant, the
+                    Briefing environment, model Sonnet. Instructions:
                   </p>
                   <CopyField label="Instructions" value={BRIEFING_TASK_PROMPT} multiline />
                 </Step>
-                <Step n={3} title="Try it">
+                <Step n={4} title="Try it">
                   <p className="text-muted">
                     “Run now” in Scheduled – a few minutes later the briefing is on Home. The prompt itself is changed
                     here, not in Claude.

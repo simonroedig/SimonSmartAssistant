@@ -158,3 +158,20 @@ test("menu: with the second page, a scroll that starts on the tab bar still scro
 
   await context.close();
 });
+
+test("menu: in a low window the side bar still shows everything – icons only when very low", async ({ page }) => {
+  await page.goto("/");
+  const rail = page.getByRole("navigation", { name: "Main" }).first();
+  for (const height of [520, 420]) {
+    await page.setViewportSize({ width: 1200, height });
+    const settings = rail.getByRole("link", { name: "Settings" });
+    await expect(settings).toBeVisible();
+    const box = (await settings.boundingBox())!;
+    expect(box.y + box.height, `${height}px`).toBeLessThanOrEqual(height);
+  }
+  // At 420px: the names are gone from view, but still there for screen readers and as tooltips.
+  await expect(rail.getByRole("link", { name: "Media" })).toHaveAttribute("title", "Media");
+  expect(
+    await rail.getByText("Media", { exact: true }).evaluate((el) => el.getBoundingClientRect().width),
+  ).toBeLessThanOrEqual(1);
+});
