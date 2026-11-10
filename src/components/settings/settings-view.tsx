@@ -21,6 +21,7 @@ import { formatLocationLong } from "@/lib/weather/open-meteo";
 import { Passkeys } from "./passkeys";
 import { BlockedAppsSection, LauncherSection } from "@/components/launcher/launcher-widgets";
 import { VaultSection } from "@/components/notes/vault-settings";
+import { BriefingSection } from "./briefing-settings";
 import { BirthdaysSection, HolidaysSection, useCalendarPreferences } from "./calendar-settings";
 import { DesignPicker } from "./design-picker";
 import { NavigationSection } from "./navigation-settings";
@@ -135,6 +136,7 @@ export function SettingsView() {
 
           <HolidaysSection />
           <BirthdaysSection />
+          <BriefingSection />
           <VaultSection />
           <NavigationSection />
           <LauncherSection />

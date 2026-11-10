@@ -277,33 +277,30 @@ function TabLink({
 function BottomNav({
   order,
   attached,
-  more,
   isCurrent,
   onNavigate,
   home,
 }: {
   order: (SectionId | "home")[];
   attached: boolean;
-  /** A second page (swiped to) with Media, Weather and Settings. */
-  more: boolean;
   isCurrent: (href: string) => boolean;
   onNavigate: (href: string) => void;
   home: { item: NavItem; target: string };
 }) {
   const items = order.map(navItem);
   const pager = useRef<HTMLDivElement>(null);
-  const onMorePage = more && MORE_ITEMS.some((item) => isCurrent(item.href));
+  // A second page (swiped to) with Media, Weather and Settings.
+  const onMorePage = MORE_ITEMS.some((item) => isCurrent(item.href));
   // Showing a page of the second set: the bar shows that set (and the first one otherwise).
   useEffect(() => {
     const el = pager.current;
-    if (!el || !more) return;
+    if (!el) return;
     const target = onMorePage ? el.clientWidth : 0;
     if (Math.abs(el.scrollLeft - target) > 2) el.scrollTo({ left: target, behavior: "instant" });
-  }, [more, onMorePage]);
+  }, [onMorePage]);
 
-  const tabs = (list: NavItem[], pill = true, className = "w-full") => (
-    <div className={cn("relative flex shrink-0 snap-start", className)}>
-      {pill && <SlidingPill index={list.findIndex((item) => isCurrent(item.href))} items={list} axis="x" />}
+  const tabs = (list: NavItem[]) => (
+    <div className="relative flex w-1/2 shrink-0 snap-start">
       {list.map((item) =>
         item.href === "/" ? (
           <TabLink
@@ -335,26 +332,20 @@ function BottomNav({
           : "inset-x-4 bottom-[calc(var(--safe-bottom)+0.75rem)] rounded-(--radius-bar) [--pill-radius:max(0.5rem,calc(var(--radius-bar)-0.375rem))]",
       )}
     >
-      {more ? (
-        <>
-          {/* Two pages side by side: swipe the bar for the second (it snaps to either) – no page dots.
-              Up and down still go to the page behind (a scroll may start on the bar). */}
-          <div
-            ref={pager}
-            data-tab-pages
-            className="no-scrollbar flex flex-1 [touch-action:manipulation] snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
-          >
-            {/* One highlight for both pages: it glides from the tab you were on, wherever it is. */}
-            <div className="relative flex w-[200%] shrink-0">
-              <PagesPill pages={[items, MORE_ITEMS]} isCurrent={isCurrent} />
-              {tabs(items, false, "w-1/2")}
-              {tabs(MORE_ITEMS, false, "w-1/2")}
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="flex flex-1">{tabs(items)}</div>
-      )}
+      {/* Two pages side by side: swipe the bar for the second (it snaps to either) – no page dots.
+          Up and down still go to the page behind (a scroll may start on the bar). */}
+      <div
+        ref={pager}
+        data-tab-pages
+        className="no-scrollbar flex flex-1 [touch-action:manipulation] snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
+      >
+        {/* One highlight for both pages: it glides from the tab you were on, wherever it is. */}
+        <div className="relative flex w-[200%] shrink-0">
+          <PagesPill pages={[items, MORE_ITEMS]} isCurrent={isCurrent} />
+          {tabs(items)}
+          {tabs(MORE_ITEMS)}
+        </div>
+      </div>
     </nav>
   );
 }
@@ -454,7 +445,6 @@ export function AppShell({
         <BottomNav
           order={phoneTabs(navigation)}
           attached={navigation.phoneStyle === "attached"}
-          more={navigation.phoneMore}
           isCurrent={isCurrent}
           onNavigate={onNavigate}
           home={home}

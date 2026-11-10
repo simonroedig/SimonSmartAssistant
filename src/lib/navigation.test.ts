@@ -57,12 +57,6 @@ describe("navigation order", () => {
     ]);
   });
 
-  it("keeps the phone's second tab bar page off unless chosen", () => {
-    expect(parseNavigation({}).phoneMore).toBe(false);
-    expect(parseNavigation({ phoneMore: true }).phoneMore).toBe(true);
-    expect(parseNavigation({ phoneMore: "yes" }).phoneMore).toBe(false);
-  });
-
   it("floats the menus unless attached – phone and rail each on their own", () => {
     expect(parseNavigation({})).toMatchObject({ phoneStyle: "floating", railStyle: "floating" });
     expect(parseNavigation({ phoneStyle: "attached" })).toMatchObject({

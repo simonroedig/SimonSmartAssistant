@@ -62,6 +62,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      briefing_settings: {
+        Row: {
+          key_created_at: string | null;
+          prompt: string;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          key_created_at?: string | null;
+          prompt?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          key_created_at?: string | null;
+          prompt?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      briefings: {
+        Row: {
+          content: string;
+          created_at: string;
+          error: string | null;
+          id: string;
+          prompt: string | null;
+          read_at: string | null;
+          status: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          content?: string;
+          created_at?: string;
+          error?: string | null;
+          id?: string;
+          prompt?: string | null;
+          read_at?: string | null;
+          status?: string;
+          user_id?: string;
+        };
+        Update: {
+          content?: string;
+          created_at?: string;
+          error?: string | null;
+          id?: string;
+          prompt?: string | null;
+          read_at?: string | null;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       day_notes: {
         Row: {
           day: string;
@@ -416,6 +472,9 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      briefing_new_key: { Args: Record<PropertyKey, never>; Returns: string };
+      briefing_post: { Args: { content?: string; failed?: string; key?: string; prompt?: string }; Returns: string };
+      briefing_prompt: { Args: { key?: string }; Returns: string };
       hook_before_user_created: { Args: { event: Json }; Returns: Json };
       keepalive: { Args: Record<PropertyKey, never>; Returns: boolean };
       move_note_to_vault: { Args: { new_position?: number; note_id: string }; Returns: boolean };

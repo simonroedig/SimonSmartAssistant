@@ -22,18 +22,13 @@ export type NavigationPreferences = {
   phoneStyle: NavStyle;
   /** Side rail of PC and wall display. */
   railStyle: NavStyle;
-  /**
-   * Phone: the tab bar swipes to a second page with Media, Weather and Settings
-   * (instead of Media and Settings at the top of the home screen).
-   */
-  phoneMore: boolean;
 };
 
-/** The second page of the phone's tab bar (with `phoneMore`). */
+/** The second page of the phone's tab bar (swiped to). */
 export const PHONE_MORE: ("media" | "weather" | "settings")[] = ["media", "weather", "settings"];
 
 export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather", "media"];
-/** Weather and Media are reached from the home screen on phones. */
+/** The first page of the phone's tab bar (Weather, Media and Settings are on its second). */
 export const PHONE_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes"];
 
 export const DEFAULT_NAVIGATION: NavigationPreferences = {
@@ -42,7 +37,6 @@ export const DEFAULT_NAVIGATION: NavigationPreferences = {
   rail: ["planner", "shopping", "backlog", "notes", "weather", "media"],
   phoneStyle: "floating",
   railStyle: "floating",
-  phoneMore: false,
 };
 
 export const NAVIGATION_COOKIE = "ssa-nav";
@@ -63,7 +57,6 @@ export function parseNavigation(value: unknown): NavigationPreferences {
     // (Earlier one shared `style` for both.)
     phoneStyle: navStyle(nav.phoneStyle ?? nav.style),
     railStyle: navStyle(nav.railStyle ?? nav.style),
-    phoneMore: nav.phoneMore === true,
   };
 }
 

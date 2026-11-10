@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mockMedia, mockWeather, setPhoneMore } from "./helpers";
+import { mockMedia, mockWeather } from "./helpers";
 
 // Example links (answered locally – nothing leaves the test).
 const SERIES_A = "https://stream.example/watchseries/bobs-burgers-online-free/season/1/episode/1";
@@ -349,9 +349,8 @@ test("media: films are ticked off, and the TV remote moves between them with the
   await expect(page.locator("html")).not.toHaveClass(/\btv\b/);
 });
 
-test("media: in the rail under Weather, and on the phone's home screen beside Settings", async ({ page }) => {
+test("media: in the rail under Weather, and on the phone's tab bar beside Weather", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await setPhoneMore(page, false);
   await page.goto("/");
   const rail = page.getByRole("navigation", { name: "Main" }).first();
   const labels = await rail.getByRole("link").allInnerTexts();
@@ -364,12 +363,9 @@ test("media: in the rail under Weather, and on the phone's home screen beside Se
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  const media = page.locator("main").getByRole("link", { name: "Media", exact: true });
-  const settings = page.locator("main").getByRole("link", { name: "Settings", exact: true });
-  const [m, s] = [(await media.boundingBox())!, (await settings.boundingBox())!];
-  expect(Math.abs(m.y - s.y)).toBeLessThan(4);
-  expect(m.x).toBeLessThan(s.x);
-  await media.click();
+  const bar = page.locator("[data-tabbar]");
+  await bar.locator("[data-tab-pages]").evaluate((el) => el.scrollTo({ left: el.clientWidth, behavior: "instant" }));
+  await bar.getByRole("link", { name: "Media", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Media" })).toBeVisible();
 });
 

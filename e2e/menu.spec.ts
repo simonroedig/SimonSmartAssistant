@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { mockWeather, setPhoneMore } from "./helpers";
+import { mockWeather } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await mockWeather(page);
@@ -22,12 +22,14 @@ async function openSettings(page: Page) {
   await loaded;
 }
 
-const labels = (page: Page, nav: "first" | "last") =>
-  page.getByRole("navigation", { name: "Main" })[nav]().getByRole("link").allInnerTexts();
+/** The side bar's links ("first"), or those of the tab bar's first page ("last"). */
+const labels = async (page: Page, nav: "first" | "last") => {
+  const all = await page.getByRole("navigation", { name: "Main" })[nav]().getByRole("link").allInnerTexts();
+  return nav === "last" ? all.slice(0, 5) : all;
+};
 
 test("menu: the order of the phone's tab bar and of the side bar is set in Settings", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await setPhoneMore(page, false);
   await openSettings(page);
   const phone = page.getByRole("group", { name: "Phone tab bar" });
 
@@ -83,25 +85,16 @@ test("menu: the order of the phone's tab bar and of the side bar is set in Setti
     .toEqual(["Home", "Planner", "Shopping", "Backlog", "Notes", "Weather", "Media", "Settings"]);
 });
 
-test("menu: the phone's tab bar can swipe to Media, Weather and Settings (instead of the icons on Home)", async ({
+test("menu: the phone's tab bar swipes to Media, Weather and Settings; Home has the daily briefing up top", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await setPhoneMore(page, false);
-  const more = page.getByRole("switch", { name: "More in the tab bar" });
-
-  // Off: Media and Settings sit at the top of Home.
-  await page.goto("/");
-  await expect(page.locator("main").getByRole("link", { name: "Media", exact: true })).toBeVisible();
-  const bar = page.locator("[data-tabbar]");
-  await expect(bar.locator("[data-tab-pages]")).toHaveCount(0);
-
-  // On: the bar has a second page with them, Home loses its icons.
-  await openSettings(page);
-  await saved(page, () => more.click());
+  // Home: no Media or Settings icons up top (they're on the bar's second page) – the briefing.
   await page.goto("/");
   await expect(page.locator("main").getByRole("link", { name: "Media", exact: true })).toHaveCount(0);
   await expect(page.locator("main").getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
+  await expect(page.locator("main").getByRole("button", { name: /^Daily briefing/ })).toBeVisible();
+  const bar = page.locator("[data-tabbar]");
   const pages = bar.locator("[data-tab-pages]");
   const inView = async (name: string) => {
     const b = (await bar.getByRole("link", { name, exact: true }).boundingBox())!;
@@ -131,11 +124,6 @@ test("menu: the phone's tab bar can swipe to Media, Weather and Settings (instea
   await expect
     .poll(async () => parseFloat(await pill.evaluate((el) => (el as HTMLElement).style.left)))
     .toBeLessThan(50);
-
-  // And off again.
-  await openSettings(page);
-  await saved(page, () => more.click());
-  await expect(more).toHaveAttribute("aria-checked", "false");
 });
 
 test("menu: with the second page, a scroll that starts on the tab bar still scrolls the page", async ({ browser }) => {
@@ -146,7 +134,6 @@ test("menu: with the second page, a scroll that starts on the tab bar still scro
   });
   const page = await context.newPage();
   await mockWeather(page);
-  await setPhoneMore(page, true);
   await page.goto("/");
   const bar = page.locator("[data-tabbar]");
   await expect(bar.locator("[data-tab-pages]")).toBeVisible();
@@ -169,6 +156,5 @@ test("menu: with the second page, a scroll that starts on the tab bar still scro
   await touch("touchEnd", 0, 0);
   await expect.poll(() => bar.locator("[data-tab-pages]").evaluate((el) => el.scrollLeft)).toBeGreaterThan(300);
 
-  await setPhoneMore(page, false);
   await context.close();
 });

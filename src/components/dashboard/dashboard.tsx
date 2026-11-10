@@ -1,10 +1,8 @@
 "use client";
 
-import { Popcorn, Settings2 } from "lucide-react";
 import { NotesBoard } from "@/components/notes/notes-board";
 import { TodayCard } from "@/components/planner/today-card";
-import { AppLink } from "@/components/shell/app-link";
-import { useNavigationPreferences } from "@/components/shell/app-shell";
+import { BriefingButton } from "@/components/briefing/briefing";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { TodoList } from "@/components/todos/todo-list";
 import { WeatherCard } from "@/components/weather/weather-card";
@@ -21,7 +19,6 @@ import { ClockHero } from "./clock-hero";
 export function Dashboard() {
   const today = useToday();
   const wide = useMediaQuery("(min-width: 1280px)");
-  const more = useNavigationPreferences().phoneMore;
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 pt-[calc(var(--safe-top)+1rem)] md:grid-cols-2 md:p-(--gutter) md:pl-0 xl:h-dvh xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,0.95fr)] xl:overflow-hidden">
@@ -30,26 +27,8 @@ export function Dashboard() {
         {/* Aurora Sky looks at this to put the sky around the clock. */}
         <div data-sky-window className="flex items-start gap-3 px-2 pt-2 md:pt-1">
           <ClockHero className="flex-1" compact={!wide} />
-          {/* Phones: My Media sits here, beside Settings (the tab bar has no room for it) – unless
-              the tab bar has a second page with both. */}
-          {!more && (
-            <AppLink
-              href="/media"
-              aria-label="Media"
-              className="-mt-1 -mr-1.5 grid size-12 shrink-0 place-items-center rounded-2xl text-fuchsia-600 transition-colors hover:bg-surface-hover active:bg-surface-hover md:hidden dark:text-fuchsia-300"
-            >
-              <Popcorn className="size-[1.6rem]" strokeWidth={1.9} />
-            </AppLink>
-          )}
-          {!more && (
-            <AppLink
-              href="/settings"
-              aria-label="Settings"
-              className="-mt-1 -mr-1.5 grid size-12 shrink-0 place-items-center rounded-2xl text-slate-500 transition-colors hover:bg-surface-hover active:bg-surface-hover md:hidden dark:text-slate-300"
-            >
-              <Settings2 className="size-[1.6rem]" strokeWidth={1.9} />
-            </AppLink>
-          )}
+          {/* The daily briefing, one tap away (Media and Settings are on the tab bar's second page). */}
+          <BriefingButton className="-mt-1 -mr-1.5" />
         </div>
         {/* Launcher app on the phone: web search and app updates right on the home screen. */}
         <WebSearchBar />

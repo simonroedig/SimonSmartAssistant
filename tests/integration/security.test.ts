@@ -10,6 +10,10 @@
  * Run with: npm run test:integration
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "../../src/lib/database.types";
 
@@ -31,6 +35,8 @@ const TABLES = [
   "blocked_apps",
   "note_categories",
   "media_titles",
+  "briefings",
+  "briefing_settings",
 ] as const;
 
 /** The PIN the tests leave the vault of the e2e user (dev@example.com) with. */
@@ -573,5 +579,121 @@ describe("database security", () => {
 
     const { error: deleteError } = await alice.client.from("media_titles").delete().eq("id", show!.id);
     expect(deleteError).toBeNull();
+  });
+
+  it("lets a briefing key only read the prompt and hand in briefings – for its own user", async () => {
+    // Signed in: a key, shown once. Anonymous callers can't make one.
+    const { data: key, error } = await alice.client.rpc("briefing_new_key");
+    expect(error).toBeNull();
+    expect(key).toMatch(/^brf_[0-9a-f]{48}$/);
+    const { data: bobKey } = await bob.client.rpc("briefing_new_key");
+    expect((await newClient().rpc("briefing_new_key")).error?.code).toBe("42501");
+
+    // Without a key, or with a wrong one: nothing.
+    const anon = newClient();
+    expect((await anon.rpc("briefing_prompt")).error?.code).toBe("28000");
+    expect((await anon.rpc("briefing_post", { content: "x", key: "brf_wrong" })).error?.code).toBe("28000");
+
+    // With the key – in the header, as the scheduled task's environment sends it.
+    const task = newClient({ "x-briefing-key": key! });
+    const { data: prompt } = await task.rpc("briefing_prompt");
+    expect(prompt).toContain("{{DATUM}}");
+    const { data: id, error: postError } = await task.rpc("briefing_post", {
+      content: "## Heute\n- Punkt",
+      prompt: "p",
+    });
+    expect(postError).toBeNull();
+
+    // It is Alice's – not Bob's – and the key reads nothing else.
+    const { data: mine } = await alice.client.from("briefings").select("status, content, prompt").eq("id", id!);
+    expect(mine).toEqual([{ status: "ok", content: "## Heute\n- Punkt", prompt: "p" }]);
+    expect((await bob.client.from("briefings").select("id").eq("id", id!)).data).toEqual([]);
+    expect((await task.from("briefings").select("*")).error?.code).toBe("42501");
+    expect((await task.from("notes").select("*")).error?.code).toBe("42501");
+
+    // A failed run is noted as one; an empty briefing isn't taken.
+    const { data: failed } = await task.rpc("briefing_post", { failed: "Usage limit reached" });
+    const { data: failedRow } = await alice.client.from("briefings").select("status, error").eq("id", failed!).single();
+    expect(failedRow).toEqual({ status: "error", error: "Usage limit reached" });
+    expect((await task.rpc("briefing_post", { content: "  " })).error?.code).toBe("22023");
+
+    // The app marks briefings read, but can't write or change one.
+    const { error: readError } = await alice.client
+      .from("briefings")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", id!);
+    expect(readError).toBeNull();
+    expect((await alice.client.from("briefings").update({ content: "fake" }).eq("id", id!)).error?.code).toBe("42501");
+    expect((await alice.client.from("briefings").insert({ content: "fake" })).error?.code).toBe("42501");
+
+    // The prompt is the user's to change; when the key was made is not.
+    const { data: settings } = await alice.client.from("briefing_settings").select("key_created_at").single();
+    expect(settings?.key_created_at).not.toBeNull();
+    expect(
+      (await alice.client.from("briefing_settings").update({ key_created_at: null }).eq("user_id", alice.userId)).error
+        ?.code,
+    ).toBe("42501");
+
+    // Bob's key writes Bob's; a new key retires the old one.
+    const { data: bobsId } = await newClient({ "x-briefing-key": bobKey! }).rpc("briefing_post", { content: "Bob" });
+    expect((await bob.client.from("briefings").select("id").eq("id", bobsId!)).data).toHaveLength(1);
+    expect((await alice.client.from("briefings").select("id").eq("id", bobsId!)).data).toEqual([]);
+    await alice.client.rpc("briefing_new_key");
+    expect((await task.rpc("briefing_prompt")).error?.code).toBe("28000");
+  });
+
+  it("runs the scheduled task's script: today's prompt, then the briefing handed in", async () => {
+    const { data: key } = await alice.client.rpc("briefing_new_key");
+    await alice.client
+      .from("briefing_settings")
+      .update({ prompt: "Heute ist {{WOCHENTAG}}, der {{DATUM}}. Schreib ein Briefing." })
+      .eq("user_id", alice.userId);
+    const dir = mkdtempSync(join(tmpdir(), "briefing-"));
+    const run = (...args: string[]) =>
+      execFileSync("node", ["scripts/briefing.mjs", ...args], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          TMPDIR: dir,
+          BRIEFING_SUPABASE_URL: SUPABASE_URL,
+          BRIEFING_SUPABASE_KEY: PUBLISHABLE_KEY,
+          BRIEFING_KEY: key!,
+        },
+      });
+
+    const instructions = run("prompt");
+    expect(instructions).toMatch(/^Heute ist \p{L}+, der \d{1,2}\. \p{L}+ \d{4}\. Schreib ein Briefing\./u);
+    expect(instructions).toContain(`node scripts/briefing.mjs publish ${join(dir, "briefing.md")}`);
+
+    writeFileSync(join(dir, "briefing.md"), "## 🔥 Heute wichtig\n- Etwas Neues [Quelle](https://example.com)\n");
+    expect(run("publish", join(dir, "briefing.md"))).toContain("handed in");
+    const { data: latest } = await alice.client
+      .from("briefings")
+      .select("status, content, prompt")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    expect(latest?.status).toBe("ok");
+    expect(latest?.content).toBe("## 🔥 Heute wichtig\n- Etwas Neues [Quelle](https://example.com)");
+    // The prompt as it was sent, date filled in.
+    expect(latest?.prompt).toMatch(/^Heute ist \p{L}+, der /u);
+
+    expect(run("fail", "Search didn't work")).toContain("couldn't be made");
+    // A wrong key says what to do.
+    expect(() =>
+      execFileSync("node", ["scripts/briefing.mjs", "prompt"], {
+        encoding: "utf8",
+        stdio: "pipe",
+        env: {
+          ...process.env,
+          BRIEFING_SUPABASE_URL: SUPABASE_URL,
+          BRIEFING_SUPABASE_KEY: PUBLISHABLE_KEY,
+          BRIEFING_KEY: "brf_nope",
+        },
+      }),
+    ).toThrow(/briefing key is missing or wrong/);
+
+    // Clean up: no briefings left over.
+    await alice.client.from("briefings").delete().eq("user_id", alice.userId);
   });
 });

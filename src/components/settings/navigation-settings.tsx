@@ -4,7 +4,6 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 import { navItem } from "@/components/shell/nav-items";
 import { Segmented } from "@/components/ui/segmented";
-import { Switch } from "@/components/ui/switch";
 import { useSettings, useSettingsRow, useUpdateSettings } from "@/data/settings";
 import {
   type NavigationPreferences,
@@ -142,20 +141,6 @@ export function NavigationSection() {
           disabled={loading}
           onSwap={(a, b) => set({ phone: swap(nav.phone, a, b) })}
         />
-        <label className="flex items-center justify-between gap-4">
-          <span>
-            <span className="block font-medium">More in the tab bar</span>
-            <span className="block text-sm text-muted">
-              Swipe the tab bar sideways for Media, Weather and Settings – instead of the icons at the top of Home
-            </span>
-          </span>
-          <Switch
-            checked={nav.phoneMore}
-            disabled={loading}
-            onCheckedChange={(phoneMore) => set({ phoneMore })}
-            label="More in the tab bar"
-          />
-        </label>
       </div>
       <Row label="PC & wall display" hint="The side bar, top to bottom – Home stays on top">
         <div className="flex flex-col items-end gap-3 [&>[role=radiogroup]]:self-end">
