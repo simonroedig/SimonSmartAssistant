@@ -200,9 +200,9 @@ export function BriefingSection() {
               <ol className="mt-4 flex flex-col gap-5 text-sm">
                 <Step n={1} title="An environment for it (claude.ai/code → environment menu → Add environment)">
                   <p className="text-muted">
-                    Name it “Briefing”. Network access: Trusted, and add the address below under allowed domains.
-                    Environment variables: the two lines below. Network secrets: the key, for that address, in the
-                    header below.
+                    Name it “Briefing”. Network access: Limited (called Custom in older apps), keep the package managers
+                    ticked and add the address below under allowed domains. Environment variables: the two lines below.
+                    Network secrets (or API credentials): the key, for that address, in the header below.
                   </p>
                   <CopyField label="Allowed domain / secret's host" value={host} />
                   <CopyField

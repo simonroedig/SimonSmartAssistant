@@ -21,10 +21,12 @@ Claude subscription – no API key, no extra costs.
 Settings → Daily briefing → "Set up in Claude" shows every value with a copy button.
 
 1. **Environment** (claude.ai/code → environment menu → Add environment), named "Briefing":
-   - Network access: Trusted, plus the Supabase project's host under allowed domains.
+   - Network access: Limited (Custom in older apps) with the package managers kept, plus the
+     Supabase project's host under allowed domains.
    - Environment variables: `BRIEFING_SUPABASE_URL` and `BRIEFING_SUPABASE_KEY` (the
      publishable key – public anyway).
-   - Network secret: the briefing key, for the Supabase host, in the header `x-briefing-key`.
+   - Network secret (or "API credentials" in older apps): the briefing key, for the Supabase
+     host, in the header `x-briefing-key`.
      The environment adds it to each request, so the key never sits in the task itself.
 2. **Scheduled task** (claude.ai → Scheduled → New): daily at e.g. 7:43, repository
    SimonSmartAssistant, the Briefing environment, model Sonnet, and these instructions:
