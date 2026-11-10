@@ -100,11 +100,15 @@ test("daily briefing: set up in Settings, handed in by the task, new on Home unt
   await page.getByRole("button", { name: "Daily briefing", exact: true }).click();
   await expect(sheet.getByText("This briefing couldn't be made.")).toBeVisible();
   await expect(sheet.getByText("Claude's usage limit was reached", { exact: false })).toBeVisible();
-  await sheet
-    .getByRole("button", { name: /^\p{L}{3} \d+ \p{L}+$/u })
-    .nth(1)
-    .click();
+  // The days sit up top: picking one leaves them where they are (two on one day show their time).
+  const days = sheet.getByRole("group", { name: "Briefings" });
+  await expect(days.getByRole("button").first()).toHaveText(/\d{2}:\d{2}$/);
+  await days.getByRole("button").nth(1).click();
   await expect(sheet.getByRole("heading", { name: "🔥 Heute wichtig" })).toBeVisible();
+  await expect(days).toBeInViewport();
+  await days.getByRole("button").first().click();
+  await expect(days).toBeInViewport();
+  await expect(sheet.getByText("This briefing couldn't be made.")).toBeVisible();
 });
 
 test("daily briefing: the task's key can't do anything else", async () => {

@@ -85,7 +85,12 @@ const HAND_IN = `
 
 ---
 How to hand it in (for the dashboard):
-- Research with web search only, at most about 10 searches. Don't open whole pages unless you really need to.
+- Research with web search only, about 10–15 searches. Don't open whole pages unless you really need to.
+- Plan the searches from the prompt first: at least one targeted search for every section and every interest it
+  names – a general news search doesn't cover them. If a search only finds old pages, search again more narrowly.
+- Before handing in, check the briefing against the prompt's format: every section it asks for is there. Leave one
+  out only if a targeted search for it really found nothing; a section that needs no news (a fact, a background)
+  is never left out.
 - Write only the finished briefing (no preamble) as Markdown to ${OUTPUT}
 - Then run: node scripts/briefing.mjs publish ${OUTPUT}
 - If something goes wrong, run: node scripts/briefing.mjs fail "<short reason>"

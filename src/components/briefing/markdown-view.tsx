@@ -31,7 +31,7 @@ function Inlines({ nodes }: { nodes: Inline[] }) {
             href={node.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-sky-600 underline decoration-sky-500/40 underline-offset-2 hover:decoration-sky-500 dark:text-sky-300"
+            className="font-medium text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
           >
             <Inlines nodes={node.children} />
           </a>

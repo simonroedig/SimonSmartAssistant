@@ -10,7 +10,6 @@ import { describeError } from "@/data/core";
 import { BRIEFING_KEY_HEADER, BRIEFING_TASK_PROMPT } from "@/lib/briefing";
 import { formatNumericDate } from "@/lib/date";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/env";
-import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { Section } from "./section";
 
@@ -54,7 +53,7 @@ function CopyField({ label, value, multiline = false }: { label: string; value: 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sky-500/14 text-xs font-semibold text-sky-700 dark:text-sky-200">
+      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-semibold text-accent">
         {n}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
@@ -134,7 +133,7 @@ export function BriefingSection() {
             </Button>
           </div>
         ) : (
-          <div className={cn("flex flex-col gap-5", FIELD_FOCUS.sky)}>
+          <div className="flex flex-col gap-5">
             <div>
               <Label htmlFor="briefing-prompt">Prompt</Label>
               <AutoTextarea
@@ -181,9 +180,9 @@ export function BriefingSection() {
             </div>
 
             {key && (
-              <div className="flex flex-col gap-2 rounded-2xl bg-sky-500/10 p-4">
+              <div className="flex flex-col gap-2 rounded-2xl bg-accent-soft p-4">
                 <p className="flex items-center gap-1.5 text-sm font-semibold">
-                  <Check className="size-4 text-sky-600 dark:text-sky-300" /> Your key – shown only now
+                  <Check className="size-4 text-accent" /> Your key – shown only now
                 </p>
                 <CopyField label="Briefing key" value={key} />
                 <p className="text-xs text-muted">

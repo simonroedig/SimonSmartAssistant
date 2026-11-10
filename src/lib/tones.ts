@@ -105,8 +105,6 @@ export const FIELD_FOCUS = {
   rose: "[--field-focus:color-mix(in_oklab,var(--color-rose-500)_55%,transparent)]",
   orange: "[--field-focus:color-mix(in_oklab,var(--color-orange-400)_65%,transparent)]",
   fuchsia: "[--field-focus:color-mix(in_oklab,var(--color-fuchsia-500)_55%,transparent)]",
-  /** The daily briefing. */
-  sky: "[--field-focus:color-mix(in_oklab,var(--color-sky-500)_55%,transparent)]",
   /** Searches: a quiet grey. */
   quiet: "[--field-focus:var(--text-faint)]",
 } as const;

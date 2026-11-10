@@ -3,19 +3,28 @@
 import { ChevronDown, Newspaper, Settings2, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { Sheet } from "@/components/ui/sheet";
 import type { Briefing } from "@/data/core";
 import { useBriefings, useMarkBriefingRead } from "@/data/briefings";
 import { useNow } from "@/hooks/use-now";
+import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { briefingState } from "@/lib/briefing";
-import { formatDayMonthShort, formatLongDate, formatTime, formatWeekday, formatWeekdayShort } from "@/lib/date";
+import {
+  formatDayMonthShort,
+  formatLongDate,
+  formatTime,
+  formatWeekday,
+  formatWeekdayShort,
+  toDayKey,
+} from "@/lib/date";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { MarkdownView } from "./markdown-view";
 
-const sky = TONE_STYLES.sky;
+/** The design's accent – in Aurora Sky it follows the sky. */
+const tone = TONE_STYLES.accent;
 
 /**
  * Home: the daily briefing, one tap away. A dot (and a little note under the button)
@@ -39,7 +48,7 @@ export function BriefingButton({ className }: { className?: string }) {
         onClick={() => setOpen(true)}
         className={cn(
           "relative grid size-12 place-items-center rounded-2xl transition-colors hover:bg-surface-hover active:bg-surface-hover",
-          sky.text,
+          tone.text,
         )}
       >
         <Newspaper className="size-[1.55rem]" strokeWidth={1.9} />
@@ -48,7 +57,7 @@ export function BriefingButton({ className }: { className?: string }) {
             data-briefing-dot={state?.unread ? "new" : "trouble"}
             className={cn(
               "absolute top-2 right-2 size-2.5 rounded-full ring-2 ring-bg",
-              state?.unread ? "bg-sky-500 dark:bg-sky-300" : "bg-amber-500 dark:bg-amber-300",
+              state?.unread ? "bg-accent" : "bg-amber-500 dark:bg-amber-300",
             )}
           />
         )}
@@ -66,7 +75,7 @@ export function BriefingButton({ className }: { className?: string }) {
             className="absolute top-full right-0 z-20 mt-1 w-max max-w-[15rem] origin-top-right rounded-2xl px-3.5 py-2.5 text-left text-sm shadow-(--shadow-card) glass-strong"
           >
             <span className="flex items-center gap-1.5 font-semibold">
-              <span className="size-2 rounded-full bg-sky-500 dark:bg-sky-300" /> Your briefing is here
+              <span className="size-2 rounded-full bg-accent" /> Your briefing is here
             </span>
             <span className="block text-xs text-muted">
               {formatWeekday(new Date(state.latest!.created_at))} · tap to read
@@ -95,6 +104,16 @@ export function BriefingSheet({
   const shown = briefings.find((b) => b.id === pickedId) ?? briefings[0] ?? null;
   const state = now ? briefingState(briefings, now) : null;
   const markRead = useMarkBriefingRead();
+  const top = useRef<HTMLDivElement>(null);
+  const row = useScrollToPressed(shown?.id ?? null);
+  const scrollToTop = () => {
+    for (let el = top.current?.parentElement; el; el = el.parentElement) {
+      if (el.scrollHeight > el.clientHeight && getComputedStyle(el).overflowY !== "visible") {
+        el.scrollTo({ top: 0 });
+        return;
+      }
+    }
+  };
 
   // Opened: read (on every screen).
   const shownId = shown?.id;
@@ -134,7 +153,41 @@ export function BriefingSheet({
           <SettingsLink onClick={close} />
         </div>
       ) : (
-        <div className="flex flex-col gap-5">
+        <div ref={top} className="flex flex-col gap-5">
+          {/* The days, up top: picking one never moves them, and the briefing starts from its top. */}
+          {briefings.length > 1 && (
+            <div
+              ref={row}
+              role="group"
+              aria-label="Briefings"
+              className="-mx-6 -mt-1 no-scrollbar flex gap-1.5 overflow-x-auto px-6 pb-0.5"
+            >
+              {briefings.slice(0, 10).map((b) => {
+                const at = new Date(b.created_at);
+                const on = b.id === shown.id;
+                // Two on one day (e.g. one started by hand): told apart by the time.
+                const sameDay = briefings.some(
+                  (o) => o.id !== b.id && toDayKey(new Date(o.created_at)) === toDayKey(at),
+                );
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => {
+                      setPickedId(b.id);
+                      scrollToTop();
+                    }}
+                    className={cn(CHIP, "h-8 shrink-0 text-xs", on ? cn(tone.soft, tone.text, CHIP_ON) : CHIP_IDLE)}
+                  >
+                    {b.status === "error" && <TriangleAlert className="size-3.5 text-amber-500" />}
+                    {formatWeekdayShort(at)} {formatDayMonthShort(at)}
+                    {sameDay && <span className="opacity-70">{formatTime(at)}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {/* Today's hasn't come (yet): say so above the last one there is. */}
           {state?.missing && shown.id === briefings[0]?.id && (
             <Notice>
@@ -149,30 +202,6 @@ export function BriefingSheet({
             </Notice>
           ) : (
             <MarkdownView text={shown.content} />
-          )}
-
-          {briefings.length > 1 && (
-            <div>
-              <p className="mb-2 text-xs font-semibold tracking-wide text-faint uppercase">Earlier</p>
-              <div className="flex flex-wrap gap-1.5">
-                {briefings.slice(0, 10).map((b) => {
-                  const day = new Date(b.created_at);
-                  const on = b.id === shown.id;
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setPickedId(b.id)}
-                      className={cn(CHIP, "h-8 text-xs", on ? cn(sky.soft, sky.text, CHIP_ON) : CHIP_IDLE)}
-                    >
-                      {b.status === "error" && <TriangleAlert className="size-3.5 text-amber-500" />}
-                      {formatWeekdayShort(day)} {formatDayMonthShort(day)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           )}
 
           {shown.prompt && (
@@ -214,7 +243,7 @@ function SettingsLink({ onClick, label = "Daily briefing in Settings" }: { onCli
         onClick();
         window.setTimeout(() => router.push("/settings#briefing"), 350);
       }}
-      className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:underline dark:text-sky-300"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
     >
       <Settings2 className="size-4" /> {label}
     </button>
