@@ -30,7 +30,8 @@ jobs:
 
   database:
     name: Database security + end-to-end tests
-    runs-on: ubuntu-latest
+    # Playwright 1.56 can't install its browser on Ubuntu 26.04 (now ubuntu-latest).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
