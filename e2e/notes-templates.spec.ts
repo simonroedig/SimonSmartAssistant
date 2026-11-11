@@ -1,97 +1,133 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { mockWeather } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await mockWeather(page);
 });
 
-test("notes: a Let go note – walk a situation through, check it off, add the next one", async ({ page }) => {
+/** Into the Let go collection – made first under "New category" if there's none yet. */
+async function openLetGo(page: Page) {
+  const tile = page.getByRole("button", { name: /^Let go, \d+ open/ });
+  await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
+  if (await tile.isVisible()) await tile.click();
+  else {
+    await page.getByRole("button", { name: "New category" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Let go/ })
+      .click();
+  }
+  await expect(page.getByRole("button", { name: "Delete Let go" })).toBeVisible();
+}
+
+test("notes: Let go – + for a situation, check it off, the done ones as a list, import old ones", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notes");
+  await openLetGo(page);
   const stamp = Date.now() % 100000;
 
-  // A new note can start from a template (if there's a Let go note already, it opens that one).
-  await page.getByRole("button", { name: "Add a note", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Let go", exact: true }).click();
-  const sheet = page.getByRole("dialog", { name: "Let go" });
-  await expect(sheet).toBeVisible();
-
-  // The questions, one situation at a time – the first one ready to type into.
+  // + : the questions in a sheet, the first one ready to type into.
+  await page.getByRole("button", { name: "New situation" }).click();
+  const sheet = page.getByRole("dialog", { name: "New situation" });
+  await expect(sheet.getByLabel("What happened?")).toBeFocused();
   const situation = `Awkward handshake ${stamp}`;
-  await expect(sheet.getByLabel("What happened?").first()).toBeFocused();
   await page.keyboard.type(situation);
-  const entry = sheet.getByRole("region", { name: situation });
-  await entry.getByRole("group", { name: "Is there anything left to do?" }).getByRole("button", { name: "No" }).click();
-  await expect(entry.getByText("only going round in circles")).toBeVisible();
-  await entry.getByLabel("Realistically, the worst that comes of it").fill("Nothing, really.");
-  await entry.getByLabel("What would I tell a friend?").fill("Nobody remembers a handshake.");
-  // Nothing sticks out sideways on a phone.
+  await sheet.getByRole("group", { name: "Is there anything left to do?" }).getByRole("button", { name: "No" }).click();
+  await expect(sheet.getByText("only going round in circles")).toBeVisible();
+  await sheet.getByLabel("Realistically, the worst that comes of it").fill("Nothing, really.");
+  await sheet.getByLabel("What would I tell a friend?").fill("Nobody remembers a handshake.");
   expect(await sheet.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 
-  // Checked off: it folds away into the done ones, with the day.
-  await entry.getByRole("button", { name: "Let it go" }).click();
-  await expect(entry).toHaveCount(0);
-  const done = sheet.locator("details", { hasText: /Let go · \d+/ });
-  await done.locator("summary").click();
-  await done.getByRole("button", { name: new RegExp(situation) }).click();
-  await expect(done.getByText("Nobody remembers a handshake.")).toBeVisible();
-  await sheet.getByRole("button", { name: "Done" }).click();
+  // Let it go: it lands in the list of done ones, with the day; a tap shows it again.
+  await sheet.getByRole("button", { name: "Let it go" }).click();
   await expect(sheet).toBeHidden();
+  const done = page.getByRole("button", { name: new RegExp(situation) });
+  await expect(done).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Let go · \d+/ })).toBeVisible();
+  await done.click();
+  const read = page.getByRole("dialog", { name: "Let go" });
+  await expect(read.getByLabel("What would I tell a friend?")).toHaveValue("Nobody remembers a handshake.");
+  await expect(read.getByRole("button", { name: "Open again" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(read).toBeHidden();
 
-  // On the board: a card with how many are let go.
-  const card = page.getByRole("button", { name: 'Open note "Let go"' });
-  await expect(card).toContainText(/\d+ let go/);
-
-  // The next one: open it, a new situation – it shows as open on the card.
-  await card.click();
-  await sheet.getByRole("button", { name: "New situation" }).click();
+  // One written and closed: it's open – the circle checks it off right there.
   const next = `Said something odd ${stamp}`;
+  await page.getByRole("button", { name: "New situation" }).click();
   await page.keyboard.type(next);
-  await sheet.getByRole("button", { name: "Done" }).click();
-  await expect(card).toContainText(/\d+ open/);
-  await expect(card).toContainText(next);
+  await page.keyboard.press("Escape");
+  const check = page.getByRole("button", { name: `Let it go: ${next}` });
+  await expect(check).toBeVisible();
+  await check.click();
+  await expect(check).toHaveCount(0);
+  await expect(page.getByRole("button", { name: new RegExp(next) })).toBeVisible();
 
-  // A new note with the template again opens this one, with a fresh situation to fill in.
-  await page.getByRole("button", { name: "Add a note", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Let go", exact: true }).click();
-  await expect(sheet.getByRole("region", { name: next })).toBeVisible();
-  await expect(sheet.getByLabel("What happened?").first()).toBeFocused();
+  // Old ones written elsewhere: pasted in.
+  await page.getByRole("button", { name: "Import" }).click();
+  await page
+    .getByLabel("Text to import")
+    .fill(
+      `Situation:\n- Coffee ${stamp}\n1. Anything left?\n- Ja: Nein\n✅ Abgehakt am: 10. Nov\n\nSituation:\n- Name ${stamp}`,
+    );
+  await page.getByRole("button", { name: "Import 2" }).click();
+  await expect(page.getByRole("button", { name: new RegExp(`Coffee ${stamp}`) })).toBeVisible();
+  await expect(page.getByRole("button", { name: `Let it go: Name ${stamp}` })).toBeVisible();
 
-  // Deleted, the next run starts afresh.
-  await sheet.getByRole("button", { name: "Delete note" }).click();
-  await expect(card).toHaveCount(0);
+  // Back: the collection's tile in the overview, striped, with what's open.
+  await page.getByRole("button", { name: "Back to all notes" }).click();
+  const tile = page.getByRole("button", { name: /^Let go, \d+ open/ });
+  await expect(tile).toContainText(`Name ${stamp}`);
+
+  // Deleted (to the trash), the next run starts afresh.
+  await tile.click();
+  await page.getByRole("button", { name: "Delete Let go" }).click();
+  await expect(tile).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "New category" })).toBeVisible();
 });
 
-test("notes: All gives an overview – pinned, the categories with a peek, then what isn't sorted", async ({ page }) => {
+test("notes: All – pinned notes without a category on top, small; a category keeps its own pinned ones", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notes");
   const stamp = Date.now() % 100000;
-  const filters = page.getByRole("group", { name: "Filter notes" });
   const name = `Peek ${stamp}`;
-  await filters.getByRole("button", { name: "New category" }).click();
+
+  // A pinned note without a category: under Pinned, one line each.
+  const loose = `Door code ${stamp}`;
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  let editor = page.getByRole("dialog");
+  await editor.getByLabel("Title").fill(loose);
+  await editor.getByLabel("Note", { exact: true }).fill("4711\nsecond line");
+  await editor.getByRole("button", { name: "Pin note" }).click();
+  await editor.getByRole("button", { name: "Done" }).click();
+  const pinnedSection = page.locator("section", { has: page.getByRole("heading", { name: "Pinned" }) });
+  const looseCard = pinnedSection.getByRole("button", { name: `Open note "${loose}"` });
+  await expect(looseCard).toBeVisible();
+  await expect(looseCard).not.toContainText("second line");
+
+  // A pinned note in a category: pinned in there, not on All.
+  await page.getByRole("button", { name: "New category" }).click();
   await page.getByRole("dialog").getByLabel("Category name").fill(name);
   await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden();
-
-  // A note in it (the page shows the category now).
-  const text = `Inside ${stamp}`;
+  const inside = `Inside ${stamp}`;
   await page.getByRole("button", { name: "Add a note", exact: true }).click();
-  await page.getByRole("dialog").getByLabel("Note", { exact: true }).fill(text);
-  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("button", { name: `Open note "${text}"` })).toBeVisible();
-
-  await filters.getByRole("button", { name: "All", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Categories" })).toBeVisible();
-  const tile = page.getByRole("button", { name: `${name}, 1 note`, exact: true });
-  await expect(tile).toContainText(text);
+  editor = page.getByRole("dialog");
+  await editor.getByLabel("Note", { exact: true }).fill(inside);
+  await editor.getByRole("button", { name: "Pin note" }).click();
+  await editor.getByRole("button", { name: "Done" }).click();
+  await expect(pinnedSection.getByRole("button", { name: `Open note "${inside}"` })).toBeVisible();
+  await page.getByRole("button", { name: "Back to all notes" }).click();
+  await expect(pinnedSection.getByRole("button", { name: `Open note "${inside}"` })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: `${name}, 1 note`, exact: true })).toContainText(inside);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await tile.click();
-  await expect(filters.getByRole("button", { name, exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: `Open note "${text}"` })).toBeVisible();
 
-  // Tidy up: the category goes (its note stays, without one).
-  await filters.getByRole("button", { name: "Edit categories" }).click();
-  await page.getByRole("dialog", { name: "Categories" }).getByRole("button", { name, exact: true }).click();
+  // Tidy up: the category goes (its note stays, without one), the pinned note to the trash.
+  await page.getByRole("button", { name: `${name}, 1 note`, exact: true }).click();
+  await page.getByRole("button", { name: `Edit ${name}` }).click();
   await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
-  await expect(filters.getByRole("button", { name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await looseCard.click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
+  await expect(looseCard).toHaveCount(0);
 });

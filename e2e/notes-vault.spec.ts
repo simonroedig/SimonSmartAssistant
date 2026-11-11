@@ -8,18 +8,23 @@ test.beforeEach(async ({ page }) => {
   await mockWeather(page);
 });
 
-const filters = (page: Page) => page.getByRole("group", { name: "Filter notes" });
+const tabs = (page: Page) => page.getByRole("group", { name: "Notes" });
+/** A category's tile in the overview (its name says how many notes it has). */
+const tile = (page: Page, name: string) => page.getByRole("button", { name: new RegExp(`^${name}, \\d+ notes?$`) });
 
-/** Opens a category to rename, recolour or delete: the pencil (all categories), then that one. */
+/** Opens a category to rename, recolour or delete: its tile, then the pencil next to its name. */
 async function editCategory(page: Page, name: string) {
-  await filters(page).getByRole("button", { name: "Edit categories" }).click();
-  await page.getByRole("dialog", { name: "Categories" }).getByRole("button", { name, exact: true }).click();
+  if (await page.getByRole("button", { name: "Back to all notes" }).isVisible()) {
+    await page.getByRole("button", { name: "Back to all notes" }).click();
+  }
+  await tile(page, name).click();
+  await page.getByRole("button", { name: `Edit ${name}` }).click();
   await expect(page.getByRole("dialog", { name: "Edit category" })).toBeVisible();
 }
 
 /** Opens the vault from the notes page – setting the PIN first if there is none yet. */
 async function openVault(page: Page) {
-  await filters(page).getByRole("button", { name: "Vault" }).click();
+  await tabs(page).getByRole("button", { name: "Vault" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel(/PIN/)).toBeVisible();
   if (await dialog.getByText("Choose a vault PIN").isVisible()) {
@@ -29,57 +34,57 @@ async function openVault(page: Page) {
     await dialog.getByLabel("PIN", { exact: true }).fill(PIN);
   }
   await expect(dialog).toBeHidden();
-  await expect(filters(page).getByRole("button", { name: "Vault (open)" })).toHaveAttribute("aria-pressed", "true");
+  await expect(tabs(page).getByRole("button", { name: "Vault (open)" })).toHaveAttribute("aria-pressed", "true");
 }
 
-test("notes: categories – add one, filter by it, tag notes, rename and delete it", async ({ page }) => {
+test("notes: categories – a tile each in the overview, a level deeper to open, back to All", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/notes");
   const name = `Work ${Date.now() % 100000}`;
+  const back = page.getByRole("button", { name: "Back to all notes" });
 
-  // A new category, in green; the page switches to it.
-  await filters(page).getByRole("button", { name: "New category" }).click();
+  // A new category, in green; the page goes into it.
+  await page.getByRole("button", { name: "New category" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("Category name").fill(name);
   await sheet.getByRole("radio", { name: "Green" }).click();
   await sheet.getByRole("button", { name: "Add category" }).click();
-  const chip = filters(page).getByRole("button", { name, exact: true });
-  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: `Edit ${name}` })).toBeVisible();
   await expect(page.getByText(`No notes in ${name} yet.`)).toBeVisible();
 
-  // A note written here goes into it and carries its tag.
+  // A note written here goes into it.
   const text = `Quarterly report ${Date.now() % 100000}`;
   await page.getByLabel("New note").fill(text);
   await page.getByRole("button", { name: "Add note" }).click();
   const card = page.getByRole("button", { name: `Open note "${text}"` });
   await expect(card).toBeVisible();
-  await expect(card.getByText(name)).toBeVisible();
 
-  // Under All: the category's tile, with a peek at the note.
-  await filters(page).getByRole("button", { name: "All", exact: true }).click();
-  const tile = page.getByRole("button", { name: `${name}, 1 note`, exact: true });
-  await expect(tile).toContainText(text);
+  // Back in the overview: the category's tile, with a peek at the note (not the note itself).
+  await back.click();
+  await expect(tabs(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(tile(page, name)).toHaveAccessibleName(`${name}, 1 note`);
+  await expect(tile(page, name)).toContainText(text);
   await expect(card).toHaveCount(0);
 
-  // Others: only the notes without a category – a new one written there, not this one.
-  await filters(page).getByRole("button", { name: "Others", exact: true }).click();
-  await expect(card).toHaveCount(0);
+  // A note without a category waits under "Not sorted yet".
   const loose = `Loose thought ${Date.now() % 100000}`;
-  // (The round + opens a new note on wide screens too, besides "Take a note…".)
   await page.getByRole("button", { name: "Add a note", exact: true }).click();
   const fresh = page.getByRole("dialog");
   await fresh.getByLabel("Note", { exact: true }).fill(loose);
   await fresh.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("heading", { name: "Not sorted yet" })).toBeVisible();
   const looseCard = page.getByRole("button", { name: `Open note "${loose}"` });
   await expect(looseCard).toBeVisible();
-  // All: what isn't sorted yet as notes, the category as its tile – a tap goes in.
-  await filters(page).getByRole("button", { name: "All", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Not sorted yet" })).toBeVisible();
-  await expect(looseCard).toBeVisible();
-  await tile.click();
-  await expect(chip).toHaveAttribute("aria-pressed", "true");
 
-  // In the editor the category can be taken off again (tap it once more).
+  // The browser's back leaves a category too.
+  await tile(page, name).click();
+  await expect(card).toBeVisible();
+  await page.goBack();
+  await expect(tile(page, name)).toBeVisible();
+  await expect(page).toHaveURL(/\/notes$/);
+
+  // In the editor the category can be taken off again (tap it once more): the note leaves it.
+  await tile(page, name).click();
   await card.click();
   const editor = page.getByRole("dialog");
   const picked = editor.getByRole("group", { name: "Category" }).getByRole("button", { name, exact: true });
@@ -87,17 +92,19 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await picked.click();
   await editor.getByRole("button", { name: "Done" }).click();
   await expect(card).toHaveCount(0);
+  await back.click();
+  await expect(card).toBeVisible();
 
-  // Rename it (the pencil: all categories, then the one), then delete it.
+  // Rename it, then delete it – from inside, by the pencil; the page goes back to All.
   await editCategory(page, name);
   const form = page.getByRole("dialog", { name: "Edit category" });
   await form.getByLabel("Category name").fill(`${name} new`);
   await form.getByRole("button", { name: "Save" }).click();
-  await expect(filters(page).getByRole("button", { name: `${name} new`, exact: true })).toBeVisible();
-  await editCategory(page, `${name} new`);
+  await expect(page.getByRole("button", { name: `Edit ${name} new` })).toBeVisible();
+  await page.getByRole("button", { name: `Edit ${name} new` }).click();
   await form.getByRole("button", { name: "Delete category" }).click();
-  await expect(filters(page).getByRole("button", { name: `${name} new`, exact: true })).toHaveCount(0);
-  await expect(filters(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(tabs(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(tile(page, `${name} new`)).toHaveCount(0);
   // Its notes stay.
   await expect(card).toBeVisible();
 });
@@ -108,23 +115,24 @@ test("notes: categories in an order of your own – drag them in the list behind
   const stamp = Date.now() % 100000;
   const names = [`First ${stamp}`, `Second ${stamp}`];
   for (const name of names) {
-    await filters(page).getByRole("button", { name: "New category" }).click();
+    await page.getByRole("button", { name: "New category" }).click();
     const form = page.getByRole("dialog", { name: "New category" });
     await form.getByLabel("Category name").fill(name);
     await form.getByRole("button", { name: "Add category" }).click();
     await expect(form).toBeHidden();
+    await page.getByRole("button", { name: "Back to all notes" }).click();
   }
-  const chipOrder = () =>
-    filters(page)
-      .getByRole("button")
-      .evaluateAll((els) => els.map((el) => el.textContent?.trim() || el.getAttribute("aria-label") || ""));
-  const order = async () => (await chipOrder()).filter((t) => t.endsWith(String(stamp)));
+  // The tiles, in order.
+  const order = async () =>
+    (
+      await page
+        .getByRole("button", { name: /, \d+ notes?$/ })
+        .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")?.replace(/, \d+ notes?$/, "") ?? ""))
+    ).filter((t) => t.endsWith(String(stamp)));
   await expect.poll(order).toEqual(names);
-  // Vault, Others and All always come first.
-  expect((await chipOrder()).slice(0, 3)).toEqual(["Vault", "Others", "All"]);
 
-  // The pencil is always there; in its list the second one moves up (here by keyboard).
-  await filters(page).getByRole("button", { name: "Edit categories" }).click();
+  // The pencil next to "Categories": in its list the second one moves up (here by keyboard).
+  await page.getByRole("button", { name: "Edit categories" }).click();
   const list = page.getByRole("dialog", { name: "Categories" });
   const handle = list.getByRole("button", { name: `Move ${names[1]}` });
   await handle.focus();
@@ -147,7 +155,6 @@ test("notes: categories in an order of your own – drag them in the list behind
   // It stays that way.
   await page.reload();
   await expect.poll(order).toEqual([names[1], names[0]]);
-  expect((await chipOrder()).slice(0, 3)).toEqual(["Vault", "Others", "All"]);
 
   for (const name of names) {
     await editCategory(page, name);
@@ -180,7 +187,7 @@ test("notes: the vault – only with the PIN, locked again on leaving, never kep
 
   // Lock: back to all notes, and the vault's notes are gone from sight and from the device.
   await page.getByRole("button", { name: "Lock", exact: true }).click();
-  await expect(filters(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(tabs(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(card).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("button", { name: /Open note/ }).first()).toBeVisible();
@@ -188,7 +195,7 @@ test("notes: the vault – only with the PIN, locked again on leaving, never kep
   expect(await page.evaluate(() => localStorage.getItem("ssa:cache") ?? "")).not.toContain(secret);
 
   // A wrong PIN doesn't open it; the right one does.
-  await filters(page).getByRole("button", { name: "Vault" }).click();
+  await tabs(page).getByRole("button", { name: "Vault" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("PIN", { exact: true }).fill("1111");
   await expect(dialog.getByText("Wrong PIN.")).toBeVisible();
@@ -199,10 +206,7 @@ test("notes: the vault – only with the PIN, locked again on leaving, never kep
   // Leaving the notes page locks it, too.
   await page.goto("/");
   await page.goto("/notes");
-  await expect(filters(page).getByRole("button", { name: "Vault", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await expect(tabs(page).getByRole("button", { name: "Vault", exact: true })).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText(secret)).toHaveCount(0);
 });
 
@@ -255,7 +259,7 @@ test("settings: change the vault PIN, or reset it with a code from the e-mail", 
   await expect(page.getByText("Vault PIN changed")).toBeVisible();
 });
 
-test("notes on a phone: swipe sideways through the vault, All and the categories", async ({ browser }) => {
+test("notes on a phone: swipe right to go back from a category, and on into the vault", async ({ browser }) => {
   const context = await browser.newContext({
     storageState: "e2e/.auth/user.json",
     hasTouch: true,
@@ -265,24 +269,14 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
   const page = await context.newPage();
   await mockWeather(page);
   await page.goto("/notes");
-
-  // Categories to swipe to – more than fit across the screen.
-  const stamp = Date.now() % 100000;
-  const added = [`Ideas ${stamp}`, `Plans ${stamp}`, `Recipes ${stamp}`];
-  for (const name of added) {
-    await filters(page).getByRole("button", { name: "New category" }).click();
-    await page.getByRole("dialog").getByLabel("Category name").fill(name);
-    await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
-  }
-  await filters(page).getByRole("button", { name: "All", exact: true }).click();
-
-  // The vault comes first, then Others (notes without a category), All, the categories.
-  const chips = await filters(page)
-    .getByRole("button")
-    .evaluateAll((els) => els.map((el) => el.textContent?.trim() || el.getAttribute("aria-label") || ""));
-  expect(chips.slice(0, 3)).toEqual(["Vault", "Others", "All"]);
-  const categories = chips.slice(3, -2); // (the last two are + and the pencil)
+  const name = `Ideas ${Date.now() % 100000}`;
+  await page.getByRole("button", { name: "New category" }).click();
+  await page.getByRole("dialog").getByLabel("Category name").fill(name);
+  await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
+  await expect(page.getByRole("button", { name: `Edit ${name}` })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Nothing sticks out sideways.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   const cdp = await context.newCDPSession(page);
   const swipe = async (dx: number) => {
@@ -296,61 +290,28 @@ test("notes on a phone: swipe sideways through the vault, All and the categories
     }
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   };
-  const pressed = (label: string) =>
-    expect(filters(page).getByRole("button", { name: label, exact: true })).toHaveAttribute("aria-pressed", "true");
+  const all = tabs(page).getByRole("button", { name: "All", exact: true });
 
-  const row = filters(page);
-  const scrolled = () =>
-    row.evaluate((el) => ({ start: el.scrollLeft <= 1, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 }));
-
-  // To the left: the next category, and on to the last one – the row then shows its very end (+).
-  for (const category of categories) {
-    await swipe(-160);
-    await pressed(category);
-    // The picked chip keeps the page's margin from the screen's edges.
-    await expect
-      .poll(() =>
-        row.getByRole("button", { name: category, exact: true }).evaluate((chip) => {
-          const box = chip.getBoundingClientRect();
-          return box.left >= 15 && box.right <= window.innerWidth - 15;
-        }),
-      )
-      .toBe(true);
-  }
-  await expect.poll(scrolled).toEqual({ start: false, end: true });
-  await expect(row.getByRole("button", { name: "New category" })).toBeInViewport();
-  // No further: it doesn't wrap round.
-  await swipe(-160);
-  await pressed(categories.at(-1)!);
-
-  // To the right: back to All, then on into the vault – with the PIN.
-  for (const category of [...categories.slice(0, -1).reverse(), "All"]) {
-    await swipe(160);
-    await pressed(category);
-  }
-  // Back at All, the row is back at its start, as when the page opens.
-  await expect.poll(scrolled).toEqual({ start: true, end: false });
-  // Then Others, then the vault.
+  // To the right: out of the category, back to All.
   await swipe(160);
-  await pressed("Others");
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await expect(tile(page, name)).toBeVisible();
+
+  // Again: into the vault – with the PIN.
   await swipe(160);
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("PIN", { exact: true }).fill(PIN);
   await expect(dialog).toBeHidden();
-  await expect(row.getByRole("button", { name: "Vault (open)" })).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(scrolled).toEqual({ start: true, end: false });
-  // Swiping out of it locks it again.
+  await expect(tabs(page).getByRole("button", { name: "Vault (open)" })).toHaveAttribute("aria-pressed", "true");
+  // To the left: back to All, and the vault locks.
   await swipe(-160);
-  await pressed("Others");
-  await expect(row.getByRole("button", { name: "Vault", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(all).toHaveAttribute("aria-pressed", "true");
+  await expect(tabs(page).getByRole("button", { name: "Vault", exact: true })).toHaveAttribute("aria-pressed", "false");
 
-  // Clean up the categories (a moment after the swipe – the tap that ends one is swallowed).
+  // Clean up (a moment after the swipe – the tap that ends one is swallowed).
   await page.waitForTimeout(150);
-  for (const name of added) {
-    await editCategory(page, name);
-    await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
-    // The list behind it may still be sliding away: no sheet left at all.
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-  }
+  await editCategory(page, name);
+  await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await context.close();
 });

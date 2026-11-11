@@ -28,11 +28,14 @@ test("notes: write, pin, edit and delete with undo – also on the home screen",
   await dialog.getByLabel("Note", { exact: true }).fill(`${text}\nRing twice ${stamp}`);
   await dialog.getByRole("button", { name: "Done" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText(`Ring twice ${stamp}`)).toBeVisible();
+  // Pinned on All it's small: the title and its first line.
+  await expect(card).toContainText(text);
+  await expect(card).not.toContainText(`Ring twice ${stamp}`);
 
-  // The home screen shows it too.
+  // The home screen shows it too, with more of it.
   await page.goto("/");
   await expect(page.getByRole("button", { name: `Open note "${title}"` }).first()).toBeVisible();
+  await expect(page.getByText(`Ring twice ${stamp}`)).toBeVisible();
 
   // Delete and undo.
   await page
@@ -774,7 +777,9 @@ test("phone: the add row of shopping, backlog and notes waits at the bottom, nea
   expect(fits).toEqual({ inside: true, noOverflow: true, lines: 2 });
 });
 
-test("planner: a block for the whole waking day, and long details shown in full on request", async ({ page }) => {
+test("planner: an all-day entry sits above the timeline, and long details show in full on request", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   // A Tuesday: awake from 07:00 to 23:30.
   await page.goto("/planner?day=2030-01-22");
@@ -783,10 +788,10 @@ test("planner: a block for the whole waking day, and long details shown in full 
   await page.getByRole("button", { name: "Add a block" }).click({ position: { x: 200, y: 9 * 64 + 5 } });
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("What").fill("Moving day");
-  await dialog.getByRole("button", { name: "Full day" }).click();
-  await expect(dialog.getByRole("button", { name: "Full day" })).toHaveAttribute("aria-pressed", "true");
-  await expect(dialog.getByRole("button", { name: "Start: 07:00" })).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "End: 23:30" })).toBeVisible();
+  // All day: no times to pick.
+  await expect(dialog.getByRole("button", { name: /^Start: / })).toBeVisible();
+  await dialog.getByRole("switch", { name: "All day" }).click();
+  await expect(dialog.getByRole("button", { name: /^Start: / })).toHaveCount(0);
 
   // Long details: a few lines, all of them on request.
   const details = dialog.getByLabel("Details");
@@ -797,7 +802,13 @@ test("planner: a block for the whole waking day, and long details shown in full 
   await dialog.getByRole("button", { name: "Show less" }).click();
   await dialog.getByRole("button", { name: "Add to plan" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator('[role="button"]', { hasText: "Moving day" }).first()).toContainText("07:00 – 23:30");
+  // Above the timeline, across its whole width – not in it.
+  const allDay = page.getByRole("list", { name: "All day" });
+  await expect(allDay.getByRole("button", { name: /Moving day/ })).toBeVisible();
+  await expect(page.locator('[role="button"]', { hasText: "Moving day" })).toHaveCount(0);
+  // A tap opens it again, still all day.
+  await allDay.getByRole("button", { name: /Moving day/ }).click();
+  await expect(dialog.getByRole("switch", { name: "All day" })).toHaveAttribute("aria-checked", "true");
 });
 
 test("planner: press and drag over empty space to draw a block; a place opens in Google Maps", async ({ page }) => {
@@ -878,15 +889,15 @@ test("computer: rows that scroll sideways follow a mouse drag; the note editor i
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/notes");
-  const row = page.getByRole("group", { name: "Filter notes" });
+  await page.goto("/media");
+  const row = page.getByRole("tablist", { name: "Media" });
   await expect(row).toBeVisible();
   // Narrow enough that the chips scroll (more categories would do the same).
   await row.evaluate((el) => {
     (el as HTMLElement).style.maxWidth = "120px";
     el.scrollLeft = 0;
   });
-  const pressed = row.locator("[aria-pressed=true]");
+  const pressed = row.locator("[aria-selected=true]");
   const pressedBefore = await pressed.evaluate((el) => el.outerHTML);
   const box = (await row.boundingBox())!;
   const y = box.y + box.height / 2;
@@ -900,11 +911,12 @@ test("computer: rows that scroll sideways follow a mouse drag; the note editor i
 
   // A plain click still picks.
   await row.evaluate((el) => (el.scrollLeft = 0));
-  const all = row.getByRole("button", { name: "All", exact: true });
-  await all.click();
-  await expect(all).toHaveAttribute("aria-pressed", "true");
+  const first = row.getByRole("tab").first();
+  await first.click();
+  await expect(first).toHaveAttribute("aria-selected", "true");
 
   // Writing a note on a computer: about half the screen wide.
+  await page.goto("/notes");
   await page.getByRole("button", { name: "Add a note", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
