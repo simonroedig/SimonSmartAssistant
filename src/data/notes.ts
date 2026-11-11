@@ -3,7 +3,9 @@
 import type { QueryKey } from "@tanstack/react-query";
 import { byPosition } from "@/lib/ordering";
 import { createClient } from "@/lib/supabase/client";
+import { isEntryEmpty, type TemplateEntry, type TemplateId } from "@/lib/note-templates";
 import { useVaultOpen } from "@/lib/vault";
+import type { Json } from "@/lib/database.types";
 import { newId, type Note, nowIso, queryKeys, useAppQuery, useOptimisticMutation } from "./core";
 
 /** Pinned notes first, then the user's own order. */
@@ -68,7 +70,7 @@ export function useTrashedNotes() {
   return { ...board, data };
 }
 
-export type NoteDraft = { title: string; body: string };
+export type NoteDraft = { title: string; body: string; template?: TemplateId | null; entries?: TemplateEntry[] | null };
 
 export function prepareNote(
   draft: NoteDraft & {
@@ -77,6 +79,8 @@ export function prepareNote(
     id?: string;
     categoryId?: string | null;
     vault?: boolean;
+    template?: TemplateId | null;
+    entries?: TemplateEntry[] | null;
   },
 ) {
   return {
@@ -87,10 +91,14 @@ export function prepareNote(
     position: draft.position,
     category_id: draft.vault ? null : (draft.categoryId ?? null),
     vault: draft.vault ?? false,
+    template: draft.template ?? null,
+    entries: (draft.entries ?? null) as Json,
   };
 }
 
+/** Nothing written yet (a note from a template: no entry filled in). */
 export function isNoteEmpty(draft: NoteDraft): boolean {
+  if (draft.template) return !(draft.entries ?? []).some((e) => !isEntryEmpty(e));
   return !draft.title.trim() && !draft.body.trim();
 }
 
@@ -114,7 +122,9 @@ export function useAddNote() {
   });
 }
 
-export type NotePatch = Partial<Pick<Note, "title" | "body" | "pinned" | "position" | "category_id" | "vault">>;
+export type NotePatch = Partial<
+  Pick<Note, "title" | "body" | "pinned" | "position" | "category_id" | "vault" | "entries">
+>;
 
 export function useUpdateNote() {
   return useOptimisticMutation<{ id: string; patch: NotePatch }>({
@@ -126,11 +136,12 @@ export function useUpdateNote() {
       // Into the vault: the rest first (while the note can still be seen), then the move itself –
       // a plain update can't hide a note from its own user while the vault is locked.
       if (patch.vault === true) {
-        const { title, body, pinned, position } = patch;
+        const { title, body, pinned, position, entries } = patch;
         const rest: NotePatch = {};
         if (title !== undefined) rest.title = title;
         if (body !== undefined) rest.body = body;
         if (pinned !== undefined) rest.pinned = pinned;
+        if (entries !== undefined) rest.entries = entries;
         if (Object.keys(rest).length > 0) {
           const { error } = await client.from("notes").update(rest).eq("id", id);
           if (error) throw error;
@@ -201,17 +212,21 @@ export function useRestoreNotes() {
     queryKey: queryKeys.notes,
     errorTitle: "Couldn't restore the note",
     mutationFn: async ({ notes }) => {
-      const rows = notes.map(({ id, title, body, pinned, position, created_at, deleted_at, category_id, vault }) => ({
-        id,
-        title,
-        body,
-        pinned,
-        position,
-        created_at,
-        deleted_at,
-        category_id: category_id ?? null,
-        vault: vault ?? false,
-      }));
+      const rows = notes.map(
+        ({ id, title, body, pinned, position, created_at, deleted_at, category_id, vault, template, entries }) => ({
+          id,
+          title,
+          body,
+          pinned,
+          position,
+          created_at,
+          deleted_at,
+          category_id: category_id ?? null,
+          vault: vault ?? false,
+          template: template ?? null,
+          entries: entries ?? null,
+        }),
+      );
       const { error } = await createClient().from("notes").upsert(rows);
       if (error) throw error;
     },

@@ -11,8 +11,9 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
-import { type Note, type NoteCategory, queryKeys } from "@/data/core";
-import { useNoteCategories } from "@/data/note-categories";
+import { CHIP, CHIP_IDLE } from "@/components/ui/chip";
+import { newId, type Note, type NoteCategory, queryKeys } from "@/data/core";
+import { categoryColor, useNoteCategories } from "@/data/note-categories";
 import {
   isNoteEmpty,
   type NoteDraft,
@@ -26,11 +27,24 @@ import {
 } from "@/data/notes";
 import { useVaultStatus } from "@/data/vault";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useLongPress } from "@/hooks/use-long-press";
 import { useSwipe } from "@/hooks/use-swipe";
+import { PALETTE } from "@/lib/palette";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { lockVault, useVaultOpen } from "@/lib/vault";
+import { formatDayMonthShort } from "@/lib/date";
+import {
+  entriesToText,
+  isEntryEmpty,
+  NOTE_TEMPLATES,
+  noteTemplate,
+  readEntries,
+  TEMPLATE_IDS,
+  type TemplateEntry,
+  type TemplateId,
+} from "@/lib/note-templates";
 import {
   CategoryPicker,
   CategoriesSheet,
@@ -41,6 +55,7 @@ import {
   NoteFilters,
   VAULT_TONE,
 } from "./note-categories";
+import { newEntry, TemplateEntries, TemplateIcon, TemplateSummary } from "./template-note";
 import { VaultPinSheet, type VaultPinMode } from "./vault-pin-sheet";
 
 export function noteLabel(note: Pick<Note, "title" | "body">): string {
@@ -65,6 +80,7 @@ function NoteCard({
   lines?: 3 | 8;
   className?: string;
 }) {
+  const template = noteTemplate(note.template);
   return (
     <div className={cn("group relative rounded-2xl paper transition-colors hover:border-line-strong", className)}>
       <button
@@ -76,19 +92,26 @@ function NoteCard({
         {/* Long titles: at most two lines, then "…" (long words break instead of running out). */}
         {note.title && (
           <span className="mb-1 line-clamp-2 text-[0.98rem] leading-snug font-semibold [overflow-wrap:anywhere]">
+            {template && (
+              <TemplateIcon template={template} className="mr-1.5 inline size-4 -translate-y-px text-orange-500" />
+            )}
             {note.title}
           </span>
         )}
-        {note.body && (
-          <span
-            className={cn(
-              "block text-[0.92rem] leading-snug [overflow-wrap:anywhere] whitespace-pre-line text-muted",
-              lines === 3 ? "line-clamp-3" : "line-clamp-8",
-              !note.title && "text-fg",
-            )}
-          >
-            {note.body}
-          </span>
+        {template ? (
+          <TemplateSummary template={template} entries={readEntries(note.entries)} lines={lines === 3 ? 2 : 4} />
+        ) : (
+          note.body && (
+            <span
+              className={cn(
+                "block text-[0.92rem] leading-snug [overflow-wrap:anywhere] whitespace-pre-line text-muted",
+                lines === 3 ? "line-clamp-3" : "line-clamp-8",
+                !note.title && "text-fg",
+              )}
+            >
+              {note.body}
+            </span>
+          )
         )}
         {category && <CategoryTag category={category} className="mt-2.5" />}
       </button>
@@ -116,10 +139,22 @@ function NoteCard({
   );
 }
 
+/** A note from a template: its entries (empty open ones dropped), and their text as its body. */
+function withText(draft: NoteDraft): NoteDraft {
+  const template = noteTemplate(draft.template);
+  if (!template) return draft;
+  const entries = (draft.entries ?? []).filter((e) => e.done_at || !isEntryEmpty(e));
+  return { ...draft, entries, body: entriesToText(template, entries, formatDayMonthShort).slice(0, 20000) };
+}
+
 /** Where a note goes: a category (or none), or the vault. */
 type Placement = { categoryId: string | null; vault: boolean };
 
-type EditorState = { mode: "create"; placement: Placement } | { mode: "edit"; note: Note } | null;
+type EditorState =
+  | { mode: "create"; placement: Placement }
+  /** `addEntry`: a note from a template, opened with a fresh entry to fill in. */
+  | { mode: "edit"; note: Note; addEntry?: boolean }
+  | null;
 
 /**
  * The vault stays open while you're in it – also when you switch to another
@@ -197,7 +232,9 @@ export function NotesBoard({
   const create = (draft: NoteDraft, pin = false, placement: Placement = here) => {
     if (isNoteEmpty(draft)) return;
     const group = listOf(placement.vault).filter((n) => n.pinned === pin);
-    add.mutate(prepareNote({ ...draft, ...placement, pinned: pin, position: positionAtStart(group) }));
+    add.mutate(
+      prepareNote({ ...draft, ...withText(draft), ...placement, pinned: pin, position: positionAtStart(group) }),
+    );
     if (placement.vault && !vaultOpen) toast("Added to the vault", { icon: <Lock className="size-4" /> });
   };
 
@@ -217,15 +254,20 @@ export function NotesBoard({
   };
 
   const save = (note: Note, draft: NoteDraft, placement: Placement) => {
-    if (isNoteEmpty(draft)) {
+    // A note from a template stays, also with every entry removed (its title is its name).
+    if (!note.template && isNoteEmpty(draft)) {
       deleteWithUndo(note);
       return;
     }
     const patch: NotePatch = {};
-    const title = draft.title.trim() || null;
-    const body = draft.body.replace(/\s+$/, "");
+    const filled = withText(draft);
+    const title = filled.title.trim() || null;
+    const body = filled.body.replace(/\s+$/, "");
     if (title !== note.title) patch.title = title;
     if (body !== note.body) patch.body = body;
+    if (filled.entries && JSON.stringify(filled.entries) !== JSON.stringify(note.entries)) {
+      patch.entries = filled.entries;
+    }
     const categoryId = placement.vault ? null : placement.categoryId;
     if (categoryId !== (note.category_id ?? null)) patch.category_id = categoryId;
     if (placement.vault !== note.vault) {
@@ -272,9 +314,19 @@ export function NotesBoard({
     variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null && !managing,
   );
 
+  // A template asked for in a new note: its note if there is one already (with a fresh
+  // entry), else the new note becomes one.
+  const useTemplate = (id: TemplateId): boolean => {
+    const existing = [...board, ...vaultList].find((n) => n.template === id);
+    if (!existing) return false;
+    setEditor({ mode: "edit", note: existing, addEntry: true });
+    return true;
+  };
+
   const editorSheet = (
     <NoteEditor
       state={editor}
+      onUseTemplate={useTemplate}
       categories={categoryList}
       vaultAvailable={vaultStatus.data?.hasPin === true}
       onClose={() => setEditor(null)}
@@ -352,7 +404,7 @@ export function NotesBoard({
 
   // Two side by side already on phones (like Keep), so more fit on the screen.
   const grid = "grid grid-cols-2 items-start gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4";
-  const sortable = (items: Note[]) => (
+  const sortable = (items: Note[], lines: 3 | 8 = 8) => (
     <SortableList
       items={items}
       layout="grid"
@@ -364,12 +416,18 @@ export function NotesBoard({
         <NoteCard
           note={note}
           category={tagFor(note)}
+          lines={lines}
           onOpen={() => setEditor({ mode: "edit", note })}
           onTogglePin={() => togglePin(note)}
         />
       )}
     </SortableList>
   );
+
+  // All, with categories: an overview – pinned first, every category as a tile with a
+  // peek at its notes (a tap goes in), then what isn't sorted yet.
+  const overview = filter === "all" && categoryList.length > 0;
+  const sectionTitle = "mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase";
 
   const emptyText =
     filter === "vault"
@@ -431,21 +489,61 @@ export function NotesBoard({
             </div>
           ) : (
             <div className={cn("flex flex-col gap-6", inVault ? "mt-4" : "mt-2 md:mt-6")}>
-              {pinned.length > 0 && (
-                <section>
-                  <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
-                  {sortable(pinned)}
-                </section>
-              )}
-              {others.length > 0 && (
-                <section>
+              {overview ? (
+                <>
                   {pinned.length > 0 && (
-                    <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Others</h2>
+                    <section>
+                      <h2 className={sectionTitle}>Pinned</h2>
+                      {sortable(pinned, 3)}
+                    </section>
                   )}
-                  {sortable(others)}
-                </section>
+                  <section>
+                    <h2 className={sectionTitle}>Categories</h2>
+                    <ul className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4">
+                      {categoryList.map((category) => (
+                        <li key={category.id}>
+                          <CategoryTile
+                            category={category}
+                            notes={board.filter((n) => n.category_id === category.id)}
+                            onOpen={() => changeFilter({ category: category.id })}
+                            onEdit={() => setCategorySheet({ mode: "edit", category })}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  {others.some((n) => !n.category_id) && (
+                    <section>
+                      <h2 className={sectionTitle}>Not sorted yet</h2>
+                      {sortable(
+                        others.filter((n) => !n.category_id),
+                        3,
+                      )}
+                    </section>
+                  )}
+                  <p className="text-center text-xs text-faint">
+                    Tap a category to see all of it · press and hold a note to move it.
+                  </p>
+                </>
+              ) : (
+                <>
+                  {pinned.length > 0 && (
+                    <section>
+                      <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Pinned</h2>
+                      {sortable(pinned)}
+                    </section>
+                  )}
+                  {others.length > 0 && (
+                    <section>
+                      {pinned.length > 0 && (
+                        <h2 className="mb-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase">Others</h2>
+                      )}
+                      {sortable(others)}
+                    </section>
+                  )}
+                  <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
+                </>
               )}
-              <p className="text-center text-xs text-faint">Press and hold a note to move it.</p>
             </div>
           )}
         </motion.div>
@@ -491,6 +589,62 @@ export function NotesBoard({
         onDone={() => setFilter("vault")}
       />
     </div>
+  );
+}
+
+/** In the overview: a category with a peek at its first notes – a tap shows all of it. */
+function CategoryTile({
+  category,
+  notes,
+  onOpen,
+  onEdit,
+}: {
+  category: NoteCategory;
+  notes: Note[];
+  onOpen: () => void;
+  onEdit: () => void;
+}) {
+  // Press and hold (or right-click): rename, recolour, delete – like its chip.
+  const longPress = useLongPress(onEdit, 500);
+  const style = PALETTE[categoryColor(category)];
+  const peek = notes.slice(0, 3);
+  return (
+    <button
+      type="button"
+      aria-label={`${category.name}, ${notes.length} ${notes.length === 1 ? "note" : "notes"}`}
+      title="Hold to edit"
+      {...longPress.props}
+      onClick={() => {
+        if (!longPress.wasLongPress()) onOpen();
+      }}
+      className={cn(
+        "flex h-full min-h-28 w-full flex-col gap-2 rounded-2xl px-3.5 py-3 text-left transition-[filter] hover:brightness-[1.03] active:brightness-95",
+        style.bg,
+      )}
+    >
+      <span className={cn("flex items-center gap-2 font-semibold", style.ink)}>
+        <span className="size-2 shrink-0 rounded-full bg-current" />
+        <span className="min-w-0 flex-1 truncate">{category.name}</span>
+        <span className="text-xs font-medium tabular-nums opacity-80">{notes.length}</span>
+      </span>
+      {peek.length === 0 ? (
+        <span className="text-sm text-faint">Nothing here yet</span>
+      ) : (
+        <span className="flex flex-col gap-1">
+          {peek.map((note) => (
+            <span key={note.id} className="flex items-center gap-1.5 text-[0.85rem] leading-snug text-fg/80">
+              {note.pinned ? (
+                <Pin className="size-3 shrink-0 fill-current text-orange-500 dark:text-orange-300" />
+              ) : (
+                <span className="size-1 shrink-0 rounded-full bg-current opacity-40" />
+              )}
+              <span className="min-w-0 truncate">{noteLabel(note)}</span>
+            </span>
+          ))}
+          {notes.length > peek.length && <span className="text-xs text-faint">+{notes.length - peek.length} more</span>}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -591,6 +745,7 @@ function NoteEditor({
   onSave,
   onDelete,
   onTogglePin,
+  onUseTemplate,
 }: {
   state: EditorState;
   categories: NoteCategory[];
@@ -600,6 +755,8 @@ function NoteEditor({
   onSave: (note: Note, draft: NoteDraft, placement: Placement) => void;
   onDelete: (note: Note) => void;
   onTogglePin: (note: Note) => void;
+  /** A template picked in a new note: true if it opened that template's note instead. */
+  onUseTemplate: (id: TemplateId) => boolean;
 }) {
   // Keep showing the last note while the sheet animates out; a fresh editor per opening.
   const [shown, setShown] = useState({ state, count: 0 });
@@ -609,7 +766,7 @@ function NoteEditor({
       key={shown.count}
       state={shown.state}
       open={state !== null}
-      {...{ categories, vaultAvailable, onClose, onCreate, onSave, onDelete, onTogglePin }}
+      {...{ categories, vaultAvailable, onClose, onCreate, onSave, onDelete, onTogglePin, onUseTemplate }}
     />
   );
 }
@@ -635,6 +792,7 @@ function NoteEditorSheet({
   onSave,
   onDelete,
   onTogglePin,
+  onUseTemplate,
 }: {
   state: EditorState;
   open: boolean;
@@ -645,10 +803,19 @@ function NoteEditorSheet({
   onSave: (note: Note, draft: NoteDraft, placement: Placement) => void;
   onDelete: (note: Note) => void;
   onTogglePin: (note: Note) => void;
+  onUseTemplate: (id: TemplateId) => boolean;
 }) {
   const note = state?.mode === "edit" ? state.note : null;
   const [title, setTitle] = useState(note?.title ?? "");
   const [body, setBody] = useState(note?.body ?? "");
+  const [templateId, setTemplateId] = useState<TemplateId | null>(noteTemplate(note?.template)?.id ?? null);
+  const template = noteTemplate(templateId);
+  // Opened to add one: a fresh entry on top, ready to type into.
+  const [focusId] = useState(() => (state?.mode === "edit" && state.addEntry ? newId() : null));
+  const [entries, setEntries] = useState<TemplateEntry[]>(() => {
+    const stored = readEntries(note?.entries);
+    return focusId ? [...stored, { ...newEntry(), id: focusId }] : stored;
+  });
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [placement, setPlacement] = useState<Placement>(
     note
@@ -659,6 +826,17 @@ function NoteEditorSheet({
   );
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const deleted = useRef(false);
+
+  const pickTemplate = (id: TemplateId) => {
+    if (onUseTemplate(id)) return;
+    const entry = newEntry();
+    setTemplateId(id);
+    setTitle(NOTE_TEMPLATES[id].name);
+    setEntries([entry]);
+    setNewFocus(entry.id);
+  };
+  const [newFocus, setNewFocus] = useState<string | null>(null);
+  const draft = (): NoteDraft => ({ title, body, template: templateId, entries: template ? entries : null });
 
   // New notes start typing right away – unless a field (the title) was tapped already.
   useEffect(() => {
@@ -680,10 +858,10 @@ function NoteEditorSheet({
     if (!open) return;
     if (!deleted.current) {
       if (note) {
-        onSave(note, { title, body }, placement);
+        onSave(note, draft(), placement);
         if (pinned !== note.pinned) onTogglePin(note);
       } else {
-        onCreate({ title, body }, pinned, placement);
+        onCreate(draft(), pinned, placement);
       }
     }
     onClose();
@@ -693,7 +871,7 @@ function NoteEditorSheet({
     <Sheet
       open={open}
       onOpenChange={(o) => !o && close()}
-      title={note ? "Note" : placement.vault ? "New note in the vault" : "New note"}
+      title={template ? template.name : note ? "Note" : placement.vault ? "New note in the vault" : "New note"}
       className={FIELD_FOCUS.orange}
       size="half"
       footer={
@@ -711,8 +889,11 @@ function NoteEditorSheet({
             variant="ghost"
             size="icon"
             aria-label="Copy note"
-            disabled={!title.trim() && !body.trim()}
-            onClick={() => void copyNote(title, body)}
+            disabled={template ? isNoteEmpty(draft()) : !title.trim() && !body.trim()}
+            onClick={() => {
+              const text = withText(draft());
+              void copyNote(text.title, text.body);
+            }}
           >
             <Copy />
           </Button>
@@ -734,7 +915,7 @@ function NoteEditorSheet({
           <Button
             variant="primary"
             className={cn("ui-action ml-auto shadow-none", TONE_STYLES.orange.solid)}
-            disabled={!body.trim()}
+            disabled={!template && !body.trim()}
             onClick={close}
           >
             Done
@@ -750,27 +931,60 @@ function NoteEditorSheet({
           vaultAvailable={vaultAvailable}
           onChange={setPlacement}
         />
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          aria-label="Title"
-          maxLength={200}
-          className="w-full bg-transparent py-1 text-[1.2rem] font-semibold outline-none placeholder:text-faint"
-        />
-        <AutoTextarea
-          ref={bodyRef}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="Note"
-          aria-label="Note"
-          minRows={6}
-          // Grows with the text; the sheet scrolls (one scroll area, the caret stays in view).
-          maxRows={Number.POSITIVE_INFINITY}
-          maxLength={20000}
-          bare
-          className="px-0"
-        />
+        {/* A note from a template goes by its name (the sheet's title). */}
+        {!template && (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title"
+            aria-label="Title"
+            maxLength={200}
+            className="w-full bg-transparent py-1 text-[1.2rem] font-semibold outline-none placeholder:text-faint"
+          />
+        )}
+        {template ? (
+          <TemplateEntries
+            template={template}
+            entries={entries}
+            onChange={setEntries}
+            focusId={focusId ?? newFocus}
+            key={newFocus ?? "entries"}
+          />
+        ) : (
+          <>
+            <AutoTextarea
+              ref={bodyRef}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Note"
+              aria-label="Note"
+              minRows={6}
+              // Grows with the text; the sheet scrolls (one scroll area, the caret stays in view).
+              maxRows={Number.POSITIVE_INFINITY}
+              maxLength={20000}
+              bare
+              className="px-0"
+            />
+            {/* A new, still empty note can start from a template instead. */}
+            {!note && !title.trim() && !body.trim() && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                <span className="text-xs font-medium text-faint">Or a template</span>
+                {TEMPLATE_IDS.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    title={NOTE_TEMPLATES[id].description}
+                    onClick={() => pickTemplate(id)}
+                    className={cn(CHIP, CHIP_IDLE, "h-8 px-3 text-[0.8rem]")}
+                  >
+                    <TemplateIcon template={NOTE_TEMPLATES[id]} className="size-3.5 text-orange-500" />
+                    {NOTE_TEMPLATES[id].name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </Sheet>
   );

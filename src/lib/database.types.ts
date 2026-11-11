@@ -232,9 +232,11 @@ export type Database = {
           category_id: string | null;
           created_at: string;
           deleted_at: string | null;
+          entries: Json | null;
           id: string;
           pinned: boolean;
           position: number;
+          template: string | null;
           title: string | null;
           updated_at: string;
           user_id: string;
@@ -246,9 +248,11 @@ export type Database = {
           category_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          entries?: Json | null;
           id?: string;
           pinned?: boolean;
           position?: number;
+          template?: string | null;
           title?: string | null;
           updated_at?: string;
           user_id?: string;
@@ -259,9 +263,11 @@ export type Database = {
           category_id?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          entries?: Json | null;
           id?: string;
           pinned?: boolean;
           position?: number;
+          template?: string | null;
           title?: string | null;
           updated_at?: string;
           user_id?: string;

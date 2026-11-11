@@ -55,9 +55,11 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await expect(card).toBeVisible();
   await expect(card.getByText(name)).toBeVisible();
 
-  // Under All, too.
+  // Under All: the category's tile, with a peek at the note.
   await filters(page).getByRole("button", { name: "All", exact: true }).click();
-  await expect(card.getByText(name)).toBeVisible();
+  const tile = page.getByRole("button", { name: `${name}, 1 note`, exact: true });
+  await expect(tile).toContainText(text);
+  await expect(card).toHaveCount(0);
 
   // Others: only the notes without a category – a new one written there, not this one.
   await filters(page).getByRole("button", { name: "Others", exact: true }).click();
@@ -70,9 +72,12 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await fresh.getByRole("button", { name: "Done" }).click();
   const looseCard = page.getByRole("button", { name: `Open note "${loose}"` });
   await expect(looseCard).toBeVisible();
+  // All: what isn't sorted yet as notes, the category as its tile – a tap goes in.
   await filters(page).getByRole("button", { name: "All", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Not sorted yet" })).toBeVisible();
   await expect(looseCard).toBeVisible();
-  await expect(card).toBeVisible();
+  await tile.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
 
   // In the editor the category can be taken off again (tap it once more).
   await card.click();
@@ -81,10 +86,9 @@ test("notes: categories – add one, filter by it, tag notes, rename and delete 
   await expect(picked).toHaveAttribute("aria-pressed", "true");
   await picked.click();
   await editor.getByRole("button", { name: "Done" }).click();
-  await expect(card.getByText(name)).toHaveCount(0);
+  await expect(card).toHaveCount(0);
 
   // Rename it (the pencil: all categories, then the one), then delete it.
-  await chip.click();
   await editCategory(page, name);
   const form = page.getByRole("dialog", { name: "Edit category" });
   await form.getByLabel("Category name").fill(`${name} new`);
