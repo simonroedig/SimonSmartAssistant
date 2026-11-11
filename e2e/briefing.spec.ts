@@ -36,7 +36,10 @@ async function newKey(page: Page): Promise<string> {
   return (await key.innerText()).trim();
 }
 
-test("daily briefing: set up in Settings, handed in by the task, new on Home until it's read", async ({ page }) => {
+test("daily briefing: set up in Settings, handed in by the task, new on Home until it's read", async ({
+  page,
+  browser,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const key = await newKey(page);
   const section = page.locator("#briefing");
@@ -109,6 +112,45 @@ test("daily briefing: set up in Settings, handed in by the task, new on Home unt
   await days.getByRole("button").first().click();
   await expect(days).toBeInViewport();
   await expect(sheet.getByText("This briefing couldn't be made.")).toBeVisible();
+
+  // With a finger, a sideways swipe goes through the days – like the notes' categories.
+  const phone = await browser.newContext({
+    storageState: "e2e/.auth/user.json",
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+  const touch = await phone.newPage();
+  await mockWeather(touch);
+  await touch.goto("/");
+  await touch.getByRole("button", { name: "Daily briefing", exact: true }).click();
+  const touchSheet = touch.getByRole("dialog", { name: "Daily briefing" });
+  await expect(touchSheet.getByText("This briefing couldn't be made.")).toBeVisible();
+  const cdp = await phone.newCDPSession(touch);
+  const swipe = async (dx: number) => {
+    const box = (await touchSheet
+      .getByText("This briefing couldn't be made.")
+      .or(touchSheet.getByRole("heading", { name: "🔥 Heute wichtig" }))
+      .first()
+      .boundingBox())!;
+    const [x, y] = [195, box.y + box.height / 2];
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y, id: 1 }] });
+    for (let i = 1; i <= 8; i++) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x: x + (dx * i) / 8, y, id: 1 }],
+      });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  };
+  const touchDays = touchSheet.getByRole("group", { name: "Briefings" }).getByRole("button");
+  await swipe(-160);
+  await expect(touchDays.nth(1)).toHaveAttribute("aria-pressed", "true");
+  await expect(touchSheet.getByRole("heading", { name: "🔥 Heute wichtig" })).toBeVisible();
+  await swipe(160);
+  await expect(touchDays.first()).toHaveAttribute("aria-pressed", "true");
+  await expect(touchSheet.getByText("This briefing couldn't be made.")).toBeVisible();
+  await phone.close();
 });
 
 test("daily briefing: the task's key can't do anything else", async () => {

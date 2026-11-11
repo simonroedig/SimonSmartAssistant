@@ -10,6 +10,7 @@ import type { Briefing } from "@/data/core";
 import { useBriefings, useMarkBriefingRead } from "@/data/briefings";
 import { useNow } from "@/hooks/use-now";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
+import { useSwipe } from "@/hooks/use-swipe";
 import { briefingState } from "@/lib/briefing";
 import {
   formatDayMonthShort,
@@ -129,6 +130,27 @@ export function BriefingSheet({
     setPickedId(null);
   };
 
+  // Picking a day: from its top. The briefing slides in from the side its chip is on.
+  const index = shown ? briefings.findIndex((b) => b.id === shown.id) : -1;
+  const [slide, setSlide] = useState({ id: shown?.id, direction: 1 });
+  if (slide.id !== shown?.id) {
+    const from = briefings.findIndex((b) => b.id === slide.id);
+    setSlide({ id: shown?.id, direction: from >= 0 && index < from ? -1 : 1 });
+  }
+  const pick = (id: string) => {
+    setPickedId(id);
+    scrollToTop();
+  };
+  // Sideways swipes go through the days, like the notes' categories: to the left is
+  // the chip to the right (the day before).
+  const swipe = useSwipe(
+    (direction) => {
+      const next = briefings[index + direction];
+      if (next) pick(next.id);
+    },
+    open && briefings.length > 1,
+  );
+
   return (
     <Sheet
       open={open}
@@ -153,16 +175,18 @@ export function BriefingSheet({
           <SettingsLink onClick={close} />
         </div>
       ) : (
-        <div ref={top} className="flex flex-col gap-5">
+        <div ref={top} className="flex [touch-action:pan-y] flex-col gap-5" {...swipe}>
           {/* The days, up top: picking one never moves them, and the briefing starts from its top. */}
           {briefings.length > 1 && (
             <div
               ref={row}
               role="group"
               aria-label="Briefings"
+              // Sideways it scrolls the days, not the briefing.
+              data-swipe
               className="-mx-6 -mt-1 no-scrollbar flex gap-1.5 overflow-x-auto px-6 pb-0.5"
             >
-              {briefings.slice(0, 10).map((b) => {
+              {briefings.map((b) => {
                 const at = new Date(b.created_at);
                 const on = b.id === shown.id;
                 // Two on one day (e.g. one started by hand): told apart by the time.
@@ -174,10 +198,7 @@ export function BriefingSheet({
                     key={b.id}
                     type="button"
                     aria-pressed={on}
-                    onClick={() => {
-                      setPickedId(b.id);
-                      scrollToTop();
-                    }}
+                    onClick={() => pick(b.id)}
                     className={cn(CHIP, "h-8 shrink-0 text-xs", on ? cn(tone.soft, tone.text, CHIP_ON) : CHIP_IDLE)}
                   >
                     {b.status === "error" && <TriangleAlert className="size-3.5 text-amber-500" />}
@@ -188,36 +209,44 @@ export function BriefingSheet({
               })}
             </div>
           )}
-          {/* Today's hasn't come (yet): say so above the last one there is. */}
-          {state?.missing && shown.id === briefings[0]?.id && (
-            <Notice>
-              No briefing today yet – the scheduled run didn&apos;t hand one in (maybe Claude&apos;s usage limit was
-              reached). Here is the last one.
-            </Notice>
-          )}
-          {shown.status === "error" ? (
-            <Notice>
-              <span className="font-semibold">This briefing couldn&apos;t be made.</span>{" "}
-              {shown.error ?? "The run didn't finish."} The run&apos;s details are in Claude → Scheduled.
-            </Notice>
-          ) : (
-            <MarkdownView text={shown.content} />
-          )}
+          <motion.div
+            key={shown.id}
+            initial={{ opacity: 0, x: slide.direction * 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            className="flex flex-col gap-5"
+          >
+            {/* Today's hasn't come (yet): say so above the last one there is. */}
+            {state?.missing && shown.id === briefings[0]?.id && (
+              <Notice>
+                No briefing today yet – the scheduled run didn&apos;t hand one in (maybe Claude&apos;s usage limit was
+                reached). Here is the last one.
+              </Notice>
+            )}
+            {shown.status === "error" ? (
+              <Notice>
+                <span className="font-semibold">This briefing couldn&apos;t be made.</span>{" "}
+                {shown.error ?? "The run didn't finish."} The run&apos;s details are in Claude → Scheduled.
+              </Notice>
+            ) : (
+              <MarkdownView text={shown.content} />
+            )}
 
-          {shown.prompt && (
-            <details className="group rounded-2xl px-4 py-3 well">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium">
-                Prompt used
-                <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" />
-              </summary>
-              <p className="mt-3 max-h-72 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-muted">
-                {shown.prompt}
-              </p>
-              <div className="mt-3">
-                <SettingsLink onClick={close} label="Change the prompt in Settings" />
-              </div>
-            </details>
-          )}
+            {shown.prompt && (
+              <details className="group rounded-2xl px-4 py-3 well">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-sm font-medium">
+                  Prompt used
+                  <ChevronDown className="size-4 text-muted transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="mt-3 max-h-72 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap text-muted">
+                  {shown.prompt}
+                </p>
+                <div className="mt-3">
+                  <SettingsLink onClick={close} label="Change the prompt in Settings" />
+                </div>
+              </details>
+            )}
+          </motion.div>
         </div>
       )}
     </Sheet>
