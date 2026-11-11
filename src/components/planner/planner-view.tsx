@@ -34,7 +34,8 @@ import { cn } from "@/lib/utils";
 import { useDayExtras } from "@/data/calendar";
 import { BacklogPlanList } from "./backlog-plan-list";
 import { BlockEditor } from "./block-editor";
-import { DayExtrasChips } from "./day-extras";
+import type { AddBlockRequest } from "./planner-client";
+import { AllDayBlocks, DayExtrasChips } from "./day-extras";
 import { DayTimeline } from "./day-timeline";
 import { FocusInput } from "./focus-input";
 import { MonthCalendar } from "./month-calendar";
@@ -72,6 +73,7 @@ export function PlannerView({
   today,
   onDayChange,
   planTodoId,
+  addBlock,
   onPlanHandled,
 }: {
   day: DayKey;
@@ -79,6 +81,7 @@ export function PlannerView({
   onDayChange: (day: DayKey) => void;
   /** A backlog item to plan (or to show, if already planned) – from the backlog page. */
   planTodoId?: string | null;
+  addBlock?: AddBlockRequest;
   onPlanHandled?: () => void;
 }) {
   const now = useNow("minute");
@@ -125,7 +128,8 @@ export function PlannerView({
       day: target,
       today,
       nowMinute: minutesOfDay(new Date()),
-      blocks,
+      // All-day entries don't take time away.
+      blocks: blocks.filter((b) => !b.all_day),
       duration,
       snap: planner.snap,
     });
@@ -154,6 +158,27 @@ export function PlannerView({
     // planTodo only reads current data; run once per requested item.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planTodoId, todos.data, linked.data, today]);
+
+  // "Add to planner" from the daily briefing: the editor opens on that day, filled in.
+  const handledAdd = useRef(false);
+  useEffect(() => {
+    if (!addBlock || handledAdd.current || !today) return;
+    handledAdd.current = true;
+    window.setTimeout(() => {
+      onPlanHandled?.();
+      planner.setEditor({
+        mode: "create",
+        day,
+        start: planner.awake[0],
+        end: Math.min(MINUTES_PER_DAY, planner.awake[0] + 60),
+        title: addBlock.title.slice(0, 120),
+        notes: addBlock.notes,
+        allDay: addBlock.allDay,
+      });
+    }, 0);
+    // Once per request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addBlock, today]);
 
   // Swipe sideways (or use the arrow keys) to flip through the days.
   const editing = planner.editor !== null;
@@ -295,6 +320,11 @@ export function PlannerView({
           <div className="flex flex-col gap-3 px-3 pt-3 md:px-4">
             <FocusInput day={day} week={planner.week} />
             <DayExtrasChips extras={dayExtras(day)} className="-mt-1" />
+            <AllDayBlocks
+              blocks={planner.allDayBlocks}
+              onOpen={(block) => planner.setEditor({ mode: "edit", block })}
+              className="-mt-1"
+            />
             {isToday && now && planner.dayBlocks.length > 0 && !isWide && !isPhone && (
               <NowNext
                 blocks={planner.dayBlocks}

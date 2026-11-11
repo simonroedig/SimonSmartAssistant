@@ -285,6 +285,7 @@ export type Database = {
       };
       plan_blocks: {
         Row: {
+          all_day: boolean;
           color: string;
           created_at: string;
           day: string;
@@ -302,6 +303,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          all_day?: boolean;
           color?: string;
           created_at?: string;
           day: string;
@@ -318,6 +320,7 @@ export type Database = {
           user_id?: string;
         };
         Update: {
+          all_day?: boolean;
           color?: string;
           created_at?: string;
           day?: string;

@@ -34,7 +34,9 @@ export function usePlanner(day: DayKey) {
   const [editor, setEditor] = useState<EditorState | null>(null);
 
   const weekBlocks = useMemo(() => blocksQuery.data ?? [], [blocksQuery.data]);
-  const dayBlocks = useMemo(() => weekBlocks.filter((b) => b.day === day), [weekBlocks, day]);
+  // All-day entries sit above the timeline; the timeline (and what's now and next) has the rest.
+  const dayBlocks = useMemo(() => weekBlocks.filter((b) => b.day === day && !b.all_day), [weekBlocks, day]);
+  const allDayBlocks = useMemo(() => weekBlocks.filter((b) => b.day === day && b.all_day), [weekBlocks, day]);
   const sleepRanges = useMemo(() => planSleepRanges(settings.sleepSchedule, day), [settings.sleepSchedule, day]);
   /** The plan view runs past midnight when bedtime is after midnight. */
   const viewEnd = planViewEnd(settings.sleepSchedule, day);
@@ -97,8 +99,8 @@ export function usePlanner(day: DayKey) {
   };
 
   const clearDay = () => {
-    if (dayBlocks.length === 0) return;
-    const removed = dayBlocks;
+    const removed = [...allDayBlocks, ...dayBlocks];
+    if (removed.length === 0) return;
     remove.mutate({ ids: removed.map((b) => b.id) });
     toast(`Cleared ${removed.length} ${removed.length === 1 ? "block" : "blocks"}`, {
       action: { label: "Undo", onClick: () => add.mutate({ blocks: removed }) },
@@ -123,8 +125,6 @@ export function usePlanner(day: DayKey) {
     },
     onDelete: deleteBlock,
     onCopyTo: (block: PlanBlock, target: DayKey) => copyTo([block], target),
-    // "Full day": from waking up to bedtime of that day.
-    awakeFor: (target: DayKey) => awakeWindow(settings.sleepSchedule, target),
   };
 
   const draftPreview =
@@ -136,6 +136,7 @@ export function usePlanner(day: DayKey) {
     week,
     weekBlocks,
     dayBlocks,
+    allDayBlocks,
     sleepRanges,
     viewEnd,
     awake,

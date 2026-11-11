@@ -12,6 +12,7 @@ import { useNow } from "@/hooks/use-now";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
 import { briefingState } from "@/lib/briefing";
+import { afterSheetClosed } from "@/lib/history";
 import {
   formatDayMonthShort,
   formatLongDate,
@@ -105,6 +106,7 @@ export function BriefingSheet({
   const shown = briefings.find((b) => b.id === pickedId) ?? briefings[0] ?? null;
   const state = now ? briefingState(briefings, now) : null;
   const markRead = useMarkBriefingRead();
+  const router = useRouter();
   const top = useRef<HTMLDivElement>(null);
   const row = useScrollToPressed(shown?.id ?? null);
   const scrollToTop = () => {
@@ -229,7 +231,19 @@ export function BriefingSheet({
                 {shown.error ?? "The run didn't finish."} The run&apos;s details are in Claude → Scheduled.
               </Notice>
             ) : (
-              <MarkdownView text={shown.content} />
+              <MarkdownView
+                text={shown.content}
+                plan={{
+                  writtenAt: new Date(shown.created_at),
+                  // To the planner, the editor open with it as an all-day entry (not saved yet).
+                  onPlan: (item) => {
+                    const params = new URLSearchParams({ day: item.day, add: item.title, allday: "1" });
+                    if (item.source) params.set("notes", item.source);
+                    close();
+                    afterSheetClosed(() => router.push(`/planner?${params}`));
+                  },
+                }}
+              />
             )}
 
             {shown.prompt && (

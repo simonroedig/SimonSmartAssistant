@@ -10,7 +10,18 @@ import { PlannerView } from "./planner-view";
  * selected day on the client: switching days is instant and only updates the
  * URL (no server round trip).
  */
-export function PlannerClient({ requestedDay, planTodoId }: { requestedDay?: string; planTodoId?: string }) {
+export type AddBlockRequest = { title: string; notes?: string; allDay: boolean };
+
+export function PlannerClient({
+  requestedDay,
+  planTodoId,
+  addBlock,
+}: {
+  requestedDay?: string;
+  planTodoId?: string;
+  /** "Add to planner" from elsewhere (the daily briefing): a new block, opened in the editor. */
+  addBlock?: AddBlockRequest;
+}) {
   const today = useToday();
   const [picked, setPicked] = useState<DayKey | null>(isDayKey(requestedDay) ? requestedDay : null);
   const day = picked ?? today;
@@ -53,10 +64,11 @@ export function PlannerClient({ requestedDay, planTodoId }: { requestedDay?: str
       today={today}
       onDayChange={go}
       planTodoId={planTodoId}
+      addBlock={addBlock}
       onPlanHandled={() => {
-        // Drop "?plan=…" so a reload doesn't plan the item again.
+        // Drop "?plan=…" / "?add=…" so a reload doesn't plan the item again.
         const url = new URL(window.location.href);
-        url.searchParams.delete("plan");
+        for (const key of ["plan", "add", "notes", "allday"]) url.searchParams.delete(key);
         window.history.replaceState(null, "", `${url.pathname}${url.search}`);
       }}
     />

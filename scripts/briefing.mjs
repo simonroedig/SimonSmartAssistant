@@ -91,6 +91,8 @@ How to hand it in (for the dashboard):
 - Before handing in, check the briefing against the prompt's format: every section it asks for is there. Leave one
   out only if a targeted search for it really found nothing; a section that needs no news (a fact, a background)
   is never left out.
+- Dates worth a place in a calendar (events, releases, deadlines): start their list line with the date as D.M.,
+  e.g. "15.11. – NFL in der Allianz Arena" – the dashboard offers "Add to planner" for such lines.
 - Write only the finished briefing (no preamble) as Markdown to ${OUTPUT}
 - Then run: node scripts/briefing.mjs publish ${OUTPUT}
 - If something goes wrong, run: node scripts/briefing.mjs fail "<short reason>"

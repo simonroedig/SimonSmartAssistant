@@ -17,7 +17,7 @@ import { TODAY_COLOR } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useDayExtras } from "@/data/calendar";
 import { BlockEditor } from "./block-editor";
-import { DayExtrasChips } from "./day-extras";
+import { AllDayBlocks, DayExtrasChips } from "./day-extras";
 import { DayTimeline } from "./day-timeline";
 import { FocusInput } from "./focus-input";
 import { NowNext } from "./now-next";
@@ -55,7 +55,14 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
   // In the evening – three hours before bedtime, with nothing left today – the
   // card starts with tomorrow. Browsing by hand overrides that for a while.
   const autoOffset =
-    now && todayBlocks.data && showTomorrowFirst(settings.sleepSchedule, today, minutesOfDay(now), todayBlocks.data)
+    now &&
+    todayBlocks.data &&
+    showTomorrowFirst(
+      settings.sleepSchedule,
+      today,
+      minutesOfDay(now),
+      todayBlocks.data.filter((b) => !b.all_day),
+    )
       ? 1
       : 0;
   const [manualOffset, setManualOffset] = useState<number | null>(null);
@@ -154,6 +161,7 @@ export function TodayCard({ today, className, fit = false }: { today: DayKey; cl
       >
         <FocusInput day={day} week={planner.week} className="-mx-1" />
         <DayExtrasChips extras={dayExtras(day)} />
+        <AllDayBlocks blocks={planner.allDayBlocks} onOpen={(block) => planner.setEditor({ mode: "edit", block })} />
         {now && isToday && !planner.isLoading && (
           <NowNext
             blocks={planner.dayBlocks}

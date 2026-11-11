@@ -92,7 +92,7 @@ function mergeIntoRange(list: PlanBlock[], blocks: PlanBlock[], key: QueryKey): 
 }
 
 export type BlockInput = Pick<PlanBlock, "day" | "start_min" | "end_min" | "title"> &
-  Partial<Pick<PlanBlock, "color" | "notes" | "location" | "icon" | "todo_id" | "done">> & { id?: string };
+  Partial<Pick<PlanBlock, "color" | "notes" | "location" | "icon" | "todo_id" | "done" | "all_day">> & { id?: string };
 
 export function prepareBlock(input: BlockInput): PlanBlock {
   const now = nowIso();
@@ -108,6 +108,7 @@ export function prepareBlock(input: BlockInput): PlanBlock {
     icon: input.icon ?? null,
     todo_id: input.todo_id ?? null,
     done: input.done ?? false,
+    all_day: input.all_day ?? false,
     created_at: now,
     updated_at: now,
     user_id: "",
@@ -115,8 +116,8 @@ export function prepareBlock(input: BlockInput): PlanBlock {
 }
 
 function toRow(block: PlanBlock) {
-  const { id, day, start_min, end_min, title, color, notes, location, icon, todo_id, done } = block;
-  return { id, day, start_min, end_min, title, color, notes, location, icon, todo_id, done };
+  const { id, day, start_min, end_min, title, color, notes, location, icon, todo_id, done, all_day } = block;
+  return { id, day, start_min, end_min, title, color, notes, location, icon, todo_id, done, all_day };
 }
 
 export function useAddBlocks() {

@@ -150,6 +150,15 @@ test("daily briefing: set up in Settings, handed in by the task, new on Home unt
   await swipe(160);
   await expect(touchDays.first()).toHaveAttribute("aria-pressed", "true");
   await expect(touchSheet.getByText("This briefing couldn't be made.")).toBeVisible();
+
+  // A line that starts with a date goes into the planner: all day, on that day – to check and add.
+  await touchDays.nth(1).click();
+  await touchSheet.getByRole("button", { name: 'Add "Ein Termin" to the planner' }).click();
+  await expect(touch).toHaveURL(/\/planner/);
+  const block = touch.getByRole("dialog", { name: "New block" });
+  await expect(block.getByLabel("What")).toHaveValue("Ein Termin");
+  await expect(block.getByRole("switch", { name: "All day" })).toHaveAttribute("aria-checked", "true");
+  await expect(block.getByText(/3 December/)).toBeVisible();
   await phone.close();
 });
 

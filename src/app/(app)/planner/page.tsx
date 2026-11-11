@@ -4,11 +4,16 @@ import { PlannerClient } from "@/components/planner/planner-client";
 export const metadata: Metadata = { title: "Planner" };
 
 export default async function PlannerPage({ searchParams }: PageProps<"/planner">) {
-  const { day, plan } = await searchParams;
+  const { day, plan, add, notes, allday } = await searchParams;
   return (
     <PlannerClient
       requestedDay={typeof day === "string" ? day : undefined}
       planTodoId={typeof plan === "string" ? plan : undefined}
+      addBlock={
+        typeof add === "string" && add.trim()
+          ? { title: add, notes: typeof notes === "string" ? notes : undefined, allDay: allday === "1" }
+          : undefined
+      }
     />
   );
 }

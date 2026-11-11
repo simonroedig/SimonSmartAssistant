@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { briefingState } from "./briefing";
+import { briefingState, datedItem } from "./briefing";
 
 const at = (iso: string, extra: Partial<{ status: string; read_at: string | null }> = {}) => ({
   status: "ok",
@@ -30,5 +30,36 @@ describe("briefing state", () => {
     expect(briefingState(yesterday, morning)).toMatchObject({ today: false, missing: false });
     expect(briefingState(yesterday, noon)).toMatchObject({ today: false, missing: true, unread: false });
     expect(briefingState([], noon)).toMatchObject({ latest: null, missing: true });
+  });
+});
+
+describe("datedItem", () => {
+  const written = new Date(2026, 10, 10, 7, 43);
+  const t = (text: string) => ({ type: "text" as const, text });
+  const link = (label: string, href: string) => ({ type: "link" as const, href, children: [t(label)] });
+
+  it("reads the date at the start, the rest is the title, the source link the notes", () => {
+    expect(
+      datedItem([t("15.11. – NFL in der Allianz Arena "), link("Quelle", "https://example.com/nfl")], written),
+    ).toEqual({
+      day: "2026-11-15",
+      title: "NFL in der Allianz Arena",
+      source: "https://example.com/nfl",
+    });
+  });
+
+  it("knows ranges, bold dates, month names and the turn of the year", () => {
+    expect(datedItem([{ type: "bold", children: [t("20.11.–24.12.")] }, t(": Christkindlmarkt")], written)?.day).toBe(
+      "2026-11-20",
+    );
+    expect(datedItem([t("3. Dezember – Ein Termin")], written)?.day).toBe("2026-12-03");
+    expect(datedItem([t("6.1. – Heilige Drei Könige")], written)?.day).toBe("2027-01-06");
+    expect(datedItem([t("1.11.2026 – Allerheiligen")], written)?.day).toBe("2026-11-01");
+  });
+
+  it("leaves lines without a date at the start alone", () => {
+    expect(datedItem([t("KI-Gipfel in Paris am 3.11.")], written)).toBeNull();
+    expect(datedItem([t("3.11.")], written)).toBeNull();
+    expect(datedItem([t("31.2. – Kein Tag")], written)).toBeNull();
   });
 });

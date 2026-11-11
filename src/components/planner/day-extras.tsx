@@ -2,8 +2,10 @@
 
 import { Cake, Clock, Flag, Store } from "lucide-react";
 import { type DayExtras, hasExtras } from "@/data/calendar";
+import type { PlanBlock } from "@/data/core";
 import type { CalendarDay } from "@/lib/holidays";
 import { cn } from "@/lib/utils";
+import { blockStyle } from "./block-colors";
 
 /** Day numbers in calendars: red when shops are closed, amber for shorter hours or a day off school. */
 export function holidayNumberClass(holiday: CalendarDay | null): string | undefined {
@@ -67,6 +69,46 @@ export function DayExtrasChips({ extras, className }: { extras: DayExtras; class
           <span className="truncate">{label}</span>
         </li>
       ))}
+    </ul>
+  );
+}
+
+/** The day's all-day entries: bars across the whole width, above the timeline (a tap opens one). */
+export function AllDayBlocks({
+  blocks,
+  onOpen,
+  className,
+}: {
+  blocks: PlanBlock[];
+  onOpen: (block: PlanBlock) => void;
+  className?: string;
+}) {
+  if (blocks.length === 0) return null;
+  return (
+    <ul aria-label="All day" className={cn("flex flex-col gap-1.5", className)}>
+      {[...blocks]
+        .sort((a, b) => a.title.localeCompare(b.title))
+        .map((block) => {
+          const style = blockStyle(block.color);
+          return (
+            <li key={block.id}>
+              <button
+                type="button"
+                onClick={() => onOpen(block)}
+                className={cn(
+                  "flex min-h-9 w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm font-semibold transition-[filter] hover:brightness-[1.04] active:brightness-95",
+                  style.bg,
+                  style.text,
+                  block.done && "opacity-55",
+                )}
+              >
+                <span className={cn("size-2 shrink-0 rounded-full", style.swatch)} />
+                <span className={cn("min-w-0 flex-1 truncate", block.done && "line-through")}>{block.title}</span>
+                <span className="shrink-0 text-xs font-medium opacity-70">All day</span>
+              </button>
+            </li>
+          );
+        })}
     </ul>
   );
 }

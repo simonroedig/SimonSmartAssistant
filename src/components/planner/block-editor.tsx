@@ -43,6 +43,9 @@ export type EditorState =
       title?: string;
       color?: BlockColor;
       todoId?: string | null;
+      /** All day (shown above the timeline), e.g. a date from the daily briefing. */
+      allDay?: boolean;
+      notes?: string;
     }
   | { mode: "edit"; block: PlanBlock };
 
@@ -58,6 +61,7 @@ export type BlockDraft = {
   location: string | null;
   done: boolean;
   todo_id: string | null;
+  all_day: boolean;
 };
 
 export function BlockEditor({
@@ -69,7 +73,6 @@ export function BlockEditor({
   onSave,
   onDelete,
   onCopyTo,
-  awakeFor,
 }: {
   state: EditorState | null;
   onClose: () => void;
@@ -79,8 +82,6 @@ export function BlockEditor({
   onSave: (block: PlanBlock, draft: BlockDraft) => void;
   onDelete: (block: PlanBlock) => void;
   onCopyTo: (block: PlanBlock, day: DayKey) => void;
-  /** Wake-up and bedtime of a day (minutes), for "Full day". */
-  awakeFor: (day: DayKey) => [number, number];
 }) {
   const title = state?.mode === "edit" ? "Edit block" : "New block";
   return (
@@ -96,7 +97,6 @@ export function BlockEditor({
           onSave={onSave}
           onDelete={onDelete}
           onCopyTo={onCopyTo}
-          awakeFor={awakeFor}
         />
       )}
     </Sheet>
@@ -112,7 +112,6 @@ function EditorForm({
   onSave,
   onDelete,
   onCopyTo,
-  awakeFor,
 }: {
   state: EditorState;
   recent: PlanBlock[];
@@ -122,7 +121,6 @@ function EditorForm({
   onSave: (block: PlanBlock, draft: BlockDraft) => void;
   onDelete: (block: PlanBlock) => void;
   onCopyTo: (block: PlanBlock, day: DayKey) => void;
-  awakeFor: (day: DayKey) => [number, number];
 }) {
   const existing = state.mode === "edit" ? state.block : null;
   const [title, setTitle] = useState(existing?.title ?? (state.mode === "create" ? (state.title ?? "") : ""));
@@ -131,7 +129,8 @@ function EditorForm({
   const [color, setColor] = useState<BlockColor>(
     (existing?.color as BlockColor) ?? (state.mode === "create" ? (state.color ?? "violet") : "violet"),
   );
-  const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [notes, setNotes] = useState(existing?.notes ?? (state.mode === "create" ? (state.notes ?? "") : ""));
+  const [allDay, setAllDay] = useState(existing?.all_day ?? (state.mode === "create" && !!state.allDay));
   const [location, setLocation] = useState(existing?.location ?? "");
   const [done, setDone] = useState(existing?.done ?? false);
   const [day, setDay] = useState<DayKey>(existing?.day ?? (state.mode === "create" ? state.day : ""));
@@ -153,14 +152,11 @@ function EditorForm({
   }, [recent, title]);
 
   const duration = end - start;
-  // The whole waking day of the block's day (for big things that fill it).
-  const [wake, bed] = day ? awakeFor(day) : [0, MINUTES_PER_DAY];
-  const fullDay = start === wake && end === bed;
 
   // A length of your own (not one of the quick picks) gets a chip of its own, so a
   // quick pick can be tried and the own length picked again.
   const [custom, setCustom] = useState<number | null>(null);
-  if (duration > 0 && !fullDay && !DURATIONS.includes(duration) && custom !== duration) setCustom(duration);
+  if (duration > 0 && !allDay && !DURATIONS.includes(duration) && custom !== duration) setCustom(duration);
 
   // Long details: a few lines while editing the rest, all of it on request.
   const [notesOpen, setNotesOpen] = useState(false);
@@ -213,8 +209,10 @@ function EditorForm({
 
   const draft = (): BlockDraft => ({
     day,
-    start_min: start,
-    end_min: Math.max(end, start + 5),
+    // All day: the whole day, so it never fits between other blocks by accident.
+    start_min: allDay ? 0 : start,
+    end_min: allDay ? MINUTES_PER_DAY : Math.max(end, start + 5),
+    all_day: allDay,
     title: title.trim(),
     color,
     notes: notes.trim() || null,
@@ -392,81 +390,67 @@ function EditorForm({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label>Start</Label>
-          <TimeField
-            value={start}
-            onChange={setStartKeepDuration}
-            max={MINUTES_PER_DAY - snap}
-            step={snap}
-            label="Start"
-          />
-        </div>
-        <div>
-          <Label>End</Label>
-          <TimeField
-            value={end}
-            onChange={(v) => setEnd(Math.max(v, start + snap))}
-            min={start + snap}
-            max={MINUTES_PER_DAY}
-            step={snap}
-            label="End"
-          />
-        </div>
-      </div>
+      <label className="flex items-center justify-between rounded-2xl bg-surface-sunken px-4 py-3">
+        <span className="flex items-center gap-2 font-medium">
+          <Sun className="size-4 text-muted" /> All day
+        </span>
+        <Switch checked={allDay} onCheckedChange={setAllDay} label="All day" />
+      </label>
 
-      <div className="-mt-2 flex flex-wrap gap-1.5">
-        {[...DURATIONS, ...(custom ? [custom] : [])].map((d, i) => (
-          <button
-            key={i < DURATIONS.length ? d : "custom"}
-            type="button"
-            disabled={start + d > MINUTES_PER_DAY}
-            aria-label={i < DURATIONS.length ? undefined : `Your own length: ${formatDuration(d)}`}
-            onClick={() => setEnd(start + d)}
-            className={cn(
-              "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-30",
-              // The picked length in the block's own colour.
-              duration === d
-                ? cn(
-                    "border-transparent ring-2 ring-inset",
-                    blockStyle(color).bg,
-                    blockStyle(color).text,
-                    blockStyle(color).ring,
-                  )
-                : "border-line bg-surface-sunken text-muted hover:text-fg",
-            )}
-          >
-            {i >= DURATIONS.length && <Timer className="size-3.5" />}
-            {formatDuration(d)}
-          </button>
-        ))}
-        {wake < bed && (
-          <button
-            type="button"
-            aria-pressed={fullDay}
-            title={`From waking up to bedtime (${formatDuration(bed - wake)})`}
-            onClick={() => {
-              setStart(wake);
-              setEnd(bed);
-            }}
-            className={cn(
-              "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors",
-              fullDay
-                ? cn(
-                    "border-transparent ring-2 ring-inset",
-                    blockStyle(color).bg,
-                    blockStyle(color).text,
-                    blockStyle(color).ring,
-                  )
-                : "border-line bg-surface-sunken text-muted hover:text-fg",
-            )}
-          >
-            <Sun className="size-3.5" />
-            Full day
-          </button>
-        )}
-      </div>
+      {!allDay && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Start</Label>
+              <TimeField
+                value={start}
+                onChange={setStartKeepDuration}
+                max={MINUTES_PER_DAY - snap}
+                step={snap}
+                label="Start"
+              />
+            </div>
+            <div>
+              <Label>End</Label>
+              <TimeField
+                value={end}
+                onChange={(v) => setEnd(Math.max(v, start + snap))}
+                min={start + snap}
+                max={MINUTES_PER_DAY}
+                step={snap}
+                label="End"
+              />
+            </div>
+          </div>
+
+          <div className="-mt-2 flex flex-wrap gap-1.5">
+            {[...DURATIONS, ...(custom ? [custom] : [])].map((d, i) => (
+              <button
+                key={i < DURATIONS.length ? d : "custom"}
+                type="button"
+                disabled={start + d > MINUTES_PER_DAY}
+                aria-label={i < DURATIONS.length ? undefined : `Your own length: ${formatDuration(d)}`}
+                onClick={() => setEnd(start + d)}
+                className={cn(
+                  "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors disabled:opacity-30",
+                  // The picked length in the block's own colour.
+                  duration === d
+                    ? cn(
+                        "border-transparent ring-2 ring-inset",
+                        blockStyle(color).bg,
+                        blockStyle(color).text,
+                        blockStyle(color).ring,
+                      )
+                    : "border-line bg-surface-sunken text-muted hover:text-fg",
+                )}
+              >
+                {i >= DURATIONS.length && <Timer className="size-3.5" />}
+                {formatDuration(d)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {existing && (
         <label className="flex items-center justify-between rounded-2xl bg-surface-sunken px-4 py-3">

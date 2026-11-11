@@ -1,3 +1,5 @@
+import { CalendarPlus } from "lucide-react";
+import { type DatedItem, datedItem } from "@/lib/briefing";
 import { type Block, type Inline, parseMarkdown } from "@/lib/markdown";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +42,10 @@ function Inlines({ nodes }: { nodes: Inline[] }) {
   });
 }
 
-function BlockView({ block }: { block: Block }) {
+/** Lines that start with a date can go into the planner. */
+type Plan = { writtenAt: Date; onPlan: (item: DatedItem) => void };
+
+function BlockView({ block, plan }: { block: Block; plan?: Plan }) {
   switch (block.type) {
     case "heading":
       return block.level === 1 ? (
@@ -70,11 +75,26 @@ function BlockView({ block }: { block: Block }) {
       const List = block.ordered ? "ol" : "ul";
       return (
         <List className={cn("flex flex-col gap-1.5 pl-5", block.ordered ? "list-decimal" : "list-disc")}>
-          {block.items.map((item, i) => (
-            <li key={i} className="pl-0.5 marker:text-faint">
-              <Inlines nodes={item} />
-            </li>
-          ))}
+          {block.items.map((item, i) => {
+            const dated = plan ? datedItem(item, plan.writtenAt) : null;
+            return (
+              <li key={i} className="pl-0.5 marker:text-faint">
+                <Inlines nodes={item} />
+                {dated && (
+                  <button
+                    type="button"
+                    aria-label={`Add "${dated.title}" to the planner`}
+                    title="Add to planner – all day"
+                    onClick={() => plan!.onPlan(dated)}
+                    // Rides at the end of the line; a big enough target for a finger.
+                    className="-my-1.5 ml-1 inline-grid size-8 translate-y-[0.1rem] place-items-center rounded-lg align-middle text-rose-600 transition-colors hover:bg-surface-hover dark:text-rose-300"
+                  >
+                    <CalendarPlus className="size-4" />
+                  </button>
+                )}
+              </li>
+            );
+          })}
         </List>
       );
     }
@@ -82,11 +102,11 @@ function BlockView({ block }: { block: Block }) {
 }
 
 /** Markdown written by Claude, shown as plain text and web links (never as HTML). */
-export function MarkdownView({ text, className }: { text: string; className?: string }) {
+export function MarkdownView({ text, plan, className }: { text: string; plan?: Plan; className?: string }) {
   return (
     <div className={cn("flex flex-col gap-3 text-[0.95rem] leading-relaxed", className)}>
       {parseMarkdown(text).map((block, i) => (
-        <BlockView key={i} block={block} />
+        <BlockView key={i} block={block} plan={plan} />
       ))}
     </div>
   );
