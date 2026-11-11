@@ -31,3 +31,39 @@ Private dashboard for one user: wall touch display (Raspberry Pi kiosk), phone P
   must not render DOM-dependent values during SSR.
 - **Checks before pushing:** `npm run lint && npm run typecheck && npm test && npm run build`;
   with local Supabase also `npm run test:integration` and `npx playwright test`.
+
+# How the user likes it (read before building)
+
+Learned over many rounds – following these saves going back and forth.
+
+- **Talk German, compact.** The user writes German, often by voice (expect transcription slips). Answer what was
+  asked first, short. The app's UI stays English (see above). "Nur einschätzen" / "erstmal nicht umsetzen" means:
+  assess, don't build.
+- **One interaction per job, everywhere.** Switching views = a row of chips; a sideways swipe moves to the
+  neighbouring chip (`useSwipe`; the chip row itself is `data-swipe`), the picked chip scrolls into view
+  (`useScrollToPressed`) and the content slides in from that side. Press and hold edits (chips, tiles). Sheets
+  close by swiping down, back or tapping outside – and save on close. A new screen reuses these, never invents its own.
+- **Three devices, all first-class:** phone (it's the launcher – touch, ~390 px wide), the wall display (Pi, touch,
+  kiosk) and the PC (mouse: drag to scroll, hover). Check every change at 390×844, in a low window and wide;
+  nothing may stick out sideways, nothing may need a precise tap.
+- **At a glance.** Overviews before details (e.g. Notes → All: pinned, the categories with a peek, then what
+  isn't sorted). Dense but calm.
+- **Colours:** each section has its tone (`src/lib/tones.ts`); app-wide things use the accent, not sky blue (that
+  clashes with the weather). Unsure or failed states are amber and say why – never silent, never a wrong yes.
+- **Spare resources:** check or fetch only while something is on screen, cache it, keep stored history short
+  (briefings: 14 days).
+- **Pragmatic:** the simplest thing that works well; no new packages without need; make it extensible only where
+  the user hints at more to come (like note templates).
+- **Flow:** one commit per feature; run the checks above before pushing; push to the working branch and to
+  `main` (migrations deploy from `main`); CI must end green.
+- **Usage is limited:** keep sessions lean – no long CI polling, small screenshots and log excerpts.
+
+# Local setup in a cloud container (learnings)
+
+- Docker isn't running after a restart: `rm -f /var/run/docker.pid; dockerd &`, then `npx supabase start`.
+- `.env.local` missing: copy `.env.example`.
+- After `npx supabase db reset` the dev user is gone: `npm run test:integration` creates it again (vault PIN 2468).
+  Then `docker restart supabase_auth_simon-smart-assistant` (the e-mail code limit) and
+  `npx playwright test --project=setup`.
+- Stop old servers with `pgrep -f "[n]ext-server" | xargs -r kill` (`pkill -f "next start"` kills its own shell).
+- CI runs Playwright on `ubuntu-24.04` (newer images aren't supported by it yet).
