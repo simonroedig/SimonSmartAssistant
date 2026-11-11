@@ -72,7 +72,7 @@ test("notes: categories – a tile each in the overview, a level deeper to open,
   const fresh = page.getByRole("dialog");
   await fresh.getByLabel("Note", { exact: true }).fill(loose);
   await fresh.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("heading", { name: "Not sorted yet" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Not sorted yet", exact: true })).toBeVisible();
   const looseCard = page.getByRole("button", { name: `Open note "${loose}"` });
   await expect(looseCard).toBeVisible();
 
@@ -109,7 +109,7 @@ test("notes: categories – a tile each in the overview, a level deeper to open,
   await expect(card).toBeVisible();
 });
 
-test("notes: categories in an order of your own – drag them in the list behind the pencil", async ({ page }) => {
+test("notes: categories in an order of your own – drag their tiles", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/notes");
   const stamp = Date.now() % 100000;
@@ -131,30 +131,32 @@ test("notes: categories in an order of your own – drag them in the list behind
     ).filter((t) => t.endsWith(String(stamp)));
   await expect.poll(order).toEqual(names);
 
-  // The pencil next to "Categories": in its list the second one moves up (here by keyboard).
-  await page.getByRole("button", { name: "Edit categories" }).click();
-  const list = page.getByRole("dialog", { name: "Categories" });
-  const handle = list.getByRole("button", { name: `Move ${names[1]}` });
-  await handle.focus();
-  // Give the sensor a moment between steps, like a person would.
-  for (const key of ["Space", "ArrowUp", "Space"]) {
-    await page.keyboard.press(key);
-    await page.waitForTimeout(250);
+  // Drag the second onto the first (with the mouse; a finger presses and holds first).
+  const from = (await tile(page, names[1]).boundingBox())!;
+  const to = (await tile(page, names[0]).boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 12; i++) {
+    await page.mouse.move(
+      from.x + from.width / 2 + ((to.x - from.x) * i) / 12,
+      from.y + from.height / 2 + ((to.y - from.y) * i) / 12,
+    );
   }
-  const listOrder = () =>
-    list
-      .getByRole("button", { name: /^Move / })
-      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")?.replace("Move ", "") ?? ""));
-  await expect
-    .poll(async () => (await listOrder()).filter((n) => n.endsWith(String(stamp))))
-    .toEqual([names[1], names[0]]);
-  await page.keyboard.press("Escape");
-  await expect(list).toBeHidden();
+  await page.waitForTimeout(150);
+  await page.mouse.up();
   await expect.poll(order).toEqual([names[1], names[0]]);
+  // The drag didn't open it.
+  await expect(page.getByRole("button", { name: "Back to all notes" })).toHaveCount(0);
 
-  // It stays that way.
+  // It stays that way – and the note editor lists them in the same order.
   await page.reload();
   await expect.poll(order).toEqual([names[1], names[0]]);
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  const picker = page.getByRole("dialog").getByRole("group", { name: "Category" });
+  expect(
+    (await picker.getByRole("button").allTextContents()).map((t) => t.trim()).filter((t) => t.endsWith(String(stamp))),
+  ).toEqual([names[1], names[0]]);
+  await page.keyboard.press("Escape");
 
   for (const name of names) {
     await editCategory(page, name);

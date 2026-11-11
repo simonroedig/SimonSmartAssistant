@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ClipboardPaste, RotateCcw, Trash2, Wind } from "lucide-react";
+import { Check, RotateCcw, Trash2, Wind } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -15,7 +15,6 @@ import {
   entryLabel,
   isEntryEmpty,
   type NoteTemplate,
-  parseTemplateText,
   readEntries,
   sortEntries,
   type TemplateEntry,
@@ -101,15 +100,11 @@ export function TemplateView({
   template,
   note,
   onChange,
-  importing,
-  onImportClose,
 }: {
   template: NoteTemplate;
   note: Note;
   /** The entries changed (saved by the caller, with their text). */
   onChange: (entries: TemplateEntry[]) => void;
-  importing: boolean;
-  onImportClose: () => void;
 }) {
   const entries = readEntries(note.entries);
   const { open, done } = sortEntries(entries.filter((e) => !isEntryEmpty(e)));
@@ -226,12 +221,6 @@ export function TemplateView({
         onSave={put}
         onRemove={remove}
         onLetGo={letGo}
-      />
-      <ImportSheet
-        template={template}
-        open={importing}
-        onClose={onImportClose}
-        onImport={(found) => onChange([...entries, ...found])}
       />
     </div>
   );
@@ -441,60 +430,5 @@ function Field({
         />
       )}
     </div>
-  );
-}
-
-/** Entries written by hand elsewhere (e.g. an older note), pasted in. */
-function ImportSheet({
-  template,
-  open,
-  onClose,
-  onImport,
-}: {
-  template: NoteTemplate;
-  open: boolean;
-  onClose: () => void;
-  onImport: (entries: TemplateEntry[]) => void;
-}) {
-  const [text, setText] = useState("");
-  const found = parseTemplateText(template, text);
-  const close = () => {
-    setText("");
-    onClose();
-  };
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(o) => !o && close()}
-      title="Import"
-      description={`Paste ${template.entry}s you wrote down elsewhere – each starting with “Situation:”, the questions as 1. to 4., and “✅ … 10 Nov” for ones already let go.`}
-      className={FIELD_FOCUS.emerald}
-      size="half"
-      footer={
-        <Button
-          variant="primary"
-          disabled={found.length === 0}
-          className={cn("ui-action ml-auto shadow-none", TEMPLATE_TONE.solid)}
-          onClick={() => {
-            onImport(found);
-            toast(`Imported ${found.length} ${found.length === 1 ? template.entry : `${template.entry}s`}`);
-            close();
-          }}
-        >
-          <ClipboardPaste /> Import {found.length > 0 ? found.length : ""}
-        </Button>
-      }
-    >
-      <AutoTextarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        aria-label="Text to import"
-        placeholder={"Situation:\n- …\n\n1. Is there anything left to do?\n- No\n…\n\n✅ Let go on 10 Nov"}
-        minRows={10}
-        maxRows={Number.POSITIVE_INFINITY}
-        maxLength={60000}
-        className="text-sm"
-      />
-    </Sheet>
   );
 }

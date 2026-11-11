@@ -20,7 +20,7 @@ async function openLetGo(page: Page) {
   await expect(page.getByRole("button", { name: "Delete Let go" })).toBeVisible();
 }
 
-test("notes: Let go – + for a situation, check it off, the done ones as a list, import old ones", async ({ page }) => {
+test("notes: Let go – + for a situation, check it off, the done ones as a list", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/notes");
   await openLetGo(page);
@@ -62,21 +62,17 @@ test("notes: Let go – + for a situation, check it off, the done ones as a list
   await expect(check).toHaveCount(0);
   await expect(page.getByRole("button", { name: new RegExp(next) })).toBeVisible();
 
-  // Old ones written elsewhere: pasted in.
-  await page.getByRole("button", { name: "Import" }).click();
-  await page
-    .getByLabel("Text to import")
-    .fill(
-      `Situation:\n- Coffee ${stamp}\n1. Anything left?\n- Ja: Nein\n✅ Abgehakt am: 10. Nov\n\nSituation:\n- Name ${stamp}`,
-    );
-  await page.getByRole("button", { name: "Import 2" }).click();
-  await expect(page.getByRole("button", { name: new RegExp(`Coffee ${stamp}`) })).toBeVisible();
-  await expect(page.getByRole("button", { name: `Let it go: Name ${stamp}` })).toBeVisible();
+  // One more, left open.
+  const open = `Forgot a name ${stamp}`;
+  await page.getByRole("button", { name: "New situation" }).click();
+  await page.keyboard.type(open);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: `Let it go: ${open}` })).toBeVisible();
 
   // Back: the collection's tile in the overview, striped, with what's open.
   await page.getByRole("button", { name: "Back to all notes" }).click();
   const tile = page.getByRole("button", { name: /^Let go, \d+ open/ });
-  await expect(tile).toContainText(`Name ${stamp}`);
+  await expect(tile).toContainText(open);
 
   // Deleted (to the trash), the next run starts afresh.
   await tile.click();
@@ -101,7 +97,7 @@ test("notes: All – pinned notes without a category on top, small; a category k
   await editor.getByLabel("Note", { exact: true }).fill("4711\nsecond line");
   await editor.getByRole("button", { name: "Pin note" }).click();
   await editor.getByRole("button", { name: "Done" }).click();
-  const pinnedSection = page.locator("section", { has: page.getByRole("heading", { name: "Pinned" }) });
+  const pinnedSection = page.locator("section", { has: page.getByRole("heading", { name: /^Pinned/ }) });
   const looseCard = pinnedSection.getByRole("button", { name: `Open note "${loose}"` });
   await expect(looseCard).toBeVisible();
   await expect(looseCard).not.toContainText("second line");

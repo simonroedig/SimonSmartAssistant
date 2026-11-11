@@ -47,6 +47,8 @@ export function SortableList<T extends { id: string }>({
   layout = "list",
   withHandle = true,
   className,
+  before,
+  after,
 }: {
   items: T[];
   onMove: (id: string, index: number) => void;
@@ -54,6 +56,9 @@ export function SortableList<T extends { id: string }>({
   layout?: "list" | "grid";
   withHandle?: boolean;
   className?: string;
+  /** Fixed items in the same list, before and after the sortable ones (`<li>`s). */
+  before?: React.ReactNode;
+  after?: React.ReactNode;
 }) {
   const kiosk = isKioskDocument();
   const sensors = useSensors(
@@ -110,11 +115,13 @@ export function SortableList<T extends { id: string }>({
             }
           }}
         >
+          {before}
           {shown.map((item) => (
             <SortableItem key={item.id} id={item.id} withHandle={withHandle}>
               {children(item)}
             </SortableItem>
           ))}
+          {after}
         </ul>
       </SortableContext>
     </DndContext>

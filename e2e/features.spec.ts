@@ -18,9 +18,9 @@ test("notes: write, pin, edit and delete with undo – also on the home screen",
   await expect(card).toBeVisible();
   await expect(page.getByText(text)).toBeVisible();
 
-  // Pin it, then it is listed under "Pinned".
+  // Pin it, then it is listed under "Pinned · not sorted yet".
   await card.locator("..").getByRole("button", { name: "Pin note" }).click();
-  await expect(page.getByRole("heading", { name: "Pinned" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pinned · not sorted yet" })).toBeVisible();
 
   // Edit in the sheet; closing saves.
   await card.click();

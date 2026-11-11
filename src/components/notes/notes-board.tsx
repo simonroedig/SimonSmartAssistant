@@ -1,7 +1,7 @@
 "use client";
 
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ClipboardPaste, Copy, Lock, Pencil, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
+import { ChevronLeft, Copy, Lock, Pencil, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
 import { type Note, type NoteCategory, queryKeys } from "@/data/core";
-import { categoryColor, useNoteCategories } from "@/data/note-categories";
+import { categoryColor, useMoveCategory, useNoteCategories } from "@/data/note-categories";
 import {
   isNoteEmpty,
   type NoteDraft,
@@ -26,7 +26,6 @@ import {
 } from "@/data/notes";
 import { useVaultStatus } from "@/data/vault";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useLongPress } from "@/hooks/use-long-press";
 import { useSwipe } from "@/hooks/use-swipe";
 import { PALETTE } from "@/lib/palette";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
@@ -45,7 +44,6 @@ import {
 import { afterSheetClosed } from "@/lib/history";
 import {
   CategoryPicker,
-  CategoriesSheet,
   CategorySheet,
   type CategorySheetState,
   CategoryTag,
@@ -194,12 +192,11 @@ export function NotesBoard({
   const add = useAddNote();
   const update = useUpdateNote();
   const trash = useTrashNotes();
+  const moveCategory = useMoveCategory();
   const [editor, setEditor] = useState<EditorState>(null);
   // Every visit starts with the overview.
   const [view, setViewState] = useState<NoteFilter>("all");
   const [categorySheet, setCategorySheet] = useState<CategorySheetState>(null);
-  const [managing, setManaging] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [pinSheet, setPinSheet] = useState<VaultPinMode | null>(null);
 
   const inVault = variant === "page" && view === "vault";
@@ -363,13 +360,7 @@ export function NotesBoard({
       } else if (view === "all" && direction === -1) openVault();
       else if (view === "vault" && direction === 1) enter("all");
     },
-    variant === "page" &&
-      phone &&
-      editor === null &&
-      categorySheet === null &&
-      pinSheet === null &&
-      !managing &&
-      !importing,
+    variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null,
   );
 
   const editorSheet = (
@@ -489,7 +480,7 @@ export function NotesBoard({
       <div className="mt-2 flex flex-col gap-6 md:mt-6">
         {loosePinned.length > 0 && (
           <section>
-            <h2 className={sectionTitle}>Pinned</h2>
+            <h2 className={sectionTitle}>Pinned · not sorted yet</h2>
             {sortable(loosePinned, 1)}
           </section>
         )}
@@ -500,51 +491,45 @@ export function NotesBoard({
           </section>
         )}
         <section>
-          <div className="mb-2 flex items-center justify-between gap-2 px-1">
-            <h2 className="text-xs font-semibold tracking-wide text-faint uppercase">Categories</h2>
-            {categoryList.length > 1 && (
-              <button
-                type="button"
-                aria-label="Edit categories"
-                title="Order and edit the categories"
-                onClick={() => setManaging(true)}
-                className="-my-2 -mr-2 grid size-9 place-items-center rounded-xl text-faint transition-colors hover:bg-surface-hover hover:text-fg"
-              >
-                <Pencil className="size-3.5" />
-              </button>
-            )}
-          </div>
-          <ul className={tiles}>
-            {collections.map(({ template, note }) => (
+          <h2 className={sectionTitle}>Categories</h2>
+          {/* Templates' collections first (fixed), then the categories – press and hold (or drag
+              with the mouse) to move one; their order is the same everywhere. */}
+          <SortableList
+            items={categoryList}
+            layout="grid"
+            withHandle={false}
+            className={tiles}
+            onMove={(id, index) => moveCategory.mutate({ id, position: positionForMove(categoryList, id, index) })}
+            before={collections.map(({ template, note }) => (
               <li key={template.id}>
                 <TemplateTile template={template} note={note} onOpen={() => enter({ template: template.id })} />
               </li>
             ))}
-            {categoryList.map((c) => (
-              <li key={c.id}>
-                <CategoryTile
-                  category={c}
-                  notes={board.filter((n) => n.category_id === c.id)}
-                  onOpen={() => enter({ category: c.id })}
-                  onEdit={() => setCategorySheet({ mode: "edit", category: c })}
-                />
+            after={
+              <li>
+                <button
+                  type="button"
+                  aria-label="New category"
+                  onClick={() => setCategorySheet({ mode: "create" })}
+                  className="flex h-full min-h-28 w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line-strong text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+                >
+                  <Plus className="size-5" />
+                  New category
+                </button>
               </li>
-            ))}
-            <li>
-              <button
-                type="button"
-                aria-label="New category"
-                onClick={() => setCategorySheet({ mode: "create" })}
-                className="flex h-full min-h-28 w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line-strong text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-              >
-                <Plus className="size-5" />
-                New category
-              </button>
-            </li>
-          </ul>
+            }
+          >
+            {(c) => (
+              <CategoryTile
+                category={c}
+                notes={board.filter((n) => n.category_id === c.id)}
+                onOpen={() => enter({ category: c.id })}
+              />
+            )}
+          </SortableList>
         </section>
         <p className="text-center text-xs text-faint">
-          Tap a category to open it · press and hold one to edit it, a note to move it.
+          Tap a category to open it · press and hold a category or a note to move it.
         </p>
       </div>
     );
@@ -594,9 +579,6 @@ export function NotesBoard({
                 <TemplateIcon template={collection.template} className="size-5 shrink-0" />
                 <span className="truncate">{collection.template.name}</span>
               </h2>
-              <Button variant="ghost" size="sm" onClick={() => setImporting(true)}>
-                <ClipboardPaste /> Import
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -679,8 +661,6 @@ export function NotesBoard({
                 template={collection.template}
                 note={collection.note}
                 onChange={(entries) => saveEntries(collection.note, entries)}
-                importing={importing}
-                onImportClose={() => setImporting(false)}
               />
             </div>
           ) : view === "all" ? (
@@ -705,20 +685,6 @@ export function NotesBoard({
         />
       )}
       {editorSheet}
-      <CategoriesSheet
-        open={managing}
-        categories={categoryList}
-        onClose={() => setManaging(false)}
-        // One sheet at a time: the list closes, the category opens.
-        onEdit={(c) => {
-          setManaging(false);
-          setCategorySheet({ mode: "edit", category: c });
-        }}
-        onAdd={() => {
-          setManaging(false);
-          setCategorySheet({ mode: "create" });
-        }}
-      />
       <CategorySheet
         state={categorySheet}
         onClose={() => setCategorySheet(null)}
@@ -739,30 +705,14 @@ export function NotesBoard({
 }
 
 /** In the overview: a category with a peek at its first notes – a tap shows all of it. */
-function CategoryTile({
-  category,
-  notes,
-  onOpen,
-  onEdit,
-}: {
-  category: NoteCategory;
-  notes: Note[];
-  onOpen: () => void;
-  onEdit: () => void;
-}) {
-  // Press and hold (or right-click): rename, recolour, delete – like its chip.
-  const longPress = useLongPress(onEdit, 500);
+function CategoryTile({ category, notes, onOpen }: { category: NoteCategory; notes: Note[]; onOpen: () => void }) {
   const style = PALETTE[categoryColor(category)];
   const peek = notes.slice(0, 3);
   return (
     <button
       type="button"
       aria-label={`${category.name}, ${notes.length} ${notes.length === 1 ? "note" : "notes"}`}
-      title="Hold to edit"
-      {...longPress.props}
-      onClick={() => {
-        if (!longPress.wasLongPress()) onOpen();
-      }}
+      onClick={onOpen}
       className={cn(
         "flex h-full min-h-28 w-full flex-col gap-2 rounded-2xl px-3.5 py-3 text-left transition-[filter] hover:brightness-[1.03] active:brightness-95",
         style.bg,

@@ -77,7 +77,6 @@ const DATED =
 /** A source link's label ("Quelle", "Source", "mehr") – not part of what happens. */
 const SOURCE_LABEL = /^(quelle|quellen|source|sources|mehr|link|more)$/i;
 
-
 function plain(nodes: Inline[], links: string[]): string {
   return nodes
     .map((node) => {

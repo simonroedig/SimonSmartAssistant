@@ -224,7 +224,7 @@ function NavRail({
       data-attached={attached ? "" : undefined}
       style={{ "--rail-item": fit } as React.CSSProperties}
       className={cn(
-        "fixed z-40 hidden w-[4.75rem] flex-col items-center overflow-y-auto px-1.5 py-4 no-scrollbar glass md:flex",
+        "fixed z-40 no-scrollbar hidden w-[4.75rem] flex-col items-center overflow-y-auto px-1.5 py-4 glass md:flex",
         // The highlight's corners follow the bar's (its radius less the padding), so they run alike.
         attached
           ? "inset-y-0 left-0 [--pill-radius:1rem]"
