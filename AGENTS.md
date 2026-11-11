@@ -42,12 +42,16 @@ Learned over many rounds – following these saves going back and forth.
 - **One interaction per job, everywhere.** Switching views = a row of chips; a sideways swipe moves to the
   neighbouring chip (`useSwipe`; the chip row itself is `data-swipe`), the picked chip scrolls into view
   (`useScrollToPressed`) and the content slides in from that side. Press and hold edits (chips, tiles). Sheets
-  close by swiping down, back or tapping outside – and save on close. A new screen reuses these, never invents its own.
+  close by swiping down, back or tapping outside – and save on close. Going a level deeper (a tile → its
+  content) gets its own history entry and a back arrow; back, the back gesture or a swipe to the right return.
+  A new screen reuses these, never invents its own.
 - **Three devices, all first-class:** phone (it's the launcher – touch, ~390 px wide), the wall display (Pi, touch,
   kiosk) and the PC (mouse: drag to scroll, hover). Check every change at 390×844, in a low window and wide;
   nothing may stick out sideways, nothing may need a precise tap.
-- **At a glance.** Overviews before details (e.g. Notes → All: pinned, the categories with a peek, then what
-  isn't sorted). Dense but calm.
+- **At a glance.** Overviews before details (e.g. Notes → All: pinned notes without a category (one line each),
+  what isn't sorted, then the categories as tiles with a peek). Dense but calm.
+- **Ready to use.** When the user gives real examples, fill them in for them – but never commit personal content
+  (the repository is public): offer an import or another way in instead.
 - **Colours:** each section has its tone (`src/lib/tones.ts`); app-wide things use the accent, not sky blue (that
   clashes with the weather). Unsure or failed states are amber and say why – never silent, never a wrong yes.
 - **Spare resources:** check or fetch only while something is on screen, cache it, keep stored history short
