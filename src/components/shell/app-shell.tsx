@@ -217,18 +217,19 @@ function NavRail({
   const items = order.map(navItem);
   // In a low window (e.g. a third of a screen) the items share the height left over,
   // so Settings and the sync dot stay in view; what doesn't fit even then scrolls.
-  const fit = `clamp(2.5rem, calc((100dvh - 2 * var(--gutter) - 5.75rem) / ${items.length + 1}), 4.25rem)`;
+  const fit = `clamp(2.5rem, calc((100dvh - 2 * var(--gutter) - 5.125rem) / ${items.length + 1}), 4.25rem)`;
   return (
     <nav
       aria-label="Main"
       data-attached={attached ? "" : undefined}
       style={{ "--rail-item": fit } as React.CSSProperties}
       className={cn(
-        "fixed z-40 no-scrollbar hidden w-[4.75rem] flex-col items-center overflow-y-auto px-1.5 py-4 glass md:flex",
-        // The highlight's corners follow the bar's (its radius less the padding), so they run alike.
+        "fixed z-40 no-scrollbar hidden w-[4.75rem] flex-col items-center overflow-y-auto px-1.5 pb-4 glass md:flex",
+        // The highlight's corners follow the bar's (its radius less the padding), so they run alike –
+        // and at the top it sits as far in as at the sides, snug in the bar's rounded corner.
         attached
-          ? "inset-y-0 left-0 [--pill-radius:1rem]"
-          : "inset-y-(--gutter) left-(--gutter) rounded-(--radius-card) [--pill-radius:max(0.5rem,calc(var(--radius-card)-0.375rem))]",
+          ? "inset-y-0 left-0 pt-4 [--pill-radius:1rem]"
+          : "inset-y-(--gutter) left-(--gutter) rounded-(--radius-card) pt-1.5 [--pill-radius:max(0.5rem,calc(var(--radius-card)-0.375rem))]",
       )}
     >
       <div className="relative flex w-full flex-1 flex-col items-center" style={{ gap: `${RAIL_GAP_REM}rem` }}>
