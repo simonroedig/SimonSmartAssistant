@@ -144,9 +144,11 @@ export function useOptimisticMutation<TVars>({
   return useMutation({
     mutationKey: [table],
     mutationFn,
-    // A dropped connection or a session that lapsed for a moment: try again before giving up.
-    retry: (count, error) => count < 2 && isTransient(error),
-    retryDelay: (count) => 800 * (count + 1),
+    // A dropped connection or a sign-in that can't be renewed yet (waking from standby – the
+    // sign-in library then pauses for a minute): keep trying, quietly, for about a minute and a
+    // half (1, 2, 4, 8, 16, 30, 30 s) – the change stays on screen meanwhile.
+    retry: (count, error) => count < 7 && isTransient(error),
+    retryDelay: (count) => Math.min(30_000, 1000 * 2 ** count),
     onMutate: async (vars: TVars) => {
       await queryClient.cancelQueries({ queryKey });
       const snapshot: Snapshot = queryClient.getQueriesData({ queryKey });

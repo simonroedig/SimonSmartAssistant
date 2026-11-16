@@ -17,7 +17,8 @@ Private dashboard for one user: wall touch display (Raspberry Pi kiosk), phone P
 - **Data access** happens in the browser via `src/data/*` hooks (TanStack Query + Supabase client) with
   optimistic updates through `useOptimisticMutation`. Realtime invalidation lives in
   `src/components/providers/realtime-provider.tsx`; every synced table must be listed there and be in the
-  `supabase_realtime` publication.
+  `supabase_realtime` publication. Database requests never go out signed-out by accident: the client renews
+  the sign-in first (`src/lib/supabase/client.ts`), and saves retry passing failures for ~90 s (waking from standby).
 - **Security model:** every table has `user_id uuid default auth.uid()`, RLS policies
   `(select auth.uid()) = user_id`, explicit `grant … to authenticated`, nothing for `anon`.
   New tables must follow this pattern (see `supabase/migrations/20261006120000_init.sql`) and get a

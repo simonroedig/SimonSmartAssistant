@@ -133,15 +133,20 @@ test("notes: nothing typed is lost – a save that fails is kept and offered aga
   await page.goto("/notes");
   const text = `Login portal ${Date.now() % 100000} https://example.com/login`;
 
-  // The connection drops while saving (every try).
+  // The server turns the save down (a dropped connection is tried again for a while first).
   await page.route("**/rest/v1/notes*", (route) =>
-    route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue(),
+    route.request().method() === "POST"
+      ? route.fulfill({
+          status: 400,
+          json: { code: "XX000", message: "Something went wrong", details: null, hint: null },
+        })
+      : route.continue(),
   );
   await page.getByRole("button", { name: "Add a note", exact: true }).click();
   await page.getByRole("dialog").getByLabel("Note", { exact: true }).fill(text);
   await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
   const banner = page.getByRole("list", { name: "Not saved" });
-  await expect(banner).toContainText("Login portal", { timeout: 15_000 });
+  await expect(banner).toContainText("Login portal");
 
   // Still there after a reload – it's kept on the device.
   await page.unroute("**/rest/v1/notes*");
