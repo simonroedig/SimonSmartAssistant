@@ -317,3 +317,36 @@ test("notes on a phone: swipe right to go back from a category, and on into the 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await context.close();
 });
+
+test("notes: from inside a category the menu goes straight there – and back from there leads home", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const name = `Leave ${Date.now() % 100000}`;
+  const nav = page.getByRole("navigation").first();
+  await nav.getByRole("link", { name: "Notes" }).click();
+  await page.getByRole("button", { name: "New category" }).click();
+  await page.getByRole("dialog").getByLabel("Category name").fill(name);
+  await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
+  await expect(page.getByRole("button", { name: `Edit ${name}` })).toBeVisible();
+
+  // Home, from a level deeper: home – not the notes' overview, and nothing left loading.
+  await nav.getByRole("link", { name: "Home" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("button", { name: "Back to all notes" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Daily briefing/ })).toBeVisible();
+
+  // Another section, from a level deeper (the name is the way back as well): back leads home.
+  await nav.getByRole("link", { name: "Notes" }).click();
+  await tile(page, name).click();
+  await nav.getByRole("link", { name: "Planner" }).click();
+  await expect(page).toHaveURL(/\/planner/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+
+  await nav.getByRole("link", { name: "Notes" }).click();
+  await editCategory(page, name);
+  await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});

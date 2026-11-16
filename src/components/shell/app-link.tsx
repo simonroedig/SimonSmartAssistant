@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { backOutOfPage, inPageDepth, leaveInPage } from "@/lib/history";
 
 const HOME_BELOW_KEY = "ssa:home-below";
 const APPS_BELOW_KEY = "ssa:apps-below";
@@ -81,14 +82,18 @@ export function AppLink({
           window.scrollTo({ top: 0, behavior: "smooth" });
           return;
         }
+        // The page's own history entries (a level deeper, a sheet) are given back first.
         if (pathname !== "/" && href === "/") {
           e.preventDefault();
-          if (homeIsBelow()) router.back();
-          else router.replace("/");
+          if (homeIsBelow()) backOutOfPage();
+          else leaveInPage(() => router.replace("/"));
         } else if (!fromHome && href === "/apps") {
           e.preventDefault();
-          if (appsIsBelow()) router.back();
-          else router.replace("/apps");
+          if (appsIsBelow()) backOutOfPage();
+          else leaveInPage(() => router.replace("/apps"));
+        } else if (inPageDepth() > 0) {
+          e.preventDefault();
+          leaveInPage(() => (fromHome ? router.push(href) : router.replace(href)));
         }
       }}
       {...props}

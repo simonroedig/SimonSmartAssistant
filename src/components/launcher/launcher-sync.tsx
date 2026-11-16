@@ -1,5 +1,6 @@
 "use client";
 
+import { backOutOfPage, leaveInPage } from "@/lib/history";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -115,11 +116,11 @@ export function LauncherSync() {
         const behavior = event.returning === true ? "instant" : "smooth";
         if (path.current === target) window.scrollTo({ top: 0, behavior });
         else if (target === "/") {
-          if (homeIsBelow()) router.back();
-          else router.replace("/");
-        } else if (path.current === "/") router.push("/apps");
-        else if (appsIsBelow()) router.back();
-        else router.replace("/apps");
+          if (homeIsBelow()) backOutOfPage();
+          else leaveInPage(() => router.replace("/"));
+        } else if (path.current === "/") leaveInPage(() => router.push("/apps"));
+        else if (appsIsBelow()) backOutOfPage();
+        else leaveInPage(() => router.replace("/apps"));
       } else if (event.type === "appsChanged") {
         void refreshApps();
       } else if (event.type === "updateStatus" && event.status) {

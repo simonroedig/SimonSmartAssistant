@@ -41,7 +41,7 @@ import {
   type TemplateEntry,
   type TemplateId,
 } from "@/lib/note-templates";
-import { afterSheetClosed } from "@/lib/history";
+import { afterSheetClosed, inPageDepth, pushInPage } from "@/lib/history";
 import {
   CategoryPicker,
   CategorySheet,
@@ -241,8 +241,8 @@ export function NotesBoard({
     if (view === "vault") lockVault();
     if (typeof next === "object") {
       const state = { notesView: viewKey(next) };
-      if (window.history.state?.notesView) window.history.replaceState(state, "");
-      else window.history.pushState(state, "");
+      if (window.history.state?.notesView) window.history.replaceState({ ...state, inPage: inPageDepth() }, "");
+      else pushInPage(state);
     }
     setViewState(next);
   };
@@ -568,52 +568,52 @@ export function NotesBoard({
     // Sideways moves are the page's (swipes), up and down scroll.
     <div className={cn("relative flex [touch-action:pan-y] flex-col", className)} {...swipe}>
       {deeper ? (
-        // A level deeper: the way back, and what this is.
-        <div className="mb-2 flex min-h-11 items-center gap-1 md:mb-4">
-          <Button variant="ghost" size="icon" aria-label="Back to all notes" onClick={back} className="-ml-2">
-            <ChevronLeft className="size-6" />
-          </Button>
-          {collection ? (
-            <>
-              <h2 className={cn("flex min-w-0 flex-1 items-center gap-2 text-lg font-semibold", TEMPLATE_TONE.text)}>
+        // A level deeper: the arrow and the name together are the way back (one big target).
+        <div className="mb-2 flex min-h-12 items-center gap-1 md:mb-4">
+          <h2 className="min-w-0 flex-1">
+            <button
+              type="button"
+              aria-label="Back to all notes"
+              title="Back to all notes"
+              onClick={back}
+              className={cn(
+                "-ml-2 flex min-h-12 max-w-full items-center gap-2 rounded-2xl py-1.5 pr-3 pl-1 text-lg font-semibold transition-colors hover:bg-surface-hover active:bg-surface-hover",
+                collection ? TEMPLATE_TONE.text : category ? PALETTE[categoryColor(category)].ink : undefined,
+              )}
+            >
+              <ChevronLeft className="size-6 shrink-0 text-muted" />
+              {collection ? (
                 <TemplateIcon template={collection.template} className="size-5 shrink-0" />
-                <span className="truncate">{collection.template.name}</span>
-              </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Delete ${collection.template.name}`}
-                title="Delete – it goes to the trash"
-                onClick={() => {
-                  deleteWithUndo(collection.note, collection.template.name);
-                  back();
-                }}
-              >
-                <Trash2 />
-              </Button>
-            </>
-          ) : category ? (
-            <>
-              <h2
-                className={cn(
-                  "flex min-w-0 flex-1 items-center gap-2 text-lg font-semibold",
-                  PALETTE[categoryColor(category)].ink,
-                )}
-              >
+              ) : (
                 <span className="size-2.5 shrink-0 rounded-full bg-current" />
-                <span className="truncate">{category.name}</span>
-                <span className="text-sm font-medium text-faint tabular-nums">{shown.length}</span>
-              </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Edit ${category.name}`}
-                title="Rename, recolour or delete"
-                onClick={() => setCategorySheet({ mode: "edit", category })}
-              >
-                <Pencil className="size-4" />
-              </Button>
-            </>
+              )}
+              <span className="truncate">{collection?.template.name ?? category?.name}</span>
+              {!collection && <span className="text-sm font-medium text-faint tabular-nums">{shown.length}</span>}
+            </button>
+          </h2>
+          {collection ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Delete ${collection.template.name}`}
+              title="Delete – it goes to the trash"
+              onClick={() => {
+                deleteWithUndo(collection.note, collection.template.name);
+                back();
+              }}
+            >
+              <Trash2 />
+            </Button>
+          ) : category ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Edit ${category.name}`}
+              title="Rename, recolour or delete"
+              onClick={() => setCategorySheet({ mode: "edit", category })}
+            >
+              <Pencil className="size-4" />
+            </Button>
           ) : null}
         </div>
       ) : (

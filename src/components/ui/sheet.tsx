@@ -1,5 +1,6 @@
 "use client";
 
+import { pushInPage } from "@/lib/history";
 import { X } from "lucide-react";
 import { AnimatePresence, motion, type PanInfo, useDragControls } from "motion/react";
 import { Dialog } from "radix-ui";
@@ -27,7 +28,7 @@ function useCloseOnBack(open: boolean, close: () => void) {
     // React strict mode re-runs effects; keep the entry we already pushed.
     if (!marker.current || window.history.state?.sheet !== marker.current) {
       marker.current = Math.random().toString(36).slice(2);
-      window.history.pushState({ sheet: marker.current }, "");
+      pushInPage({ sheet: marker.current });
     }
     const own = marker.current;
     const onPopState = () => {
