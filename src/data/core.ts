@@ -104,6 +104,15 @@ export function describeError(error: unknown): string {
   return "Please try again.";
 }
 
+/** Errors worth another try: the network, a timeout, the server, an expired sign-in. */
+export function isTransient(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { message, code, status } = error as { message?: unknown; code?: unknown; status?: unknown };
+  if (typeof status === "number" && (status >= 500 || status === 401 || status === 408)) return true;
+  if (code === "PGRST301" || code === "PGRST303") return true;
+  return typeof message === "string" && /fetch|network|timeout|jwt|load failed/i.test(message);
+}
+
 type Snapshot = [QueryKey, unknown][];
 
 function restore(queryClient: QueryClient, snapshot: Snapshot | undefined) {
@@ -135,6 +144,9 @@ export function useOptimisticMutation<TVars>({
   return useMutation({
     mutationKey: [table],
     mutationFn,
+    // A dropped connection or a session that lapsed for a moment: try again before giving up.
+    retry: (count, error) => count < 2 && isTransient(error),
+    retryDelay: (count) => 800 * (count + 1),
     onMutate: async (vars: TVars) => {
       await queryClient.cancelQueries({ queryKey });
       const snapshot: Snapshot = queryClient.getQueriesData({ queryKey });

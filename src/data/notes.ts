@@ -70,7 +70,14 @@ export function useTrashedNotes() {
   return { ...board, data };
 }
 
-export type NoteDraft = { title: string; body: string; template?: TemplateId | null; entries?: TemplateEntry[] | null };
+export type NoteDraft = {
+  title: string;
+  body: string;
+  /** The new note's id (so a backup of it on this device can be matched). */
+  id?: string;
+  template?: TemplateId | null;
+  entries?: TemplateEntry[] | null;
+};
 
 export function prepareNote(
   draft: NoteDraft & {

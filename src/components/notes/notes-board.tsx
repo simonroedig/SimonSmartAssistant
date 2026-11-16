@@ -1,7 +1,18 @@
 "use client";
 
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Copy, Lock, Pencil, Pin, Plus, StickyNote, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  Copy,
+  ExternalLink,
+  TriangleAlert,
+  Lock,
+  Pencil,
+  Pin,
+  Plus,
+  StickyNote,
+  Trash2,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +22,7 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { SortableList } from "@/components/ui/sortable";
-import { type Note, type NoteCategory, queryKeys } from "@/data/core";
+import { newId, type Note, type NoteCategory, queryKeys } from "@/data/core";
 import { categoryColor, useMoveCategory, useNoteCategories } from "@/data/note-categories";
 import {
   isNoteEmpty,
@@ -42,6 +53,15 @@ import {
   type TemplateId,
 } from "@/lib/note-templates";
 import { afterSheetClosed, inPageDepth, pushInPage } from "@/lib/history";
+import {
+  draftMatches,
+  dropNoteDraft,
+  findLinks,
+  keepNoteDraft,
+  type NoteBackup,
+  setDraftActive,
+  useNoteDrafts,
+} from "@/lib/note-drafts";
 import {
   CategoryPicker,
   CategorySheet,
@@ -110,6 +130,8 @@ function NoteCard({
         )}
         {category && <CategoryTag category={category} className="mt-2.5" />}
       </button>
+      {/* Links open right from the card (in a new tab). */}
+      {!compact && <NoteLinks text={note.body} className="-mt-1 px-3 pb-3" />}
       {onTogglePin ? (
         <button
           type="button"
@@ -256,6 +278,46 @@ export function NotesBoard({
   if (!saving && openCategory && categories.data && !byId.has(openCategory)) setViewState("all");
   if (!saving && openTemplate && notes.data && !collection) setViewState("all");
 
+  // --- Nothing typed gets lost ---------------------------------------------------
+  // Backups of notes written on this device: once the server has them (no save on the
+  // way, the list freshly loaded) they're dropped; one it doesn't have is offered again.
+  const drafts = useNoteDrafts();
+  const notesSaving = useIsMutating({ mutationKey: ["notes"] }) > 0;
+  const settled = notes.isSuccess && !notes.isFetching && !notesSaving;
+  useEffect(() => {
+    if (!settled) return;
+    for (const d of drafts) {
+      const saved = everything.find((n) => n.id === d.id);
+      if (saved && draftMatches(d, saved)) dropNoteDraft(d.id);
+    }
+  }, [settled, drafts, everything]);
+  const unsaved = settled
+    ? drafts.filter((d) => {
+        const saved = everything.find((n) => n.id === d.id);
+        return !saved || !draftMatches(d, saved);
+      })
+    : [];
+  const saveAgain = (d: NoteBackup) => {
+    const saved = everything.find((n) => n.id === d.id);
+    if (saved) {
+      update.mutate({ id: d.id, patch: { title: d.title.trim() || null, body: d.body.replace(/\s+$/, "") } });
+    } else {
+      const categoryId = d.categoryId && byId.has(d.categoryId) ? d.categoryId : null;
+      add.mutate(
+        prepareNote({
+          id: d.id,
+          title: d.title,
+          body: d.body,
+          categoryId,
+          position: positionAtStart(everything.filter((n) => !n.pinned)),
+        }),
+      );
+    }
+  };
+  const unsavedBanner = unsaved.length > 0 && (
+    <UnsavedNotes drafts={unsaved} onSave={saveAgain} onDiscard={(d) => dropNoteDraft(d.id)} />
+  );
+
   const shown = useMemo(() => {
     if (variant === "card") return board;
     if (view === "vault") return vaultList;
@@ -400,6 +462,7 @@ export function NotesBoard({
           }
         />
         <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>
+          {unsavedBanner && <div className="mb-2">{unsavedBanner}</div>}
           {loading ? (
             <div className="flex flex-col gap-2">
               <div className="skeleton h-16" />
@@ -625,7 +688,14 @@ export function NotesBoard({
           className="mb-2 md:mb-4"
         />
       )}
-      {!collection && <Composer onCreate={(draft, pin) => create(draft, pin)} className="max-md:hidden" />}
+      {!collection && (
+        <Composer
+          onCreate={(draft, pin) => create(draft, pin)}
+          placementCategory={openCategory}
+          keep={!inVault}
+          className="max-md:hidden"
+        />
+      )}
       {/* Phones: only this part scrolls (room at the end for the + button). */}
       <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-20">
         <motion.div
@@ -634,6 +704,7 @@ export function NotesBoard({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.22, ease: "easeOut" }}
         >
+          {unsavedBanner && !inVault && <div className="mt-2 md:mt-6">{unsavedBanner}</div>}
           {inVault && (
             <div
               className={cn(
@@ -744,21 +815,114 @@ function CategoryTile({ category, notes, onOpen }: { category: NoteCategory; not
   );
 }
 
+/** Notes typed on this device that the server doesn't have (saving failed): save them again. */
+function UnsavedNotes({
+  drafts,
+  onSave,
+  onDiscard,
+}: {
+  drafts: NoteBackup[];
+  onSave: (draft: NoteBackup) => void;
+  onDiscard: (draft: NoteBackup) => void;
+}) {
+  return (
+    <ul aria-label="Not saved" className="flex flex-col gap-2">
+      {drafts.map((d) => (
+        <li
+          key={d.id}
+          className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-amber-500/12 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <TriangleAlert className="size-4 shrink-0 text-amber-600 dark:text-amber-300" />
+          <span className="min-w-0 flex-1">
+            <span className="font-semibold">Not saved yet:</span> “{noteLabel({ title: d.title, body: d.body })}” – kept
+            on this device.
+          </span>
+          <span className="flex gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => onDiscard(d)}>
+              Discard
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => onSave(d)}
+              className={cn("ui-action shadow-none", TONE_STYLES.orange.solid)}
+            >
+              Save now
+            </Button>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** The web links in a note's text, as small chips that open them in a new tab. */
+function NoteLinks({ text, className }: { text: string; className?: string }) {
+  const links = findLinks(text);
+  if (links.length === 0) return null;
+  return (
+    <ul aria-label="Links" className={cn("flex flex-wrap gap-1.5", className)}>
+      {links.map((link) => (
+        <li key={link.href} className="max-w-full min-w-0">
+          <a
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={link.href}
+            className="flex min-h-8 max-w-full items-center gap-1.5 rounded-full bg-accent-soft px-2.5 text-[0.8rem] font-medium text-accent transition-colors hover:underline"
+          >
+            <ExternalLink className="size-3.5 shrink-0" />
+            <span className="truncate">{link.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** "Take a note…" – expands to an optional title and the text, like Keep. */
-function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: boolean) => void; className?: string }) {
+function Composer({
+  onCreate,
+  placementCategory,
+  keep,
+  className,
+}: {
+  onCreate: (draft: NoteDraft, pin: boolean) => void;
+  /** The category the page shows (new notes go there). */
+  placementCategory: string | null;
+  /** Kept on the device while typed (never in the vault). */
+  keep: boolean;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [pin, setPin] = useState(false);
+  const [id, setId] = useState(() => newId());
   const box = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
+  useEffect(() => {
+    setDraftActive(id, true);
+    return () => setDraftActive(id, false);
+  }, [id]);
+
+  // Kept on this device as it's typed, until the server has it.
+  const type = (next: { title?: string; body?: string }) => {
+    const t = next.title ?? title;
+    const b = next.body ?? body;
+    if (next.title !== undefined) setTitle(t);
+    if (next.body !== undefined) setBody(b);
+    if (keep) keepNoteDraft({ id, title: t, body: b, categoryId: placementCategory });
+  };
+
   const commit = () => {
-    onCreate({ title, body }, pin);
+    onCreate({ title, body, id }, pin);
     setTitle("");
     setBody("");
     setPin(false);
     setOpen(false);
+    setId(newId());
   };
 
   // Clicking/tapping outside saves the note (like Keep).
@@ -785,7 +949,7 @@ function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: b
       {open && (
         <input
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => type({ title: e.target.value })}
           placeholder="Title"
           aria-label="Note title"
           maxLength={200}
@@ -795,7 +959,7 @@ function Composer({ onCreate, className }: { onCreate: (draft: NoteDraft, pin: b
       <AutoTextarea
         ref={bodyRef}
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => type({ body: e.target.value })}
         onFocus={() => setOpen(true)}
         placeholder="Take a note…"
         aria-label="New note"
@@ -909,8 +1073,25 @@ function NoteEditorSheet({
   );
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const deleted = useRef(false);
+  // Kept on this device as it's typed, until the server has it (not for the vault).
+  const [draftId] = useState(() => note?.id ?? newId());
+  const typed = useRef(false);
+  const secret = placement.vault || !!note?.vault;
+  useEffect(() => {
+    if (!open || deleted.current) return;
+    if (!typed.current && title === (note?.title ?? "") && body === (note?.body ?? "")) return;
+    typed.current = true;
+    if (secret) dropNoteDraft(draftId);
+    else keepNoteDraft({ id: draftId, title, body, categoryId: placement.categoryId });
+  }, [open, title, body, placement.categoryId, secret, draftId, note]);
 
-  const draft = (): NoteDraft => ({ title, body });
+  useEffect(() => {
+    if (!open) return;
+    setDraftActive(draftId, true);
+    return () => setDraftActive(draftId, false);
+  }, [open, draftId]);
+
+  const draft = (): NoteDraft => ({ title, body, id: note ? undefined : draftId });
 
   // New notes start typing right away – unless a field (the title) was tapped already.
   useEffect(() => {
@@ -930,6 +1111,7 @@ function NoteEditorSheet({
   // Closing in any way (X, back gesture, swipe, tap outside) saves.
   const close = () => {
     if (!open) return;
+    if (isNoteEmpty({ title, body }) && !note) dropNoteDraft(draftId);
     if (!deleted.current) {
       if (note) {
         onSave(note, draft(), placement);
@@ -975,6 +1157,7 @@ function NoteEditorSheet({
               aria-label="Delete note"
               onClick={() => {
                 deleted.current = true;
+                dropNoteDraft(draftId);
                 onDelete(note);
                 onClose();
               }}
@@ -1023,6 +1206,7 @@ function NoteEditorSheet({
           bare
           className="px-0"
         />
+        <NoteLinks text={body} />
       </div>
     </Sheet>
   );

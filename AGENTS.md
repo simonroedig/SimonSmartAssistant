@@ -52,6 +52,8 @@ Learned over many rounds – following these saves going back and forth.
   what isn't sorted, then the categories as tiles with a peek). Dense but calm.
 - **Ready to use.** When the user gives real examples, fill them in for them – but never commit personal content
   (the repository is public): offer an import or another way in instead.
+- **Never lose what was typed.** Whatever the user writes is kept until the server has it (see
+  `src/lib/note-drafts.ts`); a failed save says so in amber and offers to save again – never a silent rollback.
 - **Colours:** each section has its tone (`src/lib/tones.ts`); app-wide things use the accent, not sky blue (that
   clashes with the weather). Unsure or failed states are amber and say why – never silent, never a wrong yes.
 - **Spare resources:** check or fetch only while something is on screen, cache it, keep stored history short

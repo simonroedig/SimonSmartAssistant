@@ -127,3 +127,37 @@ test("notes: All – pinned notes without a category on top, small; a category k
   await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
   await expect(looseCard).toHaveCount(0);
 });
+
+test("notes: nothing typed is lost – a save that fails is kept and offered again; links open", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/notes");
+  const text = `Login portal ${Date.now() % 100000} https://example.com/login`;
+
+  // The connection drops while saving (every try).
+  await page.route("**/rest/v1/notes*", (route) =>
+    route.request().method() === "POST" ? route.abort("internetdisconnected") : route.continue(),
+  );
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  await page.getByRole("dialog").getByLabel("Note", { exact: true }).fill(text);
+  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+  const banner = page.getByRole("list", { name: "Not saved" });
+  await expect(banner).toContainText("Login portal", { timeout: 15_000 });
+
+  // Still there after a reload – it's kept on the device.
+  await page.unroute("**/rest/v1/notes*");
+  await page.reload();
+  await expect(banner).toContainText("Login portal");
+  await banner.getByRole("button", { name: "Save now" }).click();
+  const card = page.getByRole("button", { name: `Open note "${text.slice(0, 39)}…"` });
+  await expect(card).toBeVisible();
+  await expect(banner).toHaveCount(0);
+
+  // Its link opens right from the card.
+  const link = card.locator("..").getByRole("link", { name: "example.com/login" });
+  await expect(link).toHaveAttribute("href", "https://example.com/login");
+  await expect(link).toHaveAttribute("target", "_blank");
+
+  await card.click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
+  await expect(card).toHaveCount(0);
+});
