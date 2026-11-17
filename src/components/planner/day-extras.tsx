@@ -1,16 +1,36 @@
 "use client";
 
-import { Cake, Clock, Flag, Store } from "lucide-react";
+import { Briefcase, Cake, Clock, Flag, GraduationCap, Store } from "lucide-react";
 import { type DayExtras, hasExtras } from "@/data/calendar";
 import type { PlanBlock } from "@/data/core";
-import type { CalendarDay } from "@/lib/holidays";
+import { type CalendarDay, dayFacts } from "@/lib/holidays";
 import { cn } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
 
-/** Day numbers in calendars: red when shops are closed, amber for shorter hours or a day off school. */
+/** Day numbers in calendars: red on a day off, amber on a workday worth knowing about. */
 export function holidayNumberClass(holiday: CalendarDay | null): string | undefined {
   if (!holiday) return undefined;
-  return holiday.shops === "closed" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-300";
+  return holiday.work === "off" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-300";
+}
+
+const FACT_ICON = { work: Briefcase, school: GraduationCap, shops: Store };
+
+/** What a holiday means – work, school (where it differs), shops – each with its icon. */
+export function HolidayFacts({ holiday, className }: { holiday: CalendarDay; className?: string }) {
+  return (
+    <span className={cn("flex flex-wrap items-center gap-x-1.5 gap-y-0.5", className)}>
+      {dayFacts(holiday).map((fact, i) => {
+        const Icon = FACT_ICON[fact.kind];
+        return (
+          <span key={fact.kind} className="flex shrink-0 items-center gap-1">
+            {i > 0 && <span aria-hidden="true">·</span>}
+            <Icon className="size-3.5" />
+            {fact.label}
+          </span>
+        );
+      })}
+    </span>
+  );
 }
 
 export const BIRTHDAY_TEXT = "text-pink-600 dark:text-pink-300";
@@ -19,7 +39,10 @@ export const CLOCK_CHANGE_TEXT = "text-indigo-600 dark:text-indigo-300";
 /** One line for tooltips and screen readers: "German Unity Day (Tag der Deutschen Einheit) · Shops closed · Anna turns 30". */
 export function extrasLabel(extras: DayExtras): string {
   return [
-    extras.holiday && `${extras.holiday.name} (${extras.holiday.nameDe}) · ${extras.holiday.shopsLabel}`,
+    extras.holiday &&
+      `${extras.holiday.name} (${extras.holiday.nameDe}) · ${dayFacts(extras.holiday)
+        .map((f) => f.label)
+        .join(" · ")}`,
     extras.clockChange && `${extras.clockChange.name} (${extras.clockChange.detail})`,
     ...extras.birthdays.map((b) => b.label),
   ]
@@ -37,7 +60,7 @@ export function DayExtrasChips({ extras, className }: { extras: DayExtras; class
         <li
           className={cn(
             "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-2xl px-2.5 py-1 text-xs font-semibold",
-            holiday.shops === "closed"
+            holiday.work === "off"
               ? "bg-red-500/10 text-red-700 dark:bg-red-400/12 dark:text-red-300"
               : "bg-amber-500/12 text-amber-800 dark:bg-amber-400/12 dark:text-amber-200",
           )}
@@ -45,11 +68,7 @@ export function DayExtrasChips({ extras, className }: { extras: DayExtras; class
           <Flag className="size-3.5 shrink-0" />
           <span>{holiday.name}</span>
           <span className="font-medium opacity-75">({holiday.nameDe})</span>
-          <span className="flex shrink-0 items-center gap-1 font-medium opacity-85">
-            <span aria-hidden="true">·</span>
-            <Store className="size-3.5" />
-            {holiday.shopsLabel}
-          </span>
+          <HolidayFacts holiday={holiday} className="font-medium opacity-85" />
         </li>
       )}
       {clockChange && (

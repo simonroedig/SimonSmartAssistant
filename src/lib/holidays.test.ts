@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ageOn, birthdayIn, birthdayLabel, isBirthdayOn, isValidBirthday, nextBirthday } from "./birthdays";
 import { clockChangeOn } from "./clock-change";
-import { calendarDayOf, easterSunday, holidaysOfYear } from "./holidays";
+import { calendarDayOf, dayFacts, easterSunday, holidaysOfYear } from "./holidays";
 
 describe("easterSunday", () => {
   it("matches known dates", () => {
@@ -53,6 +53,20 @@ describe("holidays", () => {
     expect(calendarDayOf("2026-12-24", "BY")).toMatchObject({ shops: "short", shopsLabel: "Shops close at 14:00" });
     expect(calendarDayOf("2028-12-24", "BY")).toMatchObject({ shops: "closed" });
     expect(calendarDayOf("2026-10-08", "BY")).toBeNull();
+  });
+
+  it("says what the day means for work, school and the shops", () => {
+    const facts = (day: string) => {
+      const info = calendarDayOf(day, "BY");
+      return info ? dayFacts(info).map((f) => f.label) : null;
+    };
+    expect(facts("2026-12-25")).toEqual(["Day off", "Shops closed"]);
+    // Repentance Day in Bavaria: a workday, but no school.
+    expect(facts("2026-11-18")).toEqual(["Workday", "No school", "Shops open"]);
+    // Christmas Eve on a Thursday: a workday, often only half; on a Saturday (2022) a day off.
+    expect(facts("2026-12-24")).toEqual(["Workday – often only half", "Shops close at 14:00"]);
+    expect(facts("2022-12-24")).toEqual(["Day off", "Shops close at 14:00"]);
+    expect(facts("2028-12-24")).toEqual(["Day off", "Shops closed"]);
   });
 
   it("differs between states", () => {

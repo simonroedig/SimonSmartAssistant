@@ -5,7 +5,9 @@ import { addDays, type DayKey, weekdayIndex } from "./date";
  * follow fixed dates and Easter), plus a few days worth knowing about for the
  * shops (Christmas Eve, New Year's Eve, Repentance Day in Bavaria).
  *
- * On public holidays (and Sundays) shops are closed everywhere in Germany.
+ * On public holidays (and Sundays) shops are closed everywhere in Germany, and they
+ * are days off – for work and school alike. Each day says what it means for work,
+ * school (where that differs from work) and the shops.
  */
 
 export type HolidayRegion =
@@ -42,10 +44,25 @@ export type CalendarDay = {
   nameDe: string;
   /** "holiday": a public holiday; "observance": a working day worth knowing about. */
   kind: "holiday" | "observance";
+  /** "off": a day off; "workday": a normal working day; "short": a workday that is often only half. */
+  work: "off" | "workday" | "short";
+  /** E.g. "Day off", "Workday". */
+  workLabel: string;
+  /** Only where school differs from work (Repentance Day in Bavaria: a workday, but no school). */
+  schoolLabel: string | null;
   shops: "closed" | "short" | "open";
   /** What that means for shopping, e.g. "Shops closed". */
   shopsLabel: string;
 };
+
+/** What the day means, in order: work, school (if different), shops. */
+export function dayFacts(day: CalendarDay): { kind: "work" | "school" | "shops"; label: string }[] {
+  return [
+    { kind: "work" as const, label: day.workLabel },
+    ...(day.schoolLabel ? [{ kind: "school" as const, label: day.schoolLabel }] : []),
+    { kind: "shops" as const, label: day.shopsLabel },
+  ];
+}
 
 /** Easter Sunday (Gregorian calendar, anonymous algorithm). */
 export function easterSunday(year: number): DayKey {
@@ -111,16 +128,23 @@ const GERMAN: Record<string, string> = {
   "New Year's Eve": "Silvester",
 };
 
+const OFF = { work: "off", workLabel: "Day off", schoolLabel: null } as const;
+
 function holiday(name: string): CalendarDay {
-  return { name, nameDe: GERMAN[name] ?? name, kind: "holiday", shops: "closed", shopsLabel: "Shops closed" };
+  return { name, nameDe: GERMAN[name] ?? name, kind: "holiday", ...OFF, shops: "closed", shopsLabel: "Shops closed" };
 }
 
-/** Christmas Eve and New Year's Eve: shorter opening hours, closed on a Sunday. */
+/**
+ * Christmas Eve and New Year's Eve: by law normal workdays, but many employers give the
+ * afternoon or the whole day off; shops close early. On a weekend: a day off anyway.
+ */
 function shortDay(name: string, day: DayKey, label: string): CalendarDay {
   const nameDe = GERMAN[name] ?? name;
-  return weekdayIndex(day) === 6
-    ? { name, nameDe, kind: "observance", shops: "closed", shopsLabel: "Shops closed" }
-    : { name, nameDe, kind: "observance", shops: "short", shopsLabel: label };
+  const weekday = weekdayIndex(day);
+  if (weekday === 6) return { name, nameDe, kind: "observance", ...OFF, shops: "closed", shopsLabel: "Shops closed" };
+  const work =
+    weekday === 5 ? OFF : ({ work: "short", workLabel: "Workday – often only half", schoolLabel: null } as const);
+  return { name, nameDe, kind: "observance", ...work, shops: "short", shopsLabel: label };
 }
 
 function buildYear(year: number, region: HolidayRegion): Map<DayKey, CalendarDay> {
@@ -159,8 +183,12 @@ function buildYear(year: number, region: HolidayRegion): Map<DayKey, CalendarDay
       name: "Repentance Day",
       nameDe: GERMAN["Repentance Day"],
       kind: "observance",
+      // Not a public holiday in Bavaria: work as usual – but schools are closed.
+      work: "workday",
+      workLabel: "Workday",
+      schoolLabel: "No school",
       shops: "open",
-      shopsLabel: "No school · shops open",
+      shopsLabel: "Shops open",
     },
     ["BY"],
   );

@@ -54,16 +54,17 @@ test("holidays: shown in the planner with what they mean for the shops, per stat
   await saved(page, "user_settings", () => state.selectOption("BY"));
 
   await expectChip(page, "2030-10-03", "German Unity Day");
-  await expect(dayChips(page)).toContainText("Shops closed");
+  // What it means: a day off, shops closed.
+  await expect(dayChips(page)).toContainText("Day off·Shops closed");
   // The German name, too.
   await expect(dayChips(page)).toContainText("(Tag der Deutschen Einheit)");
   // The month calendar lists the month's holidays and colours the day.
   await expect(page.getByRole("list", { name: "Holidays and birthdays this month" })).toContainText("German Unity Day");
   await expect(page.getByRole("button", { name: /^Thursday, 3 October · German Unity Day/ }).first()).toBeVisible();
 
-  // Repentance Day: no public holiday in Bavaria – no school, but the shops are open.
+  // Repentance Day: no public holiday in Bavaria – work as usual and the shops are open, but no school.
   await expectChip(page, "2030-11-20", "Repentance Day");
-  await expect(dayChips(page)).toContainText("No school · shops open");
+  await expect(dayChips(page)).toContainText("Workday·No school·Shops open");
   await page.goto("/planner?day=2030-10-31");
   await expect(dayChips(page)).toHaveCount(0);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Cake, Clock, Store } from "lucide-react";
+import { Cake, Clock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MonthGrid, monthGridDays, monthOf } from "@/components/ui/month-grid";
 import { hasExtras, useDayExtras } from "@/data/calendar";
@@ -8,7 +8,7 @@ import { useBlocks } from "@/data/planner";
 import { type DayKey, formatWeekdayShort, fromDayKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { blockStyle } from "./block-colors";
-import { BIRTHDAY_TEXT, CLOCK_CHANGE_TEXT, extrasLabel, holidayNumberClass } from "./day-extras";
+import { BIRTHDAY_TEXT, CLOCK_CHANGE_TEXT, extrasLabel, HolidayFacts, holidayNumberClass } from "./day-extras";
 
 /**
  * Month overview of the planner: dots show the planned blocks of each day,
@@ -112,13 +112,8 @@ export function MonthCalendar({
                           {extras.holiday.name}
                         </span>
                         <span className="text-xs text-muted">({extras.holiday.nameDe})</span>
-                        {/* Over: whether the shops were open no longer matters (keeps the list short). */}
-                        {!past && (
-                          <span className="flex items-center gap-1 text-xs text-muted">
-                            <Store className="size-3" />
-                            {extras.holiday.shopsLabel}
-                          </span>
-                        )}
+                        {/* Over: what it meant no longer matters (keeps the list short). */}
+                        {!past && <HolidayFacts holiday={extras.holiday} className="text-xs text-muted" />}
                       </span>
                     )}
                     {extras.clockChange && (
