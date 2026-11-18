@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
 /**
  * The Android launcher app shows this dashboard and injects `window.SmartLauncher`
  * (only for this site). Through it the page lists and opens the phone's apps,
- * searches the web in Firefox and updates the app. Everywhere else (browser,
+ * searches the web in the default browser and updates the app. Everywhere else (browser,
  * wall display) the object is missing and all of this stays hidden.
  */
 
@@ -213,7 +213,7 @@ export function setUpdateStatus(update: UpdateStatus) {
 export const launcher = {
   open: (app: LauncherApp) => request("launch", { app: app.id }),
   showInfo: (app: LauncherApp) => request("appInfo", { app: app.id }),
-  /** Web search in Firefox (just opens Firefox without a query). */
+  /** Web search in the default browser (just opens it without a query). */
   search: (query: string) => request("search", { query }),
   theme: (color: string, dark: boolean) => request("theme", { color, dark }),
   update: () => {

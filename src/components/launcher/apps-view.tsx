@@ -166,14 +166,14 @@ function RecentTray({ apps, open, onOpen }: { apps: LauncherApp[]; open: boolean
   );
 }
 
-/** Done with the search (an app or Firefox opens): the keyboard goes away. */
+/** Done with the search (an app or the browser opens): the keyboard goes away. */
 function closeKeyboard() {
   if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
 }
 
 /**
  * The phone's apps, inside the launcher app: all apps A–Z, a search that
- * filters them and searches the web in Firefox. Home in the tab bar switches
+ * filters them and searches the web in the default browser. Home in the tab bar switches
  * between the home screen and this page.
  */
 export function AppsView() {

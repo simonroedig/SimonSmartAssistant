@@ -98,7 +98,7 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   // Afterwards the keyboard goes away.
   await expect(page.getByLabel("Search apps or the web")).not.toBeFocused();
 
-  // Enter searches the web in Firefox.
+  // Enter searches the web (in the default browser).
   await page.getByLabel("Search apps or the web").fill("Wetter München");
   await page.getByLabel("Search apps or the web").press("Enter");
   await expect.poll(async () => (await sent(page)).find((m) => m.type === "search")?.query).toBe("Wetter München");
@@ -141,7 +141,7 @@ test("launcher: Home switches to the apps; open, search and come back with the h
 
   // Web search right from the home screen.
   await page.getByLabel("Search the web").fill("Feiertage Bayern");
-  await page.getByRole("button", { name: "Search in Firefox" }).click();
+  await page.getByRole("button", { name: "Search in your browser" }).click();
   await expect
     .poll(async () => (await sent(page)).filter((m) => m.type === "search").map((m) => m.query))
     .toContain("Feiertage Bayern");

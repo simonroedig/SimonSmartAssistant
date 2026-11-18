@@ -22,7 +22,7 @@ import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useLauncherUpdate } from "./launcher-sync";
 
-/** Launcher app, home screen: type and search the web in Firefox. */
+/** Launcher app, home screen: type and search the web in the phone's default browser. */
 export function WebSearchBar({ className }: { className?: string }) {
   const isLauncher = useIsLauncher();
   const [query, setQuery] = useState("");
@@ -52,7 +52,7 @@ export function WebSearchBar({ className }: { className?: string }) {
       </label>
       <button
         type="submit"
-        aria-label="Search in Firefox"
+        aria-label="Search in your browser"
         onMouseDown={(e) => e.preventDefault()}
         className="ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)"
       >

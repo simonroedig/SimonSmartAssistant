@@ -5,6 +5,7 @@ import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.LauncherApps
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
@@ -45,7 +46,7 @@ import org.json.JSONObject
 /**
  * The home screen: the dashboard (the same web app as on the wall display and
  * in the browser) in a WebView, plus what only a launcher can do – list and
- * open the installed apps, search the web in Firefox, update itself.
+ * open the installed apps, search the web in the default browser, update itself.
  */
 /** How soon after a tap the window must get the focus for the tap to count as "early". */
 private const val EARLY_TAP_MS = 1500L
@@ -349,18 +350,34 @@ class LauncherActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     }
 
-    /** Searches the web in Firefox (with its own search engine); without a query it just opens Firefox. */
+    /**
+     * The browser picked in Android's settings (Default apps → Browser app), or null when
+     * none is picked (the system would ask which one).
+     */
+    private fun defaultBrowser(): String? {
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.example.com")).addCategory(Intent.CATEGORY_BROWSABLE)
+        val pkg = packageManager.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+        return if (pkg == null || pkg == "android" || pkg.contains("resolver")) null else pkg
+    }
+
+    /**
+     * Searches the web in the default browser (with its own search engine); without a query it
+     * just opens the browser.
+     */
     fun webSearch(query: String) {
         val text = query.trim()
-        val firefox = "org.mozilla.firefox"
+        val browser = defaultBrowser()
         val google = Uri.parse("https://www.google.com/search?q=${Uri.encode(text)}")
         val attempts =
             if (text.isEmpty()) {
-                listOfNotNull(packageManager.getLaunchIntentForPackage(firefox))
+                listOfNotNull(
+                    browser?.let { packageManager.getLaunchIntentForPackage(it) },
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")),
+                )
             } else {
-                listOf(
-                    Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, text).setPackage(firefox),
-                    Intent(Intent.ACTION_VIEW, google).setPackage(firefox),
+                listOfNotNull(
+                    browser?.let { Intent(Intent.ACTION_WEB_SEARCH).putExtra(SearchManager.QUERY, text).setPackage(it) },
+                    browser?.let { Intent(Intent.ACTION_VIEW, google).setPackage(it) },
                     Intent(Intent.ACTION_VIEW, google),
                 )
             }

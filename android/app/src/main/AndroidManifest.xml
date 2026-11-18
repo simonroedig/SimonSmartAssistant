@@ -23,11 +23,15 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
         </intent>
-        <!-- Web search in Firefox. -->
+        <!-- Web search in the default browser (Default apps → Browser app), and finding out which it is. -->
         <intent>
             <action android:name="android.intent.action.WEB_SEARCH" />
         </intent>
-        <package android:name="org.mozilla.firefox" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
 
     <application
