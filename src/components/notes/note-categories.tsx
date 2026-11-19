@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Lock, Trash2 } from "lucide-react";
+import { Check, Lock, Search, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
@@ -42,13 +42,18 @@ export function CategoryTag({ category, className }: { category: NoteCategory; c
 
 /**
  * Above the notes: the vault (it may ask for the PIN first) and All – the overview with
- * the categories. Sideways swipes go between the two.
+ * the categories – and, on the right, search. Sideways swipes go between the vault and All.
+ * Searching, the row is the search field (it searches what's shown: all notes, or the vault).
  */
 export function NotesTabs({
   vault,
   vaultOpen,
   onAll,
   onVault,
+  query,
+  onSearch,
+  onQuery,
+  onCloseSearch,
   className,
 }: {
   /** The vault is shown. */
@@ -56,8 +61,43 @@ export function NotesTabs({
   vaultOpen: boolean;
   onAll: () => void;
   onVault: () => void;
+  /** null: not searching. */
+  query: string | null;
+  onSearch: () => void;
+  onQuery: (query: string) => void;
+  onCloseSearch: () => void;
   className?: string;
 }) {
+  if (query !== null) {
+    return (
+      <div role="search" className={cn("flex items-center gap-2 py-1", className)}>
+        <label className="relative flex min-w-0 flex-1 items-center">
+          <Search className="pointer-events-none absolute left-3.5 size-4 text-faint" />
+          <input
+            value={query}
+            onChange={(e) => onQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && onCloseSearch()}
+            // Opened by tapping search: type right away.
+            autoFocus
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            placeholder={vault ? "Search the vault" : "Search notes"}
+            aria-label={vault ? "Search the vault" : "Search notes"}
+            className="field h-10 w-full rounded-full border border-line bg-surface-strong pr-4 pl-10 text-[0.95rem] outline-none placeholder:text-faint focus:border-(--field-focus) [&::-webkit-search-cancel-button]:appearance-none"
+          />
+        </label>
+        <button
+          type="button"
+          aria-label="Close search"
+          onClick={onCloseSearch}
+          className={cn(CHIP, CHIP_IDLE, "w-10 justify-center px-0")}
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+    );
+  }
   return (
     <div role="group" aria-label="Notes" className={cn("flex items-center gap-2 py-1", className)}>
       <button
@@ -79,6 +119,15 @@ export function NotesTabs({
         className={cn(CHIP, !vault ? cn("bg-fg/8 text-fg", CHIP_ON) : CHIP_IDLE)}
       >
         All
+      </button>
+      <button
+        type="button"
+        aria-label={vault ? "Search the vault" : "Search notes"}
+        title="Search"
+        onClick={onSearch}
+        className={cn(CHIP, CHIP_IDLE, "ml-auto w-10 justify-center px-0")}
+      >
+        <Search className="size-4" />
       </button>
     </div>
   );

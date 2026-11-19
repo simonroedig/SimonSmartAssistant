@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockWeather } from "./helpers";
 
+// Runs last (it leaves the shared sign-in renewed several times over).
 test("back from standby: a save waits for the sign-in to be renewed – nothing is turned down or lost", async ({
   page,
 }) => {
@@ -20,6 +21,10 @@ test("back from standby: a save waits for the sign-in to be renewed – nothing 
   await page.clock.fastForward("02:00:00");
 
   const name = `After standby ${Date.now() % 100000}`;
+  const saved = page.waitForResponse(
+    (r) => r.request().method() === "POST" && /\/rest\/v1\/shopping_items/.test(r.url()) && r.status() === 201,
+    { timeout: 30_000 },
+  );
   await input.fill(name);
   await page.getByRole("button", { name: "Add item" }).click();
   await expect(page.getByText(name)).toBeVisible();
@@ -28,18 +33,15 @@ test("back from standby: a save waits for the sign-in to be renewed – nothing 
   await page.clock.fastForward("00:00:35");
   await page.waitForTimeout(500);
   offline = false;
-  for (let i = 0; i < 6; i++) {
+  // It stays on screen all along – nothing reloads it away while the save waits.
+  for (let i = 0; i < 5; i++) {
     await page.clock.fastForward("00:00:20");
     await page.waitForTimeout(400);
+    await expect(page.getByText(name)).toBeVisible();
   }
 
-  // Saved after all, without an error on the way – and still there after a reload.
+  // Saved after all (the database took it), without an error on the way.
+  await saved;
   await expect(page.getByText(/Couldn't/)).toHaveCount(0);
   await expect(page.getByText(name)).toBeVisible();
-  await page.reload();
-  await expect(page.getByText(name)).toBeVisible();
-
-  // Tidy up.
-  await page.locator("li", { hasText: name }).getByRole("button", { name, exact: true }).click();
-  await page.getByRole("button", { name: "Clear" }).click();
 });

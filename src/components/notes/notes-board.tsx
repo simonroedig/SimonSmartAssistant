@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   Copy,
   ExternalLink,
+  Search,
   TriangleAlert,
   Lock,
   Pencil,
@@ -14,7 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
@@ -53,6 +54,7 @@ import {
   type TemplateId,
 } from "@/lib/note-templates";
 import { afterSheetClosed, inPageDepth, pushInPage } from "@/lib/history";
+import { matchesSearch, searchTerms } from "@/lib/note-search";
 import {
   draftMatches,
   dropNoteDraft,
@@ -246,12 +248,26 @@ export function NotesBoard({
 
   // --- Going a level deeper, and back -------------------------------------------
   // A level deeper has its own history entry: the phone's back gesture returns to All.
+  // Search: of all notes (on All), or of the vault (in the vault) – never both at once.
+  const [query, setQuery] = useState<string | null>(null);
+  const openSearch = () => {
+    pushInPage({ notesSearch: true });
+    setQuery("");
+  };
+  const closeSearch = () => {
+    if (window.history.state?.notesSearch) window.history.back();
+    else setQuery(null);
+  };
+  const terms = useMemo(() => searchTerms(query ?? ""), [query]);
+  const searching = query !== null && terms.length > 0;
+
   const viewRef = useRef(view);
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
   useEffect(() => {
     const onPop = () => {
+      if (!window.history.state?.notesSearch) setQuery(null);
       const fromHistory = viewFromKey(window.history.state?.notesView);
       if (fromHistory) setViewState(fromHistory);
       else if (typeof viewRef.current === "object") setViewState("all");
@@ -259,7 +275,13 @@ export function NotesBoard({
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+  // Each view starts at its top; back on All, the overview is where it was left.
+  const scroller = useRef<HTMLDivElement>(null);
+  const overviewScroll = useRef({ inner: 0, page: 0 });
   const enter = (next: NoteFilter) => {
+    if (view === "all" && next !== "all") {
+      overviewScroll.current = { inner: scroller.current?.scrollTop ?? 0, page: window.scrollY };
+    }
     if (view === "vault") lockVault();
     if (typeof next === "object") {
       const state = { notesView: viewKey(next) };
@@ -268,10 +290,28 @@ export function NotesBoard({
     }
     setViewState(next);
   };
+  /** From the search into a template's collection: the search's history entry becomes its. */
+  const openFromSearch = (next: NoteFilter) => {
+    if (window.history.state?.notesSearch) {
+      window.history.replaceState({ notesView: viewKey(next), inPage: inPageDepth() }, "");
+    } else pushInPage({ notesView: viewKey(next) });
+    setQuery(null);
+    setViewState(next);
+  };
   const back = () => {
     if (window.history.state?.notesView) window.history.back();
     else setViewState("all");
   };
+
+  const shownView = viewKey(view);
+  const scrolledFor = useRef(shownView);
+  useLayoutEffect(() => {
+    if (scrolledFor.current === shownView) return;
+    scrolledFor.current = shownView;
+    const { inner, page } = shownView === "all" ? overviewScroll.current : { inner: 0, page: 0 };
+    if (scroller.current) scroller.current.scrollTop = inner;
+    window.scrollTo({ top: page });
+  }, [shownView]);
 
   // Gone meanwhile (deleted here or on another device) – not one just being added.
   const saving = useIsMutating({ mutationKey: ["note_categories"] }) + useIsMutating({ mutationKey: ["notes"] }) > 0;
@@ -422,7 +462,7 @@ export function NotesBoard({
       } else if (view === "all" && direction === -1) openVault();
       else if (view === "vault" && direction === 1) enter("all");
     },
-    variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null,
+    variant === "page" && phone && editor === null && categorySheet === null && pinSheet === null && query === null,
   );
 
   const editorSheet = (
@@ -598,6 +638,50 @@ export function NotesBoard({
     );
   };
 
+  // Search: the notes themselves (with their category), and a template's collection whose
+  // entries match – in the vault only the vault's notes.
+  const results = () => {
+    const pool = inVault ? vaultList : board;
+    const found = pool.filter((n) =>
+      matchesSearch(terms, n.title, n.body, n.category_id ? byId.get(n.category_id)?.name : null),
+    );
+    const foundCollections = inVault ? [] : collections.filter((c) => matchesSearch(terms, c.note.body));
+    const count = found.length + foundCollections.length;
+    if (count === 0) {
+      return (
+        <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
+          <Search className="size-10 text-faint" />
+          <p className="text-sm">Nothing found for “{query?.trim()}”.</p>
+        </div>
+      );
+    }
+    return (
+      <section className="mt-2 md:mt-6">
+        <h2 className={sectionTitle}>
+          {count} found{inVault ? " in the vault" : ""}
+        </h2>
+        <ul className={grid}>
+          {foundCollections.map(({ template, note }) => (
+            <li key={note.id}>
+              <TemplateTile template={template} note={note} onOpen={() => openFromSearch({ template: template.id })} />
+            </li>
+          ))}
+          {found.map((note) => (
+            <li key={note.id}>
+              <NoteCard
+                note={note}
+                category={tagFor(note)}
+                lines={3}
+                onOpen={() => setEditor({ mode: "edit", note })}
+                onTogglePin={() => togglePin(note)}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  };
+
   // A category, the vault: its pinned notes first, then the rest.
   const list = () =>
     shown.length === 0 ? (
@@ -685,10 +769,14 @@ export function NotesBoard({
           vaultOpen={vaultOpen}
           onAll={() => enter("all")}
           onVault={openVault}
+          query={query}
+          onSearch={openSearch}
+          onQuery={setQuery}
+          onCloseSearch={closeSearch}
           className="mb-2 md:mb-4"
         />
       )}
-      {!collection && (
+      {!collection && !searching && (
         <Composer
           onCreate={(draft, pin) => create(draft, pin)}
           placementCategory={openCategory}
@@ -697,7 +785,10 @@ export function NotesBoard({
         />
       )}
       {/* Phones: only this part scrolls (room at the end for the + button). */}
-      <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-20">
+      <div
+        ref={scroller}
+        className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-20"
+      >
         <motion.div
           key={viewKey(view)}
           initial={{ opacity: 0, x: slide.direction * 28 }}
@@ -726,6 +817,8 @@ export function NotesBoard({
                 <div key={i} className="skeleton h-28 rounded-2xl" />
               ))}
             </div>
+          ) : searching ? (
+            results()
           ) : collection ? (
             <div className="mt-1 md:mt-2">
               <TemplateView

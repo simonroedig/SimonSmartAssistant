@@ -166,3 +166,137 @@ test("notes: nothing typed is lost – a save that fails is kept and offered aga
   await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
   await expect(card).toHaveCount(0);
 });
+
+/** The part of the page that scrolls on a phone (around the notes). */
+const scrollTopOf = (el: import("@playwright/test").Locator) =>
+  el.evaluate((node) => {
+    for (let p = node.parentElement; p; p = p.parentElement) {
+      if (getComputedStyle(p).overflowY === "auto") return p.scrollTop;
+    }
+    return window.scrollY;
+  });
+
+test("notes on a phone: a category opens at its top; back, the overview is where it was", async ({ browser }) => {
+  const context = await browser.newContext({
+    storageState: "e2e/.auth/user.json",
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 600 },
+  });
+  const page = await context.newPage();
+  await page.goto("/notes");
+  const stamp = Date.now() % 100000;
+  const name = `Scroll ${stamp}`;
+  await page.getByRole("button", { name: "New category" }).click();
+  await page.getByRole("dialog").getByLabel("Category name").fill(name);
+  await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
+  const back = page.getByRole("button", { name: "Back to all notes" });
+  await expect(back).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await back.click();
+  // Enough unsorted notes that the categories sit further down.
+  const added: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    await page.getByRole("button", { name: "Add a note", exact: true }).click();
+    await page
+      .getByRole("dialog")
+      .getByLabel("Note", { exact: true })
+      .fill(`Filler ${stamp} ${i}\nline two\nline three`);
+    await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    added.push(`Filler ${stamp} ${i}`);
+  }
+  const tile = page.getByRole("button", { name: `${name}, 0 notes`, exact: true });
+  await tile.scrollIntoViewIfNeeded();
+  const before = await scrollTopOf(tile);
+  expect(before).toBeGreaterThan(50);
+  await tile.click();
+  await expect(back).toBeVisible();
+  expect(await scrollTopOf(page.getByText(`No notes in ${name} yet.`))).toBe(0);
+  await back.click();
+  await expect(tile).toBeVisible();
+  await expect.poll(() => scrollTopOf(tile)).toBeGreaterThan(before - 5);
+
+  // Tidy up.
+  await tile.click();
+  await page.getByRole("button", { name: `Edit ${name}` }).click();
+  await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  for (const label of added) {
+    await page.getByRole("button", { name: `Open note "${label}"` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
+  await context.close();
+});
+
+test("notes: search titles, texts and categories – all notes, or only the vault's", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/notes");
+  const stamp = `zq${Date.now() % 100000}`;
+  const tabs = page.getByRole("group", { name: "Notes" });
+
+  // A note with the word in its title, one with it in its text inside a category.
+  const name = `Search ${stamp}`;
+  await page.getByRole("button", { name: "New category" }).click();
+  await page.getByRole("dialog").getByLabel("Category name").fill(name);
+  await page.getByRole("dialog").getByRole("button", { name: "Add category" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  await page.getByRole("dialog").getByLabel("Note", { exact: true }).fill(`Deep inside: Café ${stamp} code`);
+  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Back to all notes" }).click();
+  await page.getByRole("button", { name: "Add a note", exact: true }).click();
+  await page.getByRole("dialog").getByLabel("Title").fill(`Title ${stamp}`);
+  await page.getByRole("dialog").getByLabel("Note", { exact: true }).fill("Something else");
+  await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // Search (on the right of Vault and All): both, the one in the category with its tag.
+  await tabs.getByRole("button", { name: "Search notes" }).click();
+  const field = page.getByRole("searchbox", { name: "Search notes" });
+  await expect(field).toBeFocused();
+  await field.fill(stamp.toUpperCase());
+  await expect(page.getByRole("heading", { name: "2 found" })).toBeVisible();
+  const inside = page.getByRole("button", { name: /^Open note "Deep inside/ });
+  await expect(inside).toContainText(name);
+  await expect(page.getByRole("button", { name: `Open note "Title ${stamp}"` })).toBeVisible();
+  // Every word, any order, accents or not.
+  await field.fill(`code cafe ${stamp}`);
+  await expect(page.getByRole("heading", { name: "1 found" })).toBeVisible();
+  await field.fill(`${stamp} nothing-like-this`);
+  await expect(page.getByText(/Nothing found for/)).toBeVisible();
+
+  // Back closes the search, like the X.
+  await page.goBack();
+  await expect(tabs.getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page).toHaveURL(/\/notes$/);
+
+  // In the vault, search covers the vault only: the notes on the board aren't found there.
+  await tabs.getByRole("button", { name: "Vault" }).click();
+  const pin = page.getByRole("dialog");
+  if (await pin.getByText("Choose a vault PIN").isVisible()) {
+    await pin.getByLabel("New PIN").fill("2468");
+    await pin.getByLabel("Repeat the new PIN").fill("2468");
+  } else {
+    await pin.getByLabel("PIN", { exact: true }).fill("2468");
+  }
+  await expect(pin).toBeHidden();
+  await tabs.getByRole("button", { name: "Search the vault" }).click();
+  await page.getByRole("searchbox", { name: "Search the vault" }).fill(stamp);
+  await expect(page.getByText(/Nothing found for/)).toBeVisible();
+  await page.getByRole("button", { name: "Close search" }).click();
+  await tabs.getByRole("button", { name: "All", exact: true }).click();
+
+  // Tidy up.
+  await page.getByRole("button", { name: `${name}, 1 note`, exact: true }).click();
+  await page.getByRole("button", { name: `Edit ${name}` }).click();
+  await page.getByRole("dialog", { name: "Edit category" }).getByRole("button", { name: "Delete category" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  for (const label of [`Title ${stamp}`]) {
+    await page.getByRole("button", { name: `Open note "${label}"` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
+  }
+  await page.getByRole("button", { name: /^Open note "Deep inside/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete note" }).click();
+});
