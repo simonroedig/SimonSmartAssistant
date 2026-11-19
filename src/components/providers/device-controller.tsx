@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { applyDeviceState, DEVICE_STORAGE_KEY, SUN_STORAGE_KEY } from "@/lib/device";
+import { trackScreenHeight } from "@/lib/keyboard";
 
 /**
  * Keeps <html> in sync with the device preferences: re-evaluates the theme every
@@ -31,7 +32,10 @@ export function DeviceController() {
     vv?.addEventListener("resize", updateInset);
     vv?.addEventListener("scroll", updateInset);
 
+    const untrack = trackScreenHeight(root);
+
     return () => {
+      untrack();
       window.clearInterval(interval);
       mql.removeEventListener("change", apply);
       document.removeEventListener("visibilitychange", onVisible);

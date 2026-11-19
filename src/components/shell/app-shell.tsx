@@ -17,6 +17,7 @@ import {
   type SectionId,
 } from "@/lib/navigation";
 import { TONE_STYLES } from "@/lib/tones";
+import { isTextField } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
 import { HOME_ITEM, isActive, MEDIA_ITEM, navItem, SETTINGS_ITEM, WEATHER_ITEM, type NavItem } from "./nav-items";
@@ -360,12 +361,6 @@ function BottomNav({
       </div>
     </nav>
   );
-}
-
-function isTextField(el: Element | null): boolean {
-  if (el instanceof HTMLTextAreaElement) return true;
-  if (el instanceof HTMLInputElement) return !["checkbox", "radio", "button", "submit", "range"].includes(el.type);
-  return el instanceof HTMLElement && el.isContentEditable;
 }
 
 /**

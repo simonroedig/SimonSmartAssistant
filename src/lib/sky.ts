@@ -192,7 +192,7 @@ export function computeSky({
   const vars: Record<string, string> = {};
   if (calm) {
     vars["--hz-sky"] = [
-      `radial-gradient(ellipse 60vmax 30vmax at ${pct(isDay ? gx : 80)} 0%, ${rgb(glow, (dark ? 0.3 : 0.45) * strength)}, transparent 70%)`,
+      `radial-gradient(ellipse calc(60 * var(--vmax)) calc(30 * var(--vmax)) at ${pct(isDay ? gx : 80)} 0%, ${rgb(glow, (dark ? 0.3 : 0.45) * strength)}, transparent 70%)`,
       `linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.5)}, ${rgb(hor)} ${pct(H)}, ${rgb(ground)} ${pct(H + 30)})`,
     ].join(",");
     vars["--hz-ground"] = NONE;
@@ -206,7 +206,7 @@ export function computeSky({
       const core = mix([255, 252, 240], glow, 0.35 + low * 0.5);
       const g = (dark ? 0.75 : 1) * strength;
       body.push(
-        `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb(core, g)} 0 ${disc}vmax, ${rgb(glow, 0.55 * g)} ${disc + 0.3}vmax, ${rgb(glow, 0.18 * g)} ${disc * 4}vmax, transparent ${disc * 10}vmax)`,
+        `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb(core, g)} 0 calc(${disc} * var(--vmax)), ${rgb(glow, 0.55 * g)} calc(${disc + 0.3} * var(--vmax)), ${rgb(glow, 0.18 * g)} calc(${disc * 4} * var(--vmax)), transparent calc(${disc * 10} * var(--vmax)))`,
       );
     } else {
       const clear = w === "clear" || w === "partly";
@@ -221,11 +221,11 @@ export function computeSky({
         const shade = mix(sky, glow, clear ? 0.2 : 0.07);
         const shift = 2 * disc * lit * (moon < 0.5 ? -1 : 1);
         body.push(
-          `radial-gradient(circle at calc(${pct(gx)} + ${shift.toFixed(2)}vmax) ${pct(gy)}, ${rgb(shade)} 0 ${(disc * 1.01).toFixed(2)}vmax, ${rgb(shade, 0)} ${(disc * 1.12).toFixed(2)}vmax)`,
+          `radial-gradient(circle at calc(${pct(gx)} + calc(${shift.toFixed(2)} * var(--vmax))) ${pct(gy)}, ${rgb(shade)} 0 calc(${(disc * 1.01).toFixed(2)} * var(--vmax)), ${rgb(shade, 0)} calc(${(disc * 1.12).toFixed(2)} * var(--vmax)))`,
         );
       }
       body.push(
-        `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb([240, 243, 255], clear ? 0.95 : 0.3)} 0 ${disc}vmax, ${rgb(glow, clear ? 0.22 : 0.08)} ${disc + 0.15}vmax, transparent ${disc * 7}vmax)`,
+        `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb([240, 243, 255], clear ? 0.95 : 0.3)} 0 calc(${disc} * var(--vmax)), ${rgb(glow, clear ? 0.22 : 0.08)} calc(${disc + 0.15} * var(--vmax)), transparent calc(${disc * 7} * var(--vmax)))`,
       );
     }
     // The sun or moon in its own layer: cut off at the horizon (the top of the first
@@ -258,7 +258,7 @@ export function computeSky({
   const cx = (f: number) => 4 + 92 * f;
   const cy = (f: number) => (calm ? 2 + (H - 4) * f * 0.7 : T + (H - T) * f);
   const cloud = (fx: number, fy: number, wv: number, hv: number, a: number) =>
-    `radial-gradient(ellipse ${wv}vmax ${hv}vmax at ${pct(cx(fx))} ${pct(cy(fy))}, ${rgb(cloudC, cloudA * a)}, transparent 70%)`;
+    `radial-gradient(ellipse calc(${wv} * var(--vmax)) calc(${hv} * var(--vmax)) at ${pct(cx(fx))} ${pct(cy(fy))}, ${rgb(cloudC, cloudA * a)}, transparent 70%)`;
   vars["--hz-clouds"] = cloudA
     ? [
         cloud(0.2, 0.35, land ? 14 : 22, 3, 1),

@@ -133,12 +133,12 @@ nav[data-attached]:not([data-tabbar]) {
   background: var(--hz-sun, none);
   -webkit-mask-image: linear-gradient(
     180deg,
-    black calc(var(--hz-h, 22%) - var(--hz-scroll, 0px) - 1.5vh),
+    black calc(var(--hz-h, 22%) - var(--hz-scroll, 0px) - 0.015 * var(--screen-h)),
     transparent calc(var(--hz-h, 22%) - var(--hz-scroll, 0px))
   );
   mask-image: linear-gradient(
     180deg,
-    black calc(var(--hz-h, 22%) - var(--hz-scroll, 0px) - 1.5vh),
+    black calc(var(--hz-h, 22%) - var(--hz-scroll, 0px) - 0.015 * var(--screen-h)),
     transparent calc(var(--hz-h, 22%) - var(--hz-scroll, 0px))
   );
 }
@@ -208,10 +208,10 @@ nav[data-attached]:not([data-tabbar]) {
 }
 @keyframes sky-drift {
   from {
-    transform: translateX(-2.5vmax);
+    transform: translateX(calc(-2.5 * var(--vmax)));
   }
   to {
-    transform: translateX(2.5vmax);
+    transform: translateX(calc(2.5 * var(--vmax)));
   }
 }
 /* The wall display at rest (src/lib/still.ts), or less motion wanted: the sky holds still. */
@@ -822,26 +822,26 @@ nav[data-attached]:not([data-tabbar]) {
 [data-design="doodle"] .ambient::before {
   background-color: var(--splash-1);
   border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
-  width: 34vmax;
-  height: 28vmax;
-  left: -9vmax;
-  top: -8vmax;
+  width: calc(34 * var(--vmax));
+  height: calc(28 * var(--vmax));
+  left: calc(-9 * var(--vmax));
+  top: calc(-8 * var(--vmax));
 }
 [data-design="doodle"] .ambient::after {
   background-color: var(--splash-2);
   border-radius: 63% 37% 41% 59% / 55% 62% 38% 45%;
-  width: 30vmax;
-  height: 32vmax;
-  right: -10vmax;
-  bottom: -9vmax;
+  width: calc(30 * var(--vmax));
+  height: calc(32 * var(--vmax));
+  right: calc(-10 * var(--vmax));
+  bottom: calc(-9 * var(--vmax));
 }
 [data-design="doodle"] .ambient > span {
   background-color: var(--splash-3);
   border-radius: 38% 62% 45% 55% / 60% 40% 60% 40%;
-  width: 18vmax;
-  height: 15vmax;
-  top: 30vh;
-  right: -5vmax;
+  width: calc(18 * var(--vmax));
+  height: calc(15 * var(--vmax));
+  top: calc(0.3 * var(--screen-h));
+  right: calc(-5 * var(--vmax));
   opacity: 0.36;
 }
 :root.dark[data-design="doodle"] .ambient::before,

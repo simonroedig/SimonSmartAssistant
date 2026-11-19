@@ -110,7 +110,9 @@ function useHomeLayout(home: boolean): SkyLayout {
       const time = hero?.querySelector("time");
       if (!hero || !time) return setLayout(CALM_LAYOUT);
       const vw = window.innerWidth;
-      const vh = window.innerHeight;
+      // The background's height – not the page's, which gets shorter with the keyboard.
+      const screen = getComputedStyle(document.documentElement).getPropertyValue("--screen-h").trim();
+      const vh = screen.endsWith("px") ? parseFloat(screen) : window.innerHeight;
       const box = hero.getBoundingClientRect();
       const range = document.createRange();
       range.selectNodeContents(time);

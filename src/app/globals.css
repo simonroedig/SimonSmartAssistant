@@ -363,9 +363,17 @@
  * Static on purpose: any motion here (or a blur on top of it) makes the browser
  * redraw the whole screen every frame – a constant drain on phone and Pi.
  */
+/* The background keeps the screen's full height while an on-screen keyboard is up
+   (--screen-h, kept by DeviceController): it neither shrinks nor moves up. Its sizes use
+   --vmax instead of vmax for the same reason. */
+:root {
+  --screen-h: 100lvh;
+  --vmax: calc(max(100vw, var(--screen-h)) / 100);
+}
 .ambient {
   position: fixed;
-  inset: 0;
+  inset: 0 0 auto;
+  height: var(--screen-h);
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
@@ -382,24 +390,24 @@
   transition: background-color 3s ease;
 }
 .ambient::before {
-  width: 62vmax;
-  height: 62vmax;
-  left: -18vmax;
-  top: -26vmax;
+  width: calc(62 * var(--vmax));
+  height: calc(62 * var(--vmax));
+  left: calc(-18 * var(--vmax));
+  top: calc(-26 * var(--vmax));
   background-color: var(--blob-1);
 }
 .ambient::after {
-  width: 54vmax;
-  height: 54vmax;
-  right: -20vmax;
-  bottom: -24vmax;
+  width: calc(54 * var(--vmax));
+  height: calc(54 * var(--vmax));
+  right: calc(-20 * var(--vmax));
+  bottom: calc(-24 * var(--vmax));
   background-color: var(--blob-2);
 }
 .ambient > span {
-  width: 40vmax;
-  height: 40vmax;
-  right: 8vmax;
-  top: -14vmax;
+  width: calc(40 * var(--vmax));
+  height: calc(40 * var(--vmax));
+  right: calc(8 * var(--vmax));
+  top: calc(-14 * var(--vmax));
   background-color: var(--blob-3);
   opacity: 0.4;
 }

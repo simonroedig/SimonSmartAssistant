@@ -65,3 +65,34 @@ test("Aurora Sky: the sky follows time and weather, and leaves nothing behind wh
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--accent"))).toBe("");
   await expect(html).not.toHaveAttribute("data-sky", /.*/);
 });
+
+test("an on-screen keyboard doesn't shrink or move the background", async ({ page }) => {
+  await mockWeather(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/shopping");
+  const input = page.getByLabel("New shopping item");
+  await expect(input).toBeVisible();
+  const background = () =>
+    page.locator(".ambient").evaluate((el) => ({
+      height: el.getBoundingClientRect().height,
+      top: el.getBoundingClientRect().top,
+      glow: getComputedStyle(el, "::before").width,
+    }));
+  const before = await background();
+  expect(before.height).toBe(844);
+
+  // Typing: the keyboard takes the lower part of the screen, the page gets shorter …
+  await input.focus();
+  await page.setViewportSize({ width: 390, height: 500 });
+  await expect(page.locator("html")).toHaveCSS("--screen-h", "844px");
+  // … the background stays as it was.
+  expect(await background()).toEqual(before);
+
+  // Keyboard down: still the same; turned sideways it fits the new screen.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await input.blur();
+  expect(await background()).toEqual(before);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.locator("html")).toHaveCSS("--screen-h", "390px");
+  expect((await background()).height).toBe(390);
+});
