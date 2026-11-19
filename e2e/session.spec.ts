@@ -1,11 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { mockWeather } from "./helpers";
+import { mockWeather, signIn } from "./helpers";
 
-// Runs last (it leaves the shared sign-in renewed several times over).
+// A sign-in of its own: renewing the shared one would use up its token for the other tests
+// (and one used up elsewhere would be refused here).
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test("back from standby: a save waits for the sign-in to be renewed – nothing is turned down or lost", async ({
   page,
 }) => {
   await mockWeather(page);
+  await signIn(page);
   await page.clock.install();
   const loaded = page.waitForResponse(/\/rest\/v1\/shopping_items/);
   await page.goto("/shopping");
