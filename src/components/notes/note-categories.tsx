@@ -70,7 +70,7 @@ export function NotesTabs({
 }) {
   if (query !== null) {
     return (
-      <div role="search" className={cn("flex items-center gap-2 py-1", className)}>
+      <div role="search" className={cn("flex items-center gap-2 py-1", FIELD_FOCUS.orange, className)}>
         <label className="relative flex min-w-0 flex-1 items-center">
           <Search className="pointer-events-none absolute left-3.5 size-4 text-faint" />
           <input
@@ -84,14 +84,15 @@ export function NotesTabs({
             autoComplete="off"
             placeholder={vault ? "Search the vault" : "Search notes"}
             aria-label={vault ? "Search the vault" : "Search notes"}
-            className="field h-10 w-full rounded-full border border-line bg-surface-strong pr-4 pl-10 text-[0.95rem] outline-none placeholder:text-faint focus:border-(--field-focus) [&::-webkit-search-cancel-button]:appearance-none"
+            // As tall as the chips (nothing moves), in the look of the app's other fields.
+            className="field h-9 w-full rounded-full pr-4 pl-10 text-[0.95rem] transition-colors outline-none well placeholder:text-faint focus:border-(--field-focus) focus:bg-surface-hover [&::-webkit-search-cancel-button]:appearance-none"
           />
         </label>
         <button
           type="button"
           aria-label="Close search"
           onClick={onCloseSearch}
-          className={cn(CHIP, CHIP_IDLE, "w-10 justify-center px-0")}
+          className={cn(CHIP, CHIP_IDLE, "w-9 justify-center px-0")}
         >
           <X className="size-4" />
         </button>
@@ -125,7 +126,7 @@ export function NotesTabs({
         aria-label={vault ? "Search the vault" : "Search notes"}
         title="Search"
         onClick={onSearch}
-        className={cn(CHIP, CHIP_IDLE, "ml-auto w-10 justify-center px-0")}
+        className={cn(CHIP, CHIP_IDLE, "ml-auto w-9 justify-center px-0")}
       >
         <Search className="size-4" />
       </button>

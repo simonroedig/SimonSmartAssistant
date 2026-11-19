@@ -61,7 +61,8 @@ export function WeekStrip({
               aria-label={`${formatWeekday(date)}, ${formatDayMonth(date)}${extra ? ` · ${extra}` : ""}`}
               title={extra || undefined}
               className={cn(
-                "flex min-w-0 flex-col items-center gap-0.5 rounded-2xl py-2 transition-colors",
+                // Narrow on a phone: a smaller radius, so the days stay tiles and don't turn into pills.
+                "flex min-w-0 flex-col items-center gap-0.5 rounded-xl py-2 transition-colors md:rounded-2xl",
                 // Today always in the "Now/Today" blue; another selected day quietly grey.
                 isToday
                   ? cn(isSelected ? TODAY_RING_STRONG : TODAY_RING, TODAY_TEXT)

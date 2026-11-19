@@ -279,7 +279,8 @@ export function PlannerView({
             <Button
               variant="secondary"
               size="sm"
-              className={cn("px-3 max-md:h-10", TODAY_COLOR)}
+              // As tall as the buttons next to it.
+              className={cn("h-10 px-3 md:h-11 md:rounded-2xl md:px-4", TODAY_COLOR)}
               onClick={() => go(today)}
             >
               Today
