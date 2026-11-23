@@ -20,7 +20,7 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { NavIcon, useNavHint } from "@/components/shell/nav-hints";
 import { BACKLOG_ITEM } from "@/components/shell/nav-items";
 import { CheckButton, CheckCircle } from "@/components/ui/check-circle";
-import { AutoTextarea, Label } from "@/components/ui/input";
+import { AutoTextarea, FIELD_BUTTON, FIELD_WITH_BUTTON, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
@@ -232,7 +232,7 @@ export function TodoList({
     <>
       <div className={cn(onPage && PHONE_ADD_ROW)}>
         <form
-          className={cn("flex items-end gap-2", FIELD_FOCUS.yellow)}
+          className={cn("relative", FIELD_FOCUS.yellow)}
           onSubmit={(e) => {
             e.preventDefault();
             addDraft();
@@ -253,7 +253,8 @@ export function TodoList({
             autoComplete="off"
             maxLength={5000}
             maxRows={8}
-            className="py-[11px]"
+            // Block: no gap under it, so the button sits at its very bottom.
+            className={cn("block py-[11px]", FIELD_WITH_BUTTON)}
           />
           <Button
             type="submit"
@@ -263,10 +264,7 @@ export function TodoList({
             disabled={!draft.trim()}
             // Keep the focus (and the phone's keyboard) in the field: adding needs one tap.
             onMouseDown={(e) => e.preventDefault()}
-            className={cn(
-              "ui-action size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(250_204_21)]",
-              addButtonTone("yellow", !!draft.trim()),
-            )}
+            className={cn("ui-action", FIELD_BUTTON, addButtonTone("yellow", !!draft.trim()))}
           >
             <Plus className="!size-5" />
           </Button>

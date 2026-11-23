@@ -21,6 +21,7 @@ import {
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { useLauncherUpdate } from "./launcher-sync";
+import { FIELD_BUTTON } from "@/components/ui/input";
 
 /** Launcher app, home screen: type and search the web in the phone's default browser. */
 export function WebSearchBar({ className }: { className?: string }) {
@@ -30,8 +31,8 @@ export function WebSearchBar({ className }: { className?: string }) {
   return (
     <form
       role="search"
-      // One field: the browser button is its right end (same height and corners), so it
-      // reads as part of it – and it's where the thumb sends what was typed.
+      // One field: the browser button sits inside its right end – where the thumb sends what was
+      // typed; quiet until there is something to search.
       className={cn("relative flex items-center", FIELD_FOCUS.quiet, className)}
       onSubmit={(e) => {
         e.preventDefault();
@@ -49,14 +50,18 @@ export function WebSearchBar({ className }: { className?: string }) {
           aria-label="Search the web"
           enterKeyHint="search"
           autoComplete="off"
-          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-15 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
+          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-13 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
         />
       </label>
       <button
         type="submit"
         aria-label="Search in your browser"
         onMouseDown={(e) => e.preventDefault()}
-        className="ui-action absolute inset-y-0 right-0 grid w-12 place-items-center rounded-2xl bg-fg text-bg"
+        className={cn(
+          "ui-action grid place-items-center transition-colors",
+          FIELD_BUTTON,
+          query.trim() ? "bg-fg text-bg" : "bg-fg/10 text-fg",
+        )}
       >
         <Globe className="size-5" />
       </button>

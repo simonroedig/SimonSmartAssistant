@@ -10,7 +10,7 @@ import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
 import { NavIcon, useNavHint } from "@/components/shell/nav-hints";
 import { SHOPPING_ITEM } from "@/components/shell/nav-items";
 import { CheckButton, CheckCircle } from "@/components/ui/check-circle";
-import { Input, Label } from "@/components/ui/input";
+import { FIELD_BUTTON, FIELD_WITH_BUTTON, Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { DragHandle, SortableList } from "@/components/ui/sortable";
 import { PHONE_ADD_ROW, PHONE_SCROLL_AREA } from "@/components/ui/phone-add-row";
@@ -168,7 +168,7 @@ export function ShoppingList({
     <>
       <div className={cn(onPage && PHONE_ADD_ROW, onPage && "max-md:flex max-md:flex-col-reverse")}>
         <form
-          className={cn("flex items-center gap-2", FIELD_FOCUS.emerald)}
+          className={cn("relative", FIELD_FOCUS.emerald)}
           onSubmit={(e) => {
             e.preventDefault();
             addItem(draft);
@@ -186,6 +186,7 @@ export function ShoppingList({
             enterKeyHint="done"
             autoComplete="off"
             maxLength={120}
+            className={FIELD_WITH_BUTTON}
           />
           <Button
             type="submit"
@@ -195,10 +196,7 @@ export function ShoppingList({
             disabled={!draft.trim()}
             // Keep the focus (and the phone's keyboard) in the field: adding needs one tap, and the next item can follow.
             onMouseDown={(e) => e.preventDefault()}
-            className={cn(
-              "ui-action size-12 shrink-0 shadow-[0_8px_24px_-12px_rgb(16_185_129)]",
-              addButtonTone("emerald", !!draft.trim()),
-            )}
+            className={cn("ui-action", FIELD_BUTTON, addButtonTone("emerald", !!draft.trim()))}
           >
             <Plus className="!size-5" />
           </Button>

@@ -3,6 +3,14 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * A field's own button (add, search): inside its right end, a little in from the edge so the
+ * field's frame stays whole; at the bottom, so it stays put while a text area grows. The field
+ * makes room with FIELD_WITH_BUTTON. Soft until there is something to send, then solid.
+ */
+export const FIELD_BUTTON = "absolute right-1 bottom-1 size-10 rounded-xl";
+export const FIELD_WITH_BUTTON = "pr-13";
+
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },
   ref,

@@ -13,6 +13,7 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { type LauncherApp, launcher, refreshRecent, useIsLauncher, useLauncherState } from "@/lib/launcher";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
+import { FIELD_BUTTON } from "@/components/ui/input";
 
 function AppTile({
   app,
@@ -290,7 +291,7 @@ export function AppsView() {
                 searchWeb();
               }}
               // A quiet frame while typing: searching belongs to no section. One field, the
-              // browser button its right end – as on Home.
+              // browser button inside its right end – as on Home.
               className={cn("relative flex items-center", FIELD_FOCUS.quiet)}
             >
               <label className="relative flex min-w-0 flex-1 items-center">
@@ -302,7 +303,7 @@ export function AppsView() {
                   aria-label="Search apps or the web"
                   enterKeyHint="search"
                   autoComplete="off"
-                  className="field h-12 w-full rounded-2xl pr-24 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
+                  className="field h-12 w-full rounded-2xl pr-22 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
                 />
                 {query && (
                   <button
@@ -310,7 +311,7 @@ export function AppsView() {
                     aria-label="Clear"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setQuery("")}
-                    className="absolute right-13 grid size-9 place-items-center rounded-xl text-faint"
+                    className="absolute right-12 grid size-9 place-items-center rounded-xl text-faint"
                   >
                     <X className="size-4" />
                   </button>
@@ -320,7 +321,11 @@ export function AppsView() {
                 type="submit"
                 aria-label="Search the web"
                 onMouseDown={(e) => e.preventDefault()}
-                className="ui-action absolute inset-y-0 right-0 grid w-12 place-items-center rounded-2xl bg-fg text-bg"
+                className={cn(
+                  "ui-action grid place-items-center transition-colors",
+                  FIELD_BUTTON,
+                  query.trim() ? "bg-fg text-bg" : "bg-fg/10 text-fg",
+                )}
               >
                 <Globe className="size-5" />
               </button>
