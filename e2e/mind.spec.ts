@@ -32,7 +32,8 @@ test("mind: a reminder as a card – highlighted and italic words, today's on a 
   await expect(card).toContainText("— A good book");
 
   // On top: today's, on a stack – swiped aside (or the arrows), the next one comes up.
-  const deckTitle = page.getByText(/^For today · \w+day, \d+ \w+$/);
+  // Each card has its number (the newest the highest): today's says which one it is.
+  const deckTitle = page.getByText(/^For today · No\. \d+ · \w{3} \d+ \w{3}$/);
   await expect(deckTitle).toBeVisible();
   const top = page.locator("[data-swipe] .z-10").first();
   const box = (await top.boundingBox())!;

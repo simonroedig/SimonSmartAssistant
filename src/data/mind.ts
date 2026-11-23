@@ -20,7 +20,7 @@ export function useMind() {
   });
 }
 
-/** Adds one or several (a pasted list) at once. */
+/** Adds one or several at once (cards get the next numbers). */
 export function useAddMind() {
   return useOptimisticMutation<MindInput[]>({
     table: "mind_items",
@@ -32,12 +32,20 @@ export function useAddMind() {
     },
     update: (data, inputs) => {
       const now = Date.now();
-      // The first of a pasted list stays on top, like the list reads.
+      const old = (data ?? []) as MindItem[];
+      // Cards get the next numbers (the database counts the same way).
+      let number = Math.max(0, ...old.map((m) => m.number ?? 0));
       const rows: MindItem[] = inputs.map((input, i) => {
         const at = new Date(now - i).toISOString();
-        return { ...toMindRow(input), user_id: "", created_at: at, updated_at: at };
+        return {
+          ...toMindRow(input),
+          number: input.kind === "card" ? ++number : null,
+          user_id: "",
+          created_at: at,
+          updated_at: at,
+        };
       });
-      return [...rows, ...((data ?? []) as MindItem[])];
+      return [...rows, ...old];
     },
   });
 }

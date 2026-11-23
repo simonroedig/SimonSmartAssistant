@@ -17,7 +17,7 @@ import { useScrollReset } from "@/hooks/use-scroll-reset";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useToday } from "@/hooks/use-today";
-import { type DayKey, formatDayMonth, formatDayMonthShort, formatWeekday, fromDayKey } from "@/lib/date";
+import { type DayKey, formatDayMonthShort, formatWeekdayShort, fromDayKey } from "@/lib/date";
 import { dayShuffle, type MindKind } from "@/lib/mind";
 import { isEntryEmpty, NOTE_TEMPLATES, readEntries, type TemplateEntry, templateContent } from "@/lib/note-templates";
 import { positionAtStart } from "@/lib/ordering";
@@ -47,7 +47,11 @@ function tabFrom(value: string | undefined): MindTab {
 export function MindView({ initialTab }: { initialTab?: string }) {
   const mind = useMind();
   const all = useMemo(() => mind.data ?? [], [mind.data]);
-  const cards = useMemo(() => all.filter((m) => m.kind === "card"), [all]);
+  // Newest first: the highest number on top.
+  const cards = useMemo(
+    () => all.filter((m) => m.kind === "card").sort((a, b) => (b.number ?? 0) - (a.number ?? 0)),
+    [all],
+  );
   const videos = useMemo(() => all.filter((m) => m.kind === "video"), [all]);
   const [tab, setTab] = useState<MindTab>(tabFrom(initialTab));
   const [sheet, setSheet] = useState<ItemSheetState>(null);
@@ -250,7 +254,9 @@ function Deck({ cards, today, onOpen }: { cards: MindItem[]; today: DayKey; onOp
     <section className="mx-auto w-full max-w-2xl">
       <div className={cn(sectionTitle, "min-h-9 justify-between")}>
         <span className={cn("truncate", isToday && MIND_TONE.text)}>
-          {isToday ? `For today · ${formatWeekday(day)}, ${formatDayMonth(day)}` : `${index + 1} of ${order.length}`}
+          {isToday
+            ? `For today${card.number ? ` · No. ${card.number}` : ""} · ${formatWeekdayShort(day)} ${formatDayMonthShort(day)}`
+            : `${index + 1} of ${order.length}`}
         </span>
         {order.length > 1 && (
           <div className="-my-2 -mr-1.5 flex shrink-0 items-center tracking-normal normal-case">
@@ -328,8 +334,9 @@ function DeckCard({
 }) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-260, 260], [-8, 8]);
-  // A drag isn't a tap: no editing when the finger lets go.
-  const draggedAt = useRef(0);
+  // A drag isn't a tap: no editing when the finger (or mouse) lets go. Marked as soon as
+  // it starts – the click comes before the drag's end is reported.
+  const dragged = useRef(false);
   return (
     <motion.div
       ref={ref}
@@ -343,8 +350,9 @@ function DeckCard({
       drag={canSwipe ? "x" : false}
       dragSnapToOrigin
       dragElastic={0.9}
+      onPointerDown={() => (dragged.current = false)}
+      onDragStart={() => (dragged.current = true)}
       onDragEnd={(_, info) => {
-        draggedAt.current = Date.now();
         const swing = info.offset.x + info.velocity.x * 0.2;
         if (Math.abs(swing) > 110) onSwipe(swing < 0 ? 1 : -1);
       }}
@@ -353,7 +361,7 @@ function DeckCard({
         card={card}
         large
         today={today}
-        onOpen={() => Date.now() - draggedAt.current > 300 && onOpen()}
+        onOpen={() => !dragged.current && onOpen()}
         className="cursor-grab active:cursor-grabbing"
       />
     </motion.div>

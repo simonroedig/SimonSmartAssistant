@@ -591,6 +591,34 @@ describe("database security", () => {
     expect(error).toBeNull();
     expect(card!.user_id).toBe(alice.userId);
 
+    // Cards are numbered per person, one after the other; videos aren't.
+    const { data: more } = await alice.client
+      .from("mind_items")
+      .insert(
+        [
+          { kind: "card", body: "Next" },
+          { kind: "video", url: "https://youtu.be/abcDEF12345" },
+          { kind: "card", body: "And next" },
+        ],
+        { defaultToNull: false },
+      )
+      .select();
+    expect(more!.map((m) => m.number)).toEqual([card!.number! + 1, null, card!.number! + 2]);
+    const { data: bobs } = await bob.client.from("mind_items").insert({ kind: "card", body: "Mine" }).select().single();
+    const { count: bobCards } = await bob.client
+      .from("mind_items")
+      .select("*", { count: "exact", head: true })
+      .eq("kind", "card");
+    expect(bobs!.number).toBeLessThanOrEqual(bobCards!);
+    await alice.client
+      .from("mind_items")
+      .delete()
+      .in(
+        "id",
+        more!.map((m) => m.id),
+      );
+    await bob.client.from("mind_items").delete().eq("id", bobs!.id);
+
     const { data: seenByBob } = await bob.client.from("mind_items").select("*").eq("id", card!.id);
     expect(seenByBob).toEqual([]);
     const { data: changedByBob } = await bob.client

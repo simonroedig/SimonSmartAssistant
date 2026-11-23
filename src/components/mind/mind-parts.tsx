@@ -44,7 +44,7 @@ export function ReminderCard({
   onOpen,
   className,
 }: {
-  card: Pick<MindItem, "title" | "body" | "source">;
+  card: Pick<MindItem, "title" | "body" | "source"> & { number?: number | null };
   large?: boolean;
   today?: boolean;
   clamp?: boolean;
@@ -65,7 +65,7 @@ export function ReminderCard({
             )
           : "bg-[linear-gradient(150deg,color-mix(in_oklab,var(--color-teal-400)_13%,transparent),transparent_55%)]",
         large
-          ? "rounded-(--radius-card) px-6 pt-6 pb-6 text-center md:px-10 md:pt-8 md:pb-7"
+          ? "rounded-(--radius-card) px-6 pt-8 pb-6 text-center md:px-10 md:pt-9 md:pb-7"
           : "rounded-2xl px-3.5 pt-3 pb-3",
         onOpen && "transition-[filter,scale] hover:brightness-[1.04] active:scale-[0.99]",
         className,
@@ -75,6 +75,7 @@ export function ReminderCard({
         <span
           className={cn(
             "block font-semibold tracking-tight text-balance",
+            card.number != null && !large && "pr-5",
             large ? "text-[1.5rem] leading-tight md:text-[1.8rem]" : "text-[0.95rem] leading-snug",
           )}
         >
@@ -85,6 +86,7 @@ export function ReminderCard({
         className={cn(
           "block whitespace-pre-line [overflow-wrap:anywhere]",
           card.title && (large ? "mt-2.5" : "mt-1"),
+          !card.title && card.number != null && !large && "pr-5",
           large
             ? "text-[1.1rem] leading-relaxed text-fg/90 md:text-[1.25rem]"
             : "text-[0.85rem] leading-snug text-fg/80",
@@ -101,6 +103,17 @@ export function ReminderCard({
           )}
         >
           — {card.source}
+        </span>
+      )}
+      {card.number != null && (
+        // Its number, quietly in the corner ("today it's No. 7") – last, so the card is named by its text.
+        <span
+          className={cn(
+            "absolute font-semibold text-faint tabular-nums",
+            large ? "top-3.5 right-4.5 text-xs md:top-4 md:right-5" : "top-2.5 right-3 text-[0.68rem]",
+          )}
+        >
+          {large ? `No. ${card.number}` : card.number}
         </span>
       )}
     </Tag>
