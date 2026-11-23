@@ -1,8 +1,8 @@
 /**
  * The menu's icons, changed by what's in the section instead of badges on top:
  * the backlog's box becomes a star when something is starred and its tick becomes
- * the number of open items; the shopping basket loses its handles and holds the
- * number; Settings' two knobs fill in amber when a backup is due.
+ * the number of open items; the shopping basket holds the number in place of its
+ * weave; Settings' two knobs fill in amber when a backup is due.
  * Drawn like Lucide's (24 grid, round strokes), so they sit among the others.
  */
 
@@ -79,21 +79,17 @@ export function BacklogIcon({ star, count, ...props }: IconProps & { star?: bool
 export function ShoppingIcon({ count, ...props }: IconProps & { count?: number }) {
   return (
     <Svg {...props}>
+      <path d="M2 11h20" />
+      <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
+      <path d="m19 11-4-7" />
+      <path d="m5 11 4-7" />
       {count !== undefined ? (
-        // Open at the top – no handles – and deeper, with the number in it.
-        <>
-          <path d="M2 8h20" />
-          <path d="m3.5 8 2 10.4a2 2 0 0 0 2 1.6h9a2 2 0 0 0 2-1.6l2-10.4" />
-          <Count x={12} y={13.9} value={count} size={9.5} />
-        </>
+        // The handles stay; the number takes the place of the weave, centred in the basket.
+        <Count x={12} y={16.1} value={count} size={8.6} />
       ) : (
         <>
-          <path d="M2 11h20" />
-          <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
           <path d="m15 11-1 9" />
-          <path d="m19 11-4-7" />
           <path d="M4.5 15.5h15" />
-          <path d="m5 11 4-7" />
           <path d="m9 11 1 9" />
         </>
       )}

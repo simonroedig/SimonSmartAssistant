@@ -54,7 +54,7 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { afterSheetClosed } from "@/lib/history";
 import { plannedLabel } from "@/lib/plan-todo";
 import { formatEndMinutes, formatMinutes } from "@/lib/time";
-import { addButtonTone, FIELD_FOCUS, STAR_ON, STARRED_ROW, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
+import { addButtonTone, FIELD_FOCUS, STAR_ON, STARRED_ROW, STARRED_SHEET, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 const DUE_TONES = {
@@ -398,7 +398,12 @@ function TodoEditor({
   onToggle: () => void;
 }) {
   return (
-    <Sheet open={!!todo} onOpenChange={(o) => !o && onClose()} title="Backlog item">
+    <Sheet
+      open={!!todo}
+      onOpenChange={(o) => !o && onClose()}
+      title="Backlog item"
+      className={todo && !todo.done ? STARRED_SHEET : undefined}
+    >
       {todo && today && (
         <TodoForm
           key={todo.id}
@@ -537,6 +542,7 @@ function TodoForm({
         onClick={() => setStarred((s) => !s)}
         className="flex items-center justify-between rounded-2xl bg-surface-sunken px-4 py-3"
         aria-pressed={starred}
+        data-star
       >
         <span className="font-medium">Important</span>
         <Star className={cn("size-5", starred ? STAR_ON : "text-faint")} />

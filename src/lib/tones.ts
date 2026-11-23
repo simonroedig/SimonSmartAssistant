@@ -114,6 +114,15 @@ export const STAR_ON = "fill-current text-yellow-500 dark:text-yellow-300";
 /** …and its row: framed and tinted in the same yellow, so it stands out. */
 export const STARRED_ROW =
   "border-yellow-500/60 bg-yellow-400/[0.09] dark:border-yellow-300/45 dark:bg-yellow-300/[0.06]";
+/**
+ * …and its sheet, opened: the same yellow frame while "Important" is on (follows the
+ * switch inside, marked `data-star`).
+ */
+export const STARRED_SHEET =
+  "has-[[data-star][aria-pressed=true]]:border-yellow-500/60 dark:has-[[data-star][aria-pressed=true]]:border-yellow-300/45";
+
+/** A pinned note: framed in the notes' orange – on its card and in its sheet. */
+export const PINNED_FRAME = "border-orange-400/90 dark:border-orange-300/75";
 
 /**
  * A section's add button: solid in the section's colour once there is something

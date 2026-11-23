@@ -41,7 +41,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSwipe } from "@/hooks/use-swipe";
 import { PALETTE } from "@/lib/palette";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
-import { FIELD_FOCUS, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
+import { FIELD_FOCUS, PINNED_FRAME, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { lockVault, useVaultOpen } from "@/lib/vault";
 import { formatDayMonthShort } from "@/lib/date";
@@ -106,7 +106,10 @@ function NoteCard({
         "group relative rounded-2xl paper transition-colors",
         // Pinned: framed in the notes' orange, so it stands out – pin only what matters.
         note.pinned
-          ? "border-orange-400/90 bg-orange-500/[0.07] hover:border-orange-500 dark:border-orange-300/75 dark:bg-orange-400/[0.08] dark:hover:border-orange-300"
+          ? cn(
+              PINNED_FRAME,
+              "bg-orange-500/[0.07] hover:border-orange-500 dark:bg-orange-400/[0.08] dark:hover:border-orange-300",
+            )
           : "hover:border-line-strong",
         className,
       )}
@@ -1230,7 +1233,7 @@ function NoteEditorSheet({
       open={open}
       onOpenChange={(o) => !o && close()}
       title={note ? "Note" : placement.vault ? "New note in the vault" : "New note"}
-      className={FIELD_FOCUS.orange}
+      className={cn(FIELD_FOCUS.orange, pinned && PINNED_FRAME)}
       size="half"
       footer={
         <>
