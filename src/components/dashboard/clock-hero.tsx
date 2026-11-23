@@ -19,7 +19,7 @@ export function ClockHero({ className, wide = false }: { className?: string; wid
   return (
     <section
       className={cn(
-        "@container relative flex min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-line bg-surface/35 backdrop-blur-md",
+        "@container relative flex min-w-0 flex-col overflow-hidden rounded-(--radius-card) border border-line bg-surface/35 shadow-(--shadow-card) backdrop-blur-md",
         className,
       )}
     >
