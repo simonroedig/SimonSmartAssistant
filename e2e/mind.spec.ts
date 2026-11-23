@@ -31,6 +31,12 @@ test("mind: a reminder as a card – highlighted and italic words, today's on a 
   await expect(card.locator("em")).toHaveText("Keep going.");
   await expect(card).toContainText("— A good book");
 
+  // A second one, so there is a stack to flip through.
+  await page.getByRole("button", { name: "New reminder" }).click();
+  await page.keyboard.type(`Breathe out ${stamp}.`);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: new RegExp(`^Breathe out ${stamp}`) }).last()).toBeVisible();
+
   // On top: today's, on a stack – swiped aside (or the arrows), the next one comes up.
   // Each card has its number (the newest the highest): today's says which one it is.
   const deckTitle = page.getByText(/^For today · No\. \d+ · \w{3} \d+ \w{3}$/);
@@ -43,8 +49,10 @@ test("mind: a reminder as a card – highlighted and italic words, today's on a 
   await page.mouse.up();
   await expect(page.getByText(/^2 of \d+$/)).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Previous reminder" }).click();
+  await expect(deckTitle).toBeVisible();
   await page.getByRole("button", { name: "Next reminder" }).click();
-  await expect(page.getByText(/^3 of \d+$/)).toBeVisible();
+  await expect(page.getByText(/^2 of \d+$/)).toBeVisible();
   await page.getByRole("button", { name: "Today's" }).click();
   await expect(deckTitle).toBeVisible();
 
