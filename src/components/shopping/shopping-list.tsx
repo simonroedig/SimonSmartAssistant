@@ -7,6 +7,8 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
+import { NavIcon, useNavHint } from "@/components/shell/nav-hints";
+import { SHOPPING_ITEM } from "@/components/shell/nav-items";
 import { CheckButton, CheckCircle } from "@/components/ui/check-circle";
 import { Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
@@ -100,6 +102,8 @@ export function ShoppingList({
   limit?: number;
   className?: string;
 }) {
+  // The same icon as in the menu – with its count.
+  const hint = useNavHint("/shopping");
   const items = useShoppingItems();
   const history = useShoppingHistory();
   const add = useAddShoppingItem();
@@ -332,7 +336,13 @@ export function ShoppingList({
   if (variant === "card") {
     return (
       <Card className={cn("overflow-hidden", className)}>
-        <CardHeader icon={<ShoppingIcon />} title="Shopping" count={open.length} tone="emerald" href="/shopping" />
+        <CardHeader
+          icon={<NavIcon item={SHOPPING_ITEM} hint={hint} />}
+          title="Shopping"
+          count={open.length}
+          tone="emerald"
+          href="/shopping"
+        />
         <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>{body}</div>
       </Card>
     );

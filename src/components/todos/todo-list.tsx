@@ -17,6 +17,8 @@ import { useLayoutEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardMoreLink } from "@/components/ui/card";
+import { NavIcon, useNavHint } from "@/components/shell/nav-hints";
+import { BACKLOG_ITEM } from "@/components/shell/nav-items";
 import { CheckButton, CheckCircle } from "@/components/ui/check-circle";
 import { AutoTextarea, Label } from "@/components/ui/input";
 import { MonthGrid } from "@/components/ui/month-grid";
@@ -171,6 +173,8 @@ export function TodoList({
   limit?: number;
   className?: string;
 }) {
+  // The same icon as in the menu – with its count (and the backlog's star).
+  const hint = useNavHint("/todos");
   const todos = useTodos();
   const linked = useLinkedBlocks();
   const setBlocksDone = useSetTodoBlocksDone();
@@ -372,7 +376,13 @@ export function TodoList({
   if (variant === "card") {
     return (
       <Card className={cn("overflow-hidden", className)}>
-        <CardHeader icon={<ListTodo />} title="Backlog" count={open.length} tone="yellow" href="/todos" />
+        <CardHeader
+          icon={<NavIcon item={BACKLOG_ITEM} hint={hint} />}
+          title="Backlog"
+          count={open.length}
+          tone="yellow"
+          href="/todos"
+        />
         <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>{body}</div>
       </Card>
     );
