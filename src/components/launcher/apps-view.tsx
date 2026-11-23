@@ -289,8 +289,9 @@ export function AppsView() {
                 e.preventDefault();
                 searchWeb();
               }}
-              // A quiet frame while typing: searching belongs to no section.
-              className={cn("flex items-center gap-2", FIELD_FOCUS.quiet)}
+              // A quiet frame while typing: searching belongs to no section. One field, the
+              // browser button its right end – as on Home.
+              className={cn("relative flex items-center", FIELD_FOCUS.quiet)}
             >
               <label className="relative flex min-w-0 flex-1 items-center">
                 <Search className="pointer-events-none absolute left-4 size-[18px] text-faint" />
@@ -301,7 +302,7 @@ export function AppsView() {
                   aria-label="Search apps or the web"
                   enterKeyHint="search"
                   autoComplete="off"
-                  className="field h-12 w-full rounded-2xl pr-10 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
+                  className="field h-12 w-full rounded-2xl pr-24 pl-11 text-[0.95rem] outline-none well placeholder:text-faint focus:border-(--field-focus)"
                 />
                 {query && (
                   <button
@@ -309,7 +310,7 @@ export function AppsView() {
                     aria-label="Clear"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setQuery("")}
-                    className="absolute right-1.5 grid size-9 place-items-center rounded-xl text-faint"
+                    className="absolute right-13 grid size-9 place-items-center rounded-xl text-faint"
                   >
                     <X className="size-4" />
                   </button>
@@ -319,9 +320,7 @@ export function AppsView() {
                 type="submit"
                 aria-label="Search the web"
                 onMouseDown={(e) => e.preventDefault()}
-                className={cn(
-                  "ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)",
-                )}
+                className="ui-action absolute inset-y-0 right-0 grid w-12 place-items-center rounded-2xl bg-fg text-bg"
               >
                 <Globe className="size-5" />
               </button>

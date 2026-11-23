@@ -30,7 +30,9 @@ export function WebSearchBar({ className }: { className?: string }) {
   return (
     <form
       role="search"
-      className={cn("flex items-center gap-2", FIELD_FOCUS.quiet, className)}
+      // One field: the browser button is its right end (same height and corners), so it
+      // reads as part of it – and it's where the thumb sends what was typed.
+      className={cn("relative flex items-center", FIELD_FOCUS.quiet, className)}
       onSubmit={(e) => {
         e.preventDefault();
         void launcher.search(query);
@@ -47,14 +49,14 @@ export function WebSearchBar({ className }: { className?: string }) {
           aria-label="Search the web"
           enterKeyHint="search"
           autoComplete="off"
-          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-4 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
+          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-15 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
         />
       </label>
       <button
         type="submit"
         aria-label="Search in your browser"
         onMouseDown={(e) => e.preventDefault()}
-        className="ui-action grid size-12 shrink-0 place-items-center rounded-2xl bg-fg text-bg shadow-(--shadow-card)"
+        className="ui-action absolute inset-y-0 right-0 grid w-12 place-items-center rounded-2xl bg-fg text-bg"
       >
         <Globe className="size-5" />
       </button>
