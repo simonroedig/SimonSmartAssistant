@@ -119,7 +119,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
         className="flex [touch-action:pan-y] flex-col overflow-x-clip max-md:min-h-0 max-md:flex-1 md:min-h-dvh"
         {...swipe}
       >
-        <PageHeader title="Media" subtitle="Series, films, TV and streams – where to watch and how far you are" />
+        <PageHeader title="Media" subtitle="Series, films and TV – and how far you are" />
         <PageBody className={cn(FIELD_FOCUS.fuchsia, FILL_BODY, "md:pb-28")}>
           <WatchingBanner media={all} />
           <div

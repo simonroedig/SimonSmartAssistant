@@ -61,8 +61,9 @@ function ItemRow({
           <span className="min-w-0 flex-1">
             <span
               className={cn(
-                "block truncate text-[0.98rem] transition-colors",
-                item.checked && "text-faint line-through decoration-faint/60",
+                // A longer item wraps and shows whole (like the backlog); a ticked one keeps to a line.
+                "block text-[0.98rem] leading-snug break-words transition-colors",
+                item.checked && "line-clamp-1 text-faint line-through decoration-faint/60",
               )}
             >
               {item.name}

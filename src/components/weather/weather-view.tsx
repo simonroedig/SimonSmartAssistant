@@ -71,8 +71,14 @@ export function WeatherView({ initialDay }: { initialDay?: string }) {
   const [selected, setSelected] = useState<string | undefined>(isDayKey(initialDay) ? initialDay : undefined);
 
   const changeLocation = (
-    <Button variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
-      <MapPin /> {settings.location ? settings.location.name : "Set location"}
+    // The place itself is the subtitle – the button is just the pin (or asks for one).
+    <Button
+      variant="secondary"
+      size="sm"
+      aria-label={settings.location ? `Change location (${settings.location.name})` : undefined}
+      onClick={() => setPickerOpen(true)}
+    >
+      <MapPin /> {!settings.location && "Set location"}
     </Button>
   );
 
