@@ -169,7 +169,7 @@ export function ShoppingList({
     <>
       <div className={cn(onPage && PHONE_ADD_ROW, onPage && "max-md:flex max-md:flex-col-reverse")}>
         <form
-          className={cn("relative", FIELD_FOCUS.emerald)}
+          className={cn("relative", FIELD_FOCUS.quiet)}
           onSubmit={(e) => {
             e.preventDefault();
             addItem(draft);

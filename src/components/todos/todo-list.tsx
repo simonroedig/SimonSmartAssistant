@@ -232,7 +232,7 @@ export function TodoList({
     <>
       <div className={cn(onPage && PHONE_ADD_ROW)}>
         <form
-          className={cn("relative", FIELD_FOCUS.yellow)}
+          className={cn("relative", FIELD_FOCUS.quiet)}
           onSubmit={(e) => {
             e.preventDefault();
             addDraft();

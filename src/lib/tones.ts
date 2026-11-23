@@ -110,7 +110,7 @@ export const FIELD_FOCUS = {
   orange:
     "[--field-focus:color-mix(in_oklab,var(--color-orange-500)_80%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-orange-300)_80%,transparent)]",
   fuchsia: "[--field-focus:color-mix(in_oklab,var(--color-fuchsia-500)_55%,transparent)]",
-  /** Searches: a quiet grey. */
+  /** Searches and the quick add fields (shopping, backlog): a quiet grey, like the web search. */
   quiet: "[--field-focus:var(--text-faint)]",
 } as const;
 

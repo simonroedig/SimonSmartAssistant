@@ -70,7 +70,7 @@ export function NotesTabs({
 }) {
   if (query !== null) {
     return (
-      <div role="search" className={cn("flex items-center gap-2 py-1", FIELD_FOCUS.orange, className)}>
+      <div role="search" className={cn("flex items-center gap-2 py-1", FIELD_FOCUS.quiet, className)}>
         <label className="relative flex min-w-0 flex-1 items-center">
           <Search className="pointer-events-none absolute left-3.5 size-4 text-faint" />
           <input
