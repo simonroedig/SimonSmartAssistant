@@ -67,7 +67,7 @@ export function DailyList({
                 onClick={() => onSelect(d.day)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-2xl px-2 transition-colors",
+                  "flex w-full items-center gap-2 rounded-2xl pr-2 pl-3.5 transition-colors",
                   dense ? "h-12" : "h-14",
                   isSelected ? SELECTED_DAY : isToday ? TODAY_RING : "hover:bg-surface-hover/60",
                 )}
@@ -77,7 +77,7 @@ export function DailyList({
             ) : (
               <div
                 className={cn(
-                  "flex items-center gap-2 rounded-2xl px-2",
+                  "flex items-center gap-2 rounded-2xl pr-2 pl-3.5",
                   dense ? "h-12" : "h-14",
                   isToday && TODAY_RING,
                 )}

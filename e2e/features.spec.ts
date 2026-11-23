@@ -590,7 +590,7 @@ test("phone home: lists show their first items with a link to the rest; the plan
   await expect(page).toHaveURL(/\/shopping$/);
 });
 
-test("planner header: the weekday leads, the relative day follows in brackets on one line", async ({ page }) => {
+test("planner header: the weekday leads, the relative day follows; the buttons end with the date", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -598,12 +598,16 @@ test("planner header: the weekday leads, the relative day follows in brackets on
   const month = tomorrow.toLocaleDateString("en-GB", { month: "long" });
   await page.goto(`/planner?day=${dayKeyOf(tomorrow)}`);
   const heading = page.getByRole("heading", { level: 1 });
-  await expect(heading).toHaveText(`${weekday} (Tomorrow)`);
-  // The date below it, with the short month on a phone.
+  // On a phone the Today button takes the room, so "Tomorrow" leads the date line instead.
+  await expect(heading).toHaveText(weekday, { useInnerText: true });
   const date = heading.locator("xpath=following-sibling::p[1]");
-  await expect(date).toHaveText(new RegExp(`^${tomorrow.getDate()} ${month.slice(0, 3)}\\w* · Week \\d+$`), {
+  await expect(date).toHaveText(new RegExp(`^Tomorrow · ${tomorrow.getDate()} ${month.slice(0, 3)}$`), {
     useInnerText: true,
   });
+  // Like every page header: the buttons end where the date ends.
+  const buttons = page.getByRole("button", { name: "More actions" });
+  const bottom = (box: { y: number; height: number } | null) => Math.round(box!.y + box!.height);
+  expect(Math.abs(bottom(await buttons.boundingBox()) - bottom(await date.boundingBox()))).toBeLessThanOrEqual(1);
   expect(await date.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   // One line for the title and one for the date – nothing wraps.
   expect((await heading.boundingBox())!.height).toBeLessThan(48);
@@ -614,6 +618,7 @@ test("planner header: the weekday leads, the relative day follows in brackets on
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(heading).toContainText("(Today)");
+  await expect(date).toContainText("· Week ");
 });
 
 test("planner: a day opens with just its last hour of sleep at the top", async ({ page }) => {

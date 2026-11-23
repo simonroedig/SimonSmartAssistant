@@ -221,7 +221,7 @@ export function PlannerView({
   const menu = (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <Button variant="secondary" size="icon" aria-label="More actions" className="max-md:size-10">
+        <Button variant="secondary" size="icon" aria-label="More actions" className="max-md:size-9 max-md:rounded-xl">
           <MoreHorizontal />
         </Button>
       </DropdownMenu.Trigger>
@@ -251,37 +251,40 @@ export function PlannerView({
 
   return (
     <div className="flex h-[calc(100dvh-var(--page-bottom))] flex-col md:h-dvh" {...swipe}>
-      {/* On phones the title gets its own line, so a long weekday never wraps. */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 pt-[calc(var(--safe-top)+1.25rem)] pb-4 md:items-end md:pt-(--gutter) md:pr-(--gutter) md:pl-0">
-        <h1 className="ui-title col-span-2 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:col-span-1 md:text-[2rem]">
+      {/* Like every page header: title and date on the left, the buttons beside them, ending with the date. */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3 px-4 pt-[calc(var(--safe-top)+1.25rem)] pb-4 md:pt-(--gutter) md:pr-(--gutter) md:pl-0">
+        <h1 className="ui-title col-start-1 row-start-1 truncate text-[1.75rem] leading-tight font-semibold tracking-tight md:text-[2rem]">
           {title}
-          {relative && " "}
           {relative && (
-            <span
-              className={cn(
-                "text-[0.62em] font-medium tracking-normal",
-                relative === "Today" ? TODAY_COLOR : "text-muted",
-              )}
-            >
-              ({relative})
+            // Phones with the Today button: no room beside it, so "Tomorrow" moves into the date line.
+            <span className={cn(relative !== "Today" && "max-md:hidden")}>
+              {" "}
+              <span
+                className={cn(
+                  "text-[0.62em] font-medium tracking-normal",
+                  relative === "Today" ? TODAY_COLOR : "text-muted",
+                )}
+              >
+                ({relative})
+              </span>
             </span>
           )}
         </h1>
-        {/* Like every page's subtitle: same size, right under the title (not centred on the buttons). */}
-        <p className="self-start truncate text-[0.95rem] text-muted md:col-start-1 md:row-start-2">
+        <p className="col-start-1 row-start-2 mt-0.5 truncate text-[0.95rem] text-muted">
+          {relative && relative !== "Today" && <span className="md:hidden">{relative} · </span>}
           {/* Phones: the short month, so it fits next to the buttons. */}
           <span className="md:hidden">{formatDayMonthShort(date)}</span>
           <span className="max-md:hidden">{formatDayMonth(date)}</span>
           {year}
-          {week}
+          <span className={cn(relative && relative !== "Today" && "max-md:hidden")}>{week}</span>
         </p>
-        <div className="flex items-center gap-1.5 md:col-start-2 md:row-span-2 md:row-start-1 md:gap-2">
+        <div className="col-start-2 row-span-2 row-start-1 flex items-center gap-1.5 md:gap-2">
           {!isToday && today && (
             <Button
               variant="secondary"
               size="sm"
               // As tall as the buttons next to it.
-              className={cn("h-10 px-3 md:h-11 md:rounded-2xl md:px-4", TODAY_COLOR)}
+              className={cn("px-3 md:h-11 md:rounded-2xl md:px-4", TODAY_COLOR)}
               onClick={() => go(today)}
             >
               Today
@@ -291,7 +294,7 @@ export function PlannerView({
             variant="secondary"
             size="icon"
             aria-label="Plan from backlog"
-            className="max-md:size-10 lg:hidden"
+            className="max-md:size-9 max-md:rounded-xl lg:hidden"
             onClick={() => setBacklogOpen(true)}
           >
             <ListTodo className="text-yellow-600 dark:text-yellow-300" />
@@ -300,7 +303,7 @@ export function PlannerView({
             variant="secondary"
             size="icon"
             aria-label="Pick a day"
-            className="max-md:size-10 lg:hidden"
+            className="max-md:size-9 max-md:rounded-xl lg:hidden"
             onClick={() => setCalendarOpen(true)}
           >
             <CalendarDays />
