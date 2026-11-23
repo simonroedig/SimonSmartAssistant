@@ -1,14 +1,13 @@
 "use client";
 
-import { Star } from "lucide-react";
 import { createContext, useContext, useMemo } from "react";
 import { useSettings } from "@/data/settings";
 import { useShoppingItems } from "@/data/shopping";
 import { useTodos } from "@/data/todos";
 import { useNow } from "@/hooks/use-now";
-import { backupDue, hintCount, hintCountLabel } from "@/lib/icon-hints";
-import { TONE_STYLES, type Tone } from "@/lib/tones";
-import { cn } from "@/lib/utils";
+import { backupDue, hintCount } from "@/lib/icon-hints";
+import { BacklogIcon, SettingsIcon, ShoppingIcon } from "./hint-icons";
+import type { NavItem } from "./nav-items";
 
 export type NavHint = {
   /** Open items, once there are enough to mention. */
@@ -56,40 +55,23 @@ export function navHintText(hint: NavHint | undefined): string | undefined {
   return parts.length ? parts.join(", ") : undefined;
 }
 
-/** The marks around an icon (its wrapper is `relative`): calm, in the section's colour. */
-export function NavHintMarks({ hint, tone }: { hint: NavHint | undefined; tone: Tone }) {
-  if (!hint) return null;
-  const style = TONE_STYLES[tone];
-  return (
-    <>
-      {hint.star && (
-        <Star
-          aria-hidden="true"
-          data-hint="star"
-          strokeWidth={2.4}
-          className="absolute -top-1 -right-1.5 size-2.5 fill-yellow-400 text-yellow-500 dark:fill-yellow-300 dark:text-yellow-300"
-        />
-      )}
-      {hint.count !== undefined && (
-        // Drawn by CSS: the number is no part of the link's name (that stays "Backlog").
-        <span
-          aria-hidden="true"
-          data-hint="count"
-          data-count={hintCountLabel(hint.count)}
-          className={cn(
-            "absolute -right-3.5 -bottom-1 min-w-4 rounded-full px-1 text-center text-[0.6rem] leading-4 font-bold tabular-nums after:content-[attr(data-count)]",
-            style.soft,
-            style.text,
-          )}
-        />
-      )}
-      {hint.due && (
-        <span
-          aria-hidden="true"
-          data-hint="due"
-          className="absolute -top-0.5 -right-1 size-2 rounded-full bg-amber-500"
-        />
-      )}
-    </>
-  );
+/** A section's icon in the menu – drawn differently when there is something to hint at. */
+export function NavIcon({
+  item,
+  hint,
+  className,
+  strokeWidth,
+}: {
+  item: NavItem;
+  hint: NavHint | undefined;
+  className?: string;
+  strokeWidth?: number;
+}) {
+  const props = { className, strokeWidth };
+  if (item.href === "/todos" && (hint?.star || hint?.count !== undefined))
+    return <BacklogIcon {...props} star={hint.star} count={hint.count} />;
+  if (item.href === "/shopping" && hint?.count !== undefined) return <ShoppingIcon {...props} count={hint.count} />;
+  if (item.href === "/settings" && hint?.due) return <SettingsIcon {...props} due />;
+  const Icon = item.icon;
+  return <Icon {...props} />;
 }

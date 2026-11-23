@@ -5,6 +5,24 @@ import { mockWeather } from "./helpers";
 /** The vault PIN of dev@example.com (the integration tests leave it set to this). */
 const PIN = "2468";
 
+/** Opens Settings once its values are there (a choice made before would not be saved). */
+async function openSettings(page: Page) {
+  const loaded = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/user_settings") && r.request().method() === "GET",
+  );
+  await page.goto("/settings");
+  await loaded;
+}
+
+/** Picks a count and waits until it is written. */
+async function pickCount(page: Page, group: string, option: string) {
+  const saved = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/user_settings") && r.request().method() !== "GET",
+  );
+  await page.getByRole("radiogroup", { name: group }).getByRole("radio", { name: option }).click();
+  await saved;
+}
+
 const menu = (page: Page) => page.getByRole("navigation", { name: "Main" }).filter({ visible: true }).first();
 
 test("backup: everything in one file, the vault included – and when it was made", async ({ page }) => {
@@ -49,8 +67,8 @@ test("menu icons: a quiet count from the chosen number on, and a star for starre
   await page.setViewportSize({ width: 390, height: 844 });
 
   // Shopping: from 3 items on.
-  await page.goto("/settings");
-  await page.getByRole("radiogroup", { name: "Shopping count" }).getByRole("radio", { name: "3+" }).click();
+  await openSettings(page);
+  await pickCount(page, "Shopping count", "3+");
   await page.goto("/shopping");
   for (let i = 0; i < 3; i++) {
     const name = `Count ${i} ${Date.now() % 100000}`;
@@ -61,8 +79,8 @@ test("menu icons: a quiet count from the chosen number on, and a star for starre
   const shopping = menu(page).getByRole("link", { name: "Shopping" });
   await expect(shopping.locator('[data-hint="count"]')).toHaveAttribute("data-count", /^\d+\+?$/);
   // Off: no number.
-  await page.goto("/settings");
-  await page.getByRole("radiogroup", { name: "Shopping count" }).getByRole("radio", { name: "Off" }).click();
+  await openSettings(page);
+  await pickCount(page, "Shopping count", "Off");
   await expect(menu(page).getByRole("link", { name: "Shopping" }).locator('[data-hint="count"]')).toHaveCount(0);
 
   // Backlog: a starred item shows as a small star on the icon.
@@ -76,6 +94,6 @@ test("menu icons: a quiet count from the chosen number on, and a star for starre
   await expect(menu(page).getByRole("link", { name: "Backlog" }).locator('[data-hint="star"]')).toBeVisible();
   await item.getByRole("button", { name: "Remove star" }).click();
 
-  await page.goto("/settings");
-  await page.getByRole("radiogroup", { name: "Shopping count" }).getByRole("radio", { name: "5+" }).click();
+  await openSettings(page);
+  await pickCount(page, "Shopping count", "5+");
 });

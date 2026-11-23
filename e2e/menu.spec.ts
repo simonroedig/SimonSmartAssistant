@@ -24,7 +24,20 @@ async function openSettings(page: Page) {
 
 /** The side bar's links ("first"), or those of the tab bar's first page ("last"). */
 const labels = async (page: Page, nav: "first" | "last") => {
-  const all = await page.getByRole("navigation", { name: "Main" })[nav]().getByRole("link").allInnerTexts();
+  // The names under the icons (an icon may show a number in its drawing).
+  const all = await page
+    .getByRole("navigation", { name: "Main" })
+    [nav]()
+    .getByRole("link")
+    .evaluateAll((links) =>
+      links.map((link) =>
+        [...link.childNodes]
+          .filter((node) => node.nodeName.toLowerCase() !== "svg")
+          .map((node) => node.textContent)
+          .join("")
+          .trim(),
+      ),
+    );
   return nav === "last" ? all.slice(0, 5) : all;
 };
 

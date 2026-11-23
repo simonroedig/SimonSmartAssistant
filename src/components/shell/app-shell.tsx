@@ -20,7 +20,7 @@ import { TONE_STYLES } from "@/lib/tones";
 import { isTextField } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
-import { NavHintMarks, NavHintsProvider, navHintText, useNavHint } from "./nav-hints";
+import { NavHintsProvider, navHintText, NavIcon, useNavHint } from "./nav-hints";
 import { HOME_ITEM, isActive, MEDIA_ITEM, navItem, SETTINGS_ITEM, WEATHER_ITEM, type NavItem } from "./nav-items";
 
 const NavigationContext = createContext<NavigationPreferences>(DEFAULT_NAVIGATION);
@@ -170,7 +170,6 @@ function RailLink({
   target = item.href,
   anchor = false,
 }: LinkProps & { pill?: boolean; target?: string; anchor?: boolean }) {
-  const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
   const hint = useNavHint(item.href);
   return (
@@ -187,17 +186,16 @@ function RailLink({
       )}
     >
       {pill && active && <span className={cn("ui-pill absolute inset-0 rounded-(--pill-radius)", tone.soft)} />}
-      <span className="relative">
-        <Icon
-          className={cn(
-            "relative size-6 shrink-0 transition-opacity [@media(max-height:560px)]:size-5",
-            tone.text,
-            !active && "opacity-75 group-hover:opacity-100",
-          )}
-          strokeWidth={active ? 2.2 : 1.9}
-        />
-        <NavHintMarks hint={hint} tone={item.tone} />
-      </span>
+      <NavIcon
+        item={item}
+        hint={hint}
+        className={cn(
+          "relative size-6 shrink-0 transition-opacity [@media(max-height:560px)]:size-5",
+          tone.text,
+          !active && "opacity-75 group-hover:opacity-100",
+        )}
+        strokeWidth={active ? 2.2 : 1.9}
+      />
       {/* A very low window: icons only (the name stays for screen readers and as a tooltip). */}
       <span className="relative [@media(max-height:460px)]:sr-only">
         {item.label}
@@ -271,7 +269,6 @@ function TabLink({
   target = item.href,
   anchor = false,
 }: LinkProps & { target?: string; anchor?: boolean }) {
-  const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
   const hint = useNavHint(item.href);
   return (
@@ -285,13 +282,12 @@ function TabLink({
         active ? "text-fg" : "text-muted",
       )}
     >
-      <span className="relative">
-        <Icon
-          className={cn("relative size-[1.4rem]", tone.text, !active && "opacity-80")}
-          strokeWidth={active ? 2.2 : 1.9}
-        />
-        <NavHintMarks hint={hint} tone={item.tone} />
-      </span>
+      <NavIcon
+        item={item}
+        hint={hint}
+        className={cn("relative size-[1.4rem]", tone.text, !active && "opacity-80")}
+        strokeWidth={active ? 2.2 : 1.9}
+      />
       <span className="relative">{item.label}</span>
       {anchor && <AnchorLine />}
     </AppLink>
