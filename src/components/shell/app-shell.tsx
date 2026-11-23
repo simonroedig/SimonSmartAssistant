@@ -20,6 +20,7 @@ import { TONE_STYLES } from "@/lib/tones";
 import { isTextField } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
+import { NavHintMarks, NavHintsProvider, navHintText, useNavHint } from "./nav-hints";
 import { HOME_ITEM, isActive, MEDIA_ITEM, navItem, SETTINGS_ITEM, WEATHER_ITEM, type NavItem } from "./nav-items";
 
 const NavigationContext = createContext<NavigationPreferences>(DEFAULT_NAVIGATION);
@@ -171,10 +172,12 @@ function RailLink({
 }: LinkProps & { pill?: boolean; target?: string; anchor?: boolean }) {
   const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
+  const hint = useNavHint(item.href);
   return (
     <AppLink
       href={target}
       aria-current={active ? "page" : undefined}
+      aria-description={navHintText(hint)}
       onClick={() => onNavigate(target)}
       title={item.label}
       style={{ height: RAIL_ITEM }}
@@ -184,14 +187,17 @@ function RailLink({
       )}
     >
       {pill && active && <span className={cn("ui-pill absolute inset-0 rounded-(--pill-radius)", tone.soft)} />}
-      <Icon
-        className={cn(
-          "relative size-6 shrink-0 transition-opacity [@media(max-height:560px)]:size-5",
-          tone.text,
-          !active && "opacity-75 group-hover:opacity-100",
-        )}
-        strokeWidth={active ? 2.2 : 1.9}
-      />
+      <span className="relative">
+        <Icon
+          className={cn(
+            "relative size-6 shrink-0 transition-opacity [@media(max-height:560px)]:size-5",
+            tone.text,
+            !active && "opacity-75 group-hover:opacity-100",
+          )}
+          strokeWidth={active ? 2.2 : 1.9}
+        />
+        <NavHintMarks hint={hint} tone={item.tone} />
+      </span>
       {/* A very low window: icons only (the name stays for screen readers and as a tooltip). */}
       <span className="relative [@media(max-height:460px)]:sr-only">
         {item.label}
@@ -267,20 +273,25 @@ function TabLink({
 }: LinkProps & { target?: string; anchor?: boolean }) {
   const Icon = item.icon;
   const tone = TONE_STYLES[item.tone];
+  const hint = useNavHint(item.href);
   return (
     <AppLink
       href={target}
       aria-current={active ? "page" : undefined}
+      aria-description={navHintText(hint)}
       onClick={() => onNavigate(target)}
       className={cn(
         "relative flex flex-1 flex-col items-center gap-0.5 rounded-(--pill-radius) py-2 text-[0.65rem] font-medium transition-colors active:scale-95",
         active ? "text-fg" : "text-muted",
       )}
     >
-      <Icon
-        className={cn("relative size-[1.4rem]", tone.text, !active && "opacity-80")}
-        strokeWidth={active ? 2.2 : 1.9}
-      />
+      <span className="relative">
+        <Icon
+          className={cn("relative size-[1.4rem]", tone.text, !active && "opacity-80")}
+          strokeWidth={active ? 2.2 : 1.9}
+        />
+        <NavHintMarks hint={hint} tone={item.tone} />
+      </span>
       <span className="relative">{item.label}</span>
       {anchor && <AnchorLine />}
     </AppLink>
@@ -425,38 +436,40 @@ export function AppShell({
 
   return (
     <NavigationContext.Provider value={navigation}>
-      <div className="relative min-h-dvh" data-phone-nav={navigation.phoneStyle} data-rail-nav={navigation.railStyle}>
-        {/* Android app: the page shows through the status bar; a soft veil keeps its icons legible. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-(--safe-top) bg-linear-to-b from-(--bg)/70 to-transparent"
-        />
-        {pendingHref && (
-          <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden" role="progressbar" aria-label="Loading">
-            <div className="nav-progress h-full w-1/3 rounded-full bg-accent" />
-          </div>
-        )}
-        <LauncherSync />
-        <NavRail
-          order={railItems(navigation)}
-          attached={navigation.railStyle === "attached"}
-          isCurrent={isCurrent}
-          onNavigate={onNavigate}
-          home={home}
-        />
-        <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-(--rail-space)">
-          {children}
-          {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
-          <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
-        </main>
-        <BottomNav
-          order={phoneTabs(navigation)}
-          attached={navigation.phoneStyle === "attached"}
-          isCurrent={isCurrent}
-          onNavigate={onNavigate}
-          home={home}
-        />
-      </div>
+      <NavHintsProvider>
+        <div className="relative min-h-dvh" data-phone-nav={navigation.phoneStyle} data-rail-nav={navigation.railStyle}>
+          {/* Android app: the page shows through the status bar; a soft veil keeps its icons legible. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 top-0 z-[45] h-(--safe-top) bg-linear-to-b from-(--bg)/70 to-transparent"
+          />
+          {pendingHref && (
+            <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden" role="progressbar" aria-label="Loading">
+              <div className="nav-progress h-full w-1/3 rounded-full bg-accent" />
+            </div>
+          )}
+          <LauncherSync />
+          <NavRail
+            order={railItems(navigation)}
+            attached={navigation.railStyle === "attached"}
+            isCurrent={isCurrent}
+            onNavigate={onNavigate}
+            home={home}
+          />
+          <main className="min-h-dvh pb-(--page-bottom) md:pb-0 md:pl-(--rail-space)">
+            {children}
+            {/* Room for the on-screen keyboard so focused fields can scroll above it. */}
+            <div aria-hidden="true" style={{ height: "var(--osk-height, 0px)" }} />
+          </main>
+          <BottomNav
+            order={phoneTabs(navigation)}
+            attached={navigation.phoneStyle === "attached"}
+            isCurrent={isCurrent}
+            onNavigate={onNavigate}
+            home={home}
+          />
+        </div>
+      </NavHintsProvider>
     </NavigationContext.Provider>
   );
 }

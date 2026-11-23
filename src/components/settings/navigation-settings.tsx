@@ -14,6 +14,7 @@ import {
   type SectionId,
   swap,
 } from "@/lib/navigation";
+import { HINT_FROM_OPTIONS, type IconHintPreferences } from "@/lib/icon-hints";
 import { TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { Row, Section } from "./section";
@@ -154,6 +155,35 @@ export function NavigationSection() {
           />
         </div>
       </Row>
+      <IconCountRow label="Backlog count" kind="backlog" />
+      <IconCountRow label="Shopping count" kind="shopping" />
     </Section>
+  );
+}
+
+/**
+ * From how many open items the menu's icon shows their number (small, in the section's
+ * colour – no red badge). A starred backlog item always shows as a little star.
+ */
+function IconCountRow({ label, kind }: { label: string; kind: keyof IconHintPreferences }) {
+  const { settings } = useSettings();
+  const row = useSettingsRow();
+  const update = useUpdateSettings();
+  const hint =
+    kind === "backlog"
+      ? "Shown on the menu's icon from this many open items – a starred one adds a small star"
+      : "Shown on the menu's icon from this many items to buy";
+  return (
+    <Row label={label} hint={hint}>
+      <Segmented
+        size="sm"
+        label={label}
+        value={settings.hints[kind]}
+        onChange={(value: number) => {
+          if (row.data) update.mutate({ current: row.data, hints: { ...settings.hints, [kind]: value } });
+        }}
+        options={HINT_FROM_OPTIONS.map((v) => ({ value: v, label: v === 0 ? "Off" : `${v}+` }))}
+      />
+    </Row>
   );
 }

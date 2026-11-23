@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { Json } from "@/lib/database.types";
+import { DEFAULT_ICON_HINTS, type IconHintPreferences, parseIconHints } from "@/lib/icon-hints";
 import { DEFAULT_HOLIDAY_REGION, type HolidayRegion, isHolidayRegion } from "@/lib/holidays";
 import { DEFAULT_NAVIGATION, type NavigationPreferences, parseNavigation } from "@/lib/navigation";
 import { DEFAULT_SLEEP_SCHEDULE, normalizeSleepSchedule, type SleepSchedule } from "@/lib/sleep";
@@ -32,7 +33,17 @@ export type Settings = {
   planner: PlannerPreferences;
   calendar: CalendarPreferences;
   navigation: NavigationPreferences;
+  hints: IconHintPreferences;
+  backup: BackupPreferences;
 };
+
+/** When the last backup was downloaded (any device). */
+export type BackupPreferences = { lastAt: string | null };
+
+function parseBackup(value: unknown): BackupPreferences {
+  const v = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return { lastAt: typeof v.lastAt === "string" ? v.lastAt : null };
+}
 
 export const DEFAULT_PLANNER_PREFERENCES: PlannerPreferences = { snap: 15, defaultDuration: 60 };
 export const DEFAULT_CALENDAR_PREFERENCES: CalendarPreferences = {
@@ -93,6 +104,8 @@ export function parseSettings(row: UserSettingsRow | null): Settings {
       planner: DEFAULT_PLANNER_PREFERENCES,
       calendar: DEFAULT_CALENDAR_PREFERENCES,
       navigation: DEFAULT_NAVIGATION,
+      hints: DEFAULT_ICON_HINTS,
+      backup: { lastAt: null },
     };
   }
   return {
@@ -101,6 +114,8 @@ export function parseSettings(row: UserSettingsRow | null): Settings {
     planner: parsePlanner(row.preferences),
     calendar: parseCalendar(row.preferences),
     navigation: parseNavigation(preferencesOf(row.preferences).navigation),
+    hints: parseIconHints(preferencesOf(row.preferences).hints),
+    backup: parseBackup(preferencesOf(row.preferences).backup),
   };
 }
 
@@ -143,6 +158,8 @@ type SettingsPatch = {
   planner?: PlannerPreferences;
   calendar?: CalendarPreferences;
   navigation?: NavigationPreferences;
+  hints?: IconHintPreferences;
+  backup?: BackupPreferences;
 };
 
 /** The JSON preferences with the patched parts replaced. */
@@ -156,6 +173,8 @@ function patchPreferences(current: Json, patch: SettingsPatch): NonNullable<Json
     ...(patch.planner ? { planner: patch.planner } : {}),
     ...(patch.calendar ? { calendar: patch.calendar } : {}),
     ...(patch.navigation ? { navigation: patch.navigation } : {}),
+    ...(patch.hints ? { hints: patch.hints } : {}),
+    ...(patch.backup ? { backup: patch.backup } : {}),
   } as unknown as NonNullable<Json>;
 }
 
@@ -168,7 +187,7 @@ export function useUpdateSettings() {
       const update: Partial<UserSettingsRow> = {};
       if (patch.location !== undefined) update.location = patch.location as unknown as Json;
       if (patch.sleepSchedule) update.sleep_schedule = patch.sleepSchedule as unknown as NonNullable<Json>;
-      if (patch.planner || patch.calendar || patch.navigation)
+      if (patch.planner || patch.calendar || patch.navigation || patch.hints || patch.backup)
         update.preferences = patchPreferences(current.preferences, patch);
       const { error } = await createClient().from("user_settings").update(update).eq("user_id", current.user_id);
       if (error) throw error;
@@ -179,7 +198,7 @@ export function useUpdateSettings() {
         ...row,
         ...(patch.location !== undefined ? { location: patch.location as unknown as Json } : {}),
         ...(patch.sleepSchedule ? { sleep_schedule: patch.sleepSchedule as unknown as NonNullable<Json> } : {}),
-        ...(patch.planner || patch.calendar || patch.navigation
+        ...(patch.planner || patch.calendar || patch.navigation || patch.hints || patch.backup
           ? { preferences: patchPreferences(row.preferences, patch) }
           : {}),
       };
