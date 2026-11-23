@@ -286,7 +286,8 @@ export function TodoList({
         ) : (
           <SortableList
             items={shown}
-            className="flex flex-col"
+            // A little air between rows: two starred ones under each other keep both frames.
+            className="flex flex-col gap-1"
             onMove={(id, index) => update.mutate({ id, patch: { position: positionForMove(open, id, index) } })}
           >
             {(todo) => (
