@@ -124,11 +124,11 @@ export function NotesTabs({
       <button
         type="button"
         aria-label={vault ? "Search the vault" : "Search notes"}
-        title="Search"
         onClick={onSearch}
-        className={cn(CHIP, CHIP_IDLE, "ml-auto w-9 justify-center px-0")}
+        className={cn(CHIP, CHIP_IDLE, "ml-auto")}
       >
         <Search className="size-4" />
+        Search
       </button>
     </div>
   );

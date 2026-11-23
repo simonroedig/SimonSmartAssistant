@@ -51,8 +51,8 @@ export function NotesTrashButton({ className }: { className?: string }) {
         className={className}
         onClick={() => setOpen(true)}
       >
+        {/* Just the bin and how much is in it – the label is for screen readers. */}
         <Trash2 />
-        Trash
         {notes.length > 0 && (
           <span className="rounded-full bg-surface-hover px-1.5 text-xs font-semibold text-muted tabular">
             {notes.length}
