@@ -216,14 +216,14 @@ function Reminders({ cards, onOpen }: { cards: MindItem[]; onOpen: (card: MindIt
       {today && <Deck cards={cards} today={today} onOpen={onOpen} />}
       <section>
         <h2 className={sectionTitle}>All reminders · {cards.length}</h2>
-        {/* Small and side by side (columns of different heights): the list grows fast. */}
-        <div className="columns-2 gap-2.5 md:columns-3 xl:columns-4">
+        {/* Small and side by side, in rows like the notes (left to right, the newest first). */}
+        <ul className="grid grid-cols-2 items-start gap-2.5 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-4">
           {cards.map((card) => (
-            <div key={card.id} className="mb-2.5 break-inside-avoid">
+            <li key={card.id}>
               <ReminderCard card={card} clamp onOpen={() => onOpen(card)} />
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
     </div>
   );
