@@ -101,7 +101,16 @@ function NoteCard({
 }) {
   const compact = lines === 1;
   return (
-    <div className={cn("group relative rounded-2xl paper transition-colors hover:border-line-strong", className)}>
+    <div
+      className={cn(
+        "group relative rounded-2xl paper transition-colors",
+        // Pinned: framed in the notes' orange, so it stands out – pin only what matters.
+        note.pinned
+          ? "border-orange-400/90 bg-orange-500/[0.07] hover:border-orange-500 dark:border-orange-300/75 dark:bg-orange-400/[0.08] dark:hover:border-orange-300"
+          : "hover:border-line-strong",
+        className,
+      )}
+    >
       <button
         type="button"
         onClick={onOpen}

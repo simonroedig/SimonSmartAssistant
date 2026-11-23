@@ -109,8 +109,11 @@ export const FIELD_FOCUS = {
   quiet: "[--field-focus:var(--text-faint)]",
 } as const;
 
-/** A starred backlog item: the same grey star as unstarred, filled in. */
-export const STAR_ON = "fill-current text-muted";
+/** A starred backlog item: the star filled in the backlog's yellow. */
+export const STAR_ON = "fill-current text-yellow-500 dark:text-yellow-300";
+/** …and its row: framed and tinted in the same yellow, so it stands out. */
+export const STARRED_ROW =
+  "border-yellow-500/60 bg-yellow-400/[0.09] dark:border-yellow-300/45 dark:bg-yellow-300/[0.06]";
 
 /**
  * A section's add button: solid in the section's colour once there is something

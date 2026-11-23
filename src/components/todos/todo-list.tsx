@@ -54,7 +54,7 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { afterSheetClosed } from "@/lib/history";
 import { plannedLabel } from "@/lib/plan-todo";
 import { formatEndMinutes, formatMinutes } from "@/lib/time";
-import { addButtonTone, FIELD_FOCUS, STAR_ON, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
+import { addButtonTone, FIELD_FOCUS, STAR_ON, STARRED_ROW, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn, vibrate } from "@/lib/utils";
 
 const DUE_TONES = {
@@ -88,7 +88,12 @@ function TodoRow({
   const rest = more.join("\n").trim();
   return (
     <SwipeRow onDelete={onDelete}>
-      <div className="flex items-start gap-1 rounded-2xl transition-colors hover:bg-surface-hover">
+      <div
+        className={cn(
+          "flex items-start gap-1 rounded-2xl border border-transparent transition-colors",
+          todo.starred && !todo.done ? STARRED_ROW : "hover:bg-surface-hover",
+        )}
+      >
         {!todo.done && <DragHandle label={`Move "${headline}"`} className="-mr-2 h-12 self-start" />}
         <button
           type="button"
