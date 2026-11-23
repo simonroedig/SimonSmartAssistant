@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Ban, Download, Globe, House, Lock, Search, ShieldBan, Smartphone } from "lucide-react";
+import { AlertTriangle, Ban, Download, Globe, House, Lock, Search, ShieldBan, Smartphone, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Row, Section } from "@/components/settings/section";
 import { Button } from "@/components/ui/button";
@@ -50,8 +50,20 @@ export function WebSearchBar({ className }: { className?: string }) {
           aria-label="Search the web"
           enterKeyHint="search"
           autoComplete="off"
-          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-13 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
+          className="field h-12 w-full rounded-2xl border border-line bg-surface-strong pr-22 pl-11 text-[0.95rem] shadow-(--shadow-card) outline-none placeholder:text-faint focus:border-(--field-focus)"
         />
+        {/* Like the search in Apps: an X empties the field. */}
+        {query && (
+          <button
+            type="button"
+            aria-label="Clear"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setQuery("")}
+            className="absolute right-12 grid size-9 place-items-center rounded-xl text-faint"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </label>
       <button
         type="submit"

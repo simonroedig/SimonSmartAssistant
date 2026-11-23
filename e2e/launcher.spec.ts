@@ -139,8 +139,13 @@ test("launcher: Home switches to the apps; open, search and come back with the h
   await tabs.getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/$/);
 
-  // Web search right from the home screen.
-  await page.getByLabel("Search the web").fill("Feiertage Bayern");
+  // Web search right from the home screen; the X empties the field, like in Apps.
+  const web = page.getByLabel("Search the web");
+  await web.fill("Something else");
+  await page.getByRole("button", { name: "Clear" }).click();
+  await expect(web).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Clear" })).toHaveCount(0);
+  await web.fill("Feiertage Bayern");
   await page.getByRole("button", { name: "Search in your browser" }).click();
   await expect
     .poll(async () => (await sent(page)).filter((m) => m.type === "search").map((m) => m.query))
