@@ -3,10 +3,12 @@
 import { Check, RotateCcw, Trash2, Wind } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { Fab } from "@/components/ui/fab";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { AutoTextarea } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { newId, type Note, nowIso } from "@/data/core";
@@ -112,6 +114,7 @@ export function TemplateView({
   const entries = readEntries(note.entries);
   const { open, done } = sortEntries(entries.filter((e) => !isEntryEmpty(e)));
   const [sheet, setSheet] = useState<EntrySheetState>(null);
+  const hydrated = useHydrated();
 
   const put = (entry: TemplateEntry) =>
     onChange(
@@ -208,11 +211,16 @@ export function TemplateView({
         </section>
       )}
 
-      <Fab
-        aria-label={`New ${template.entry}`}
-        onClick={() => setSheet({ entry: newEntry(), isNew: true })}
-        className={fabClassName}
-      />
+      {/* On the page itself: inside content that slides in, a fixed + would slide (and jump) with it. */}
+      {hydrated &&
+        createPortal(
+          <Fab
+            aria-label={`New ${template.entry}`}
+            onClick={() => setSheet({ entry: newEntry(), isNew: true })}
+            className={fabClassName}
+          />,
+          document.body,
+        )}
 
       <EntrySheet
         template={template}

@@ -86,61 +86,54 @@ export function videoInfo(link: string | null): VideoInfo {
   return { platform: "web", label: name.charAt(0).toUpperCase() + name.slice(1), thumbnail: null };
 }
 
-export type TextPart = { text: string; mark: boolean };
+export type TextPart = { text: string; mark: boolean; italic: boolean };
 
-/** A card's text with its ==marked== parts (shown like a highlighter on paper). */
-export function markedParts(text: string): TextPart[] {
+/**
+ * A card's text with its styles: ==highlighted== (like a highlighter on paper) and
+ * *italic* – the stars at a word's edges, so "sh*t" stays as it is. They mix: ==*both*==.
+ */
+export function styledParts(text: string, mark = false, italic = false): TextPart[] {
   const parts: TextPart[] = [];
-  const re = /==([^=\n](?:[^\n]*?[^=\n])?)==/g;
+  const re = /==([^=\n](?:[^\n]*?[^=\n])?)==|(?<![\p{L}\p{N}*])\*([^\s*](?:[^*\n]*?[^\s*])?)\*(?![\p{L}\p{N}*])/gu;
   let last = 0;
   for (let m = re.exec(text); m; m = re.exec(text)) {
-    if (m.index > last) parts.push({ text: text.slice(last, m.index), mark: false });
-    parts.push({ text: m[1], mark: true });
+    if (m.index > last) parts.push({ text: text.slice(last, m.index), mark, italic });
+    if (m[1] !== undefined) parts.push(...styledParts(m[1], true, italic));
+    else parts.push(...styledParts(m[2], mark, true));
     last = m.index + m[0].length;
   }
-  if (last < text.length) parts.push({ text: text.slice(last), mark: false });
+  if (last < text.length) parts.push({ text: text.slice(last), mark, italic });
   return parts;
 }
 
 /** The plain text, without the marks (for labels and search). */
 export function plainCardText(text: string): string {
-  return markedParts(text)
+  return styledParts(text)
     .map((p) => p.text)
     .join("");
+}
+
+/** A hash of a text (stable across devices). */
+function hashOf(text: string): number {
+  let hash = 0;
+  for (const ch of text) hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) >>> 0;
+  return hash;
 }
 
 /** One card a day – the same all day on every device, a different one tomorrow. */
 export function cardOfTheDay<T extends { id: string }>(cards: T[], day: string): T | null {
   if (cards.length === 0) return null;
   const sorted = [...cards].sort((a, b) => a.id.localeCompare(b.id));
-  let hash = 0;
-  for (const ch of day) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return sorted[hash % sorted.length];
+  return sorted[hashOf(day) % sorted.length];
 }
 
-/**
- * Several at once, pasted: blocks between lines of `---`. In a block, a first line
- * `# …` is the title, a last line `— …` (or `-- …`) says who it's from, and a link
- * on its own makes it a video; everything else is the card's text.
- */
-export function parseMindList(text: string): Omit<MindInput, "id">[] {
-  return text
-    .replace(/\r\n?/g, "\n")
-    .split(/^\s*-{3,}\s*$/m)
-    .flatMap((block): Omit<MindInput, "id">[] => {
-      const lines = block.split("\n");
-      while (lines.length && !lines[0].trim()) lines.shift();
-      while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
-      if (!lines.length) return [];
-      let title = "";
-      let source = "";
-      if (/^#\s+/.test(lines[0])) title = lines.shift()!.replace(/^#\s+/, "").trim();
-      const last = lines[lines.length - 1];
-      if (last && /^\s*(—|–|--)\s*\S/.test(last)) source = lines.pop()!.replace(/^\s*(—|–|--)\s*/, "").trim();
-      const body = lines.join("\n").trim();
-      const link = webLink(body);
-      if (link) return [{ kind: "video", title, body: "", source, url: link }];
-      if (!body) return [];
-      return [{ kind: "card", title, body, source, url: null }];
-    });
+/** To flip through: the one for today first, then the others shuffled – a new order each day. */
+export function dayShuffle<T extends { id: string }>(cards: T[], day: string): T[] {
+  const first = cardOfTheDay(cards, day);
+  const rest = cards
+    .filter((c) => c !== first)
+    .map((c) => ({ c, key: hashOf(`${day}:${c.id}`) }))
+    .sort((a, b) => a.key - b.key || a.c.id.localeCompare(b.c.id))
+    .map(({ c }) => c);
+  return first ? [first, ...rest] : rest;
 }

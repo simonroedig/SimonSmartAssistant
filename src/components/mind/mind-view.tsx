@@ -1,12 +1,11 @@
 "use client";
 
-import { ClipboardPaste, Quote, Shuffle, SquarePlay, Wind } from "lucide-react";
+import { ChevronLeft, ChevronRight, Quote, SquarePlay, Undo2, Wind } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
+import { type Ref, useMemo, useRef, useState } from "react";
 import { TemplateView } from "@/components/notes/template-note";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { Fab } from "@/components/ui/fab";
@@ -17,13 +16,13 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useToday } from "@/hooks/use-today";
-import { formatDayMonthShort } from "@/lib/date";
-import { cardOfTheDay, type MindKind } from "@/lib/mind";
+import { type DayKey, formatDayMonth, formatDayMonthShort, formatWeekday, fromDayKey } from "@/lib/date";
+import { dayShuffle, type MindKind } from "@/lib/mind";
 import { isEntryEmpty, NOTE_TEMPLATES, readEntries, type TemplateEntry, templateContent } from "@/lib/note-templates";
 import { positionAtStart } from "@/lib/ordering";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-import { ItemSheet, type ItemSheetState, PasteSheet } from "./mind-sheets";
+import { ItemSheet, type ItemSheetState } from "./mind-sheets";
 import { MIND_TONE, ReminderCard, VideoTile } from "./mind-parts";
 
 type MindTab = "cards" | "videos" | "letgo";
@@ -51,8 +50,6 @@ export function MindView({ initialTab }: { initialTab?: string }) {
   const videos = useMemo(() => all.filter((m) => m.kind === "video"), [all]);
   const [tab, setTab] = useState<MindTab>(tabFrom(initialTab));
   const [sheet, setSheet] = useState<ItemSheetState>(null);
-  const [pasting, setPasting] = useState(false);
-  const [pasteDraft, setPasteDraft] = useState("");
 
   // Let go is a note from a template behind the scenes (it used to live in Notes).
   const notes = useNotes();
@@ -90,7 +87,7 @@ export function MindView({ initialTab }: { initialTab?: string }) {
       const next = TABS[TABS.indexOf(tab) + direction];
       if (next) changeTab(next);
     },
-    phone && sheet === null && !pasting,
+    phone && sheet === null,
   );
   const row = useScrollToPressed(tab);
   const count: Record<MindTab, number> = { cards: cards.length, videos: videos.length, letgo: letGoOpen };
@@ -103,23 +100,7 @@ export function MindView({ initialTab }: { initialTab?: string }) {
         className="flex [touch-action:pan-y] flex-col overflow-x-clip max-md:min-h-0 max-md:flex-1 md:min-h-dvh"
         {...swipe}
       >
-        <PageHeader
-          title="Mind"
-          subtitle="What helps – reminders, videos, letting go"
-          actions={
-            tab !== "letgo" && (
-              <Button
-                variant="secondary"
-                size="sm"
-                aria-label="Add several at once"
-                title="Add several at once"
-                onClick={() => setPasting(true)}
-              >
-                <ClipboardPaste />
-              </Button>
-            )
-          }
-        />
+        <PageHeader title="Mind" subtitle="What helps – reminders, videos, letting go" />
         <PageBody className={cn(FIELD_FOCUS.teal, FILL_BODY, "md:pb-28")}>
           <div
             ref={row}
@@ -173,9 +154,9 @@ export function MindView({ initialTab }: { initialTab?: string }) {
               ) : mind.isPending ? (
                 <Skeletons />
               ) : tab === "cards" ? (
-                <Reminders cards={cards} onOpen={(c) => open("card", c)} onPaste={() => setPasting(true)} />
+                <Reminders cards={cards} onOpen={(c) => open("card", c)} />
               ) : (
-                <Videos videos={videos} onEdit={(v) => open("video", v)} onPaste={() => setPasting(true)} />
+                <Videos videos={videos} onEdit={(v) => open("video", v)} />
               )}
             </motion.div>
           </div>
@@ -190,13 +171,6 @@ export function MindView({ initialTab }: { initialTab?: string }) {
         />
       )}
       <ItemSheet state={sheet} onClose={() => setSheet(null)} />
-      <PasteSheet
-        open={pasting}
-        draft={pasteDraft}
-        onDraft={setPasteDraft}
-        onClose={() => setPasting(false)}
-        onAdded={(kinds) => kinds.length === 1 && changeTab(kinds[0] === "card" ? "cards" : "videos")}
-      />
     </FillPage>
   );
 }
@@ -214,79 +188,33 @@ function Skeletons() {
   );
 }
 
-function Empty({ icon: Icon, text, onPaste }: { icon: LucideIcon; text: string; onPaste: () => void }) {
+function Empty({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   return (
     <Card className="items-center gap-3 px-6 py-12 text-center">
       <Icon className={cn("size-10", MIND_TONE.text)} />
       <p className="max-w-sm text-sm text-muted">{text}</p>
-      <Button variant="secondary" size="sm" onClick={onPaste}>
-        <ClipboardPaste /> Add several at once
-      </Button>
     </Card>
   );
 }
 
 const sectionTitle = "mb-2 flex items-center gap-2 px-1 text-xs font-semibold tracking-wide text-faint uppercase";
 
-/** The one for today on top (another one on request), then all of them. */
-function Reminders({
-  cards,
-  onOpen,
-  onPaste,
-}: {
-  cards: MindItem[];
-  onOpen: (card: MindItem) => void;
-  onPaste: () => void;
-}) {
+/** The one for today on top of the stack (flip through the others), then all of them, small. */
+function Reminders({ cards, onOpen }: { cards: MindItem[]; onOpen: (card: MindItem) => void }) {
   const today = useToday();
-  const [picked, setPicked] = useState<string | null>(null);
   if (cards.length === 0) {
-    return (
-      <Empty
-        icon={Quote}
-        text="Keep what helps you here – a line you read, a thought that sticks. Add one with +."
-        onPaste={onPaste}
-      />
-    );
+    return <Empty icon={Quote} text="Keep what helps you here – a line you read, a thought that sticks. Add one with +." />;
   }
-  const featured = cards.find((c) => c.id === picked) ?? (today ? cardOfTheDay(cards, today) : null);
-  const another = () => {
-    const others = cards.filter((c) => c.id !== featured?.id);
-    if (others.length) setPicked(others[Math.floor(Math.random() * others.length)].id);
-  };
   return (
-    <div className="flex flex-col gap-6">
-      {featured && (
-        <section>
-          <h2 className={cn(sectionTitle, "justify-between")}>
-            <span className={MIND_TONE.text}>{picked ? "Another one" : "For today"}</span>
-            {cards.length > 1 && (
-              <button
-                type="button"
-                onClick={another}
-                className="-my-2 flex h-9 items-center gap-1.5 rounded-xl px-2.5 tracking-normal normal-case transition-colors hover:bg-surface-hover hover:text-fg"
-              >
-                <Shuffle className="size-3.5" /> Another one
-              </button>
-            )}
-          </h2>
-          <motion.div
-            key={featured.id}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-          >
-            <ReminderCard card={featured} large onOpen={() => onOpen(featured)} />
-          </motion.div>
-        </section>
-      )}
+    <div className="flex flex-col gap-7">
+      {today && <Deck cards={cards} today={today} onOpen={onOpen} />}
       <section>
         <h2 className={sectionTitle}>All reminders · {cards.length}</h2>
-        {/* Columns of different heights, like cards laid out on a table. */}
-        <div className="columns-1 gap-3 sm:columns-2 2xl:columns-3">
+        {/* Small and side by side (columns of different heights): the list grows fast. */}
+        <div className="columns-2 gap-2.5 md:columns-3 xl:columns-4">
           {cards.map((card) => (
-            <div key={card.id} className="mb-3 break-inside-avoid">
-              <ReminderCard card={card} onOpen={() => onOpen(card)} />
+            <div key={card.id} className="mb-2.5 break-inside-avoid">
+              <ReminderCard card={card} clamp onOpen={() => onOpen(card)} />
             </div>
           ))}
         </div>
@@ -295,21 +223,147 @@ function Reminders({
   );
 }
 
-function Videos({
-  videos,
-  onEdit,
-  onPaste,
+const iconButton =
+  "grid size-9 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-hover hover:text-fg";
+
+/**
+ * A stack of cards, today's on top: swipe one aside (or use the arrows) and the next comes
+ * up – left for the next, right for the one before; all of them, in a new order each day.
+ */
+function Deck({ cards, today, onOpen }: { cards: MindItem[]; today: DayKey; onOpen: (card: MindItem) => void }) {
+  const order = useMemo(() => dayShuffle(cards, today), [cards, today]);
+  // The card on top (null: today's); a gone one falls back to today's.
+  const [at, setAt] = useState<string | null>(null);
+  const [fly, setFly] = useState(-1);
+  const index = Math.max(0, order.findIndex((c) => c.id === at));
+  const card = order[index];
+  const isToday = index === 0;
+  const go = (step: 1 | -1) => {
+    setFly(-step);
+    setAt(order[(index + step + order.length) % order.length].id);
+  };
+  const day = fromDayKey(today);
+  return (
+    // Wide screens: a card's width, not a banner.
+    <section className="mx-auto w-full max-w-2xl">
+      <div className={cn(sectionTitle, "min-h-9 justify-between")}>
+        <span className={cn("truncate", isToday && MIND_TONE.text)}>
+          {isToday ? `For today · ${formatWeekday(day)}, ${formatDayMonth(day)}` : `${index + 1} of ${order.length}`}
+        </span>
+        {order.length > 1 && (
+          <div className="-my-2 -mr-1.5 flex shrink-0 items-center tracking-normal normal-case">
+            {!isToday && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFly(1);
+                  setAt(null);
+                }}
+                className="flex h-9 items-center gap-1.5 rounded-xl px-2.5 transition-colors hover:bg-surface-hover hover:text-fg"
+              >
+                <Undo2 className="size-3.5" /> Today&apos;s
+              </button>
+            )}
+            <button type="button" aria-label="Previous reminder" onClick={() => go(-1)} className={iconButton}>
+              <ChevronLeft className="size-4.5" />
+            </button>
+            <button type="button" aria-label="Next reminder" onClick={() => go(1)} className={iconButton}>
+              <ChevronRight className="size-4.5" />
+            </button>
+          </div>
+        )}
+      </div>
+      {/* Its own sideways swipe: the page's (to the next tab) doesn't start here. */}
+      <div data-swipe className={cn("relative", order.length > 1 && "pb-3")}>
+        {order.length > 1 && (
+          <>
+            <div
+              aria-hidden
+              className="absolute inset-x-6 top-4 bottom-0 rounded-(--radius-card) border border-line bg-surface/45 shadow-(--shadow-card)"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-x-3 top-2 bottom-1.5 rounded-(--radius-card) border border-line bg-surface/70"
+            />
+          </>
+        )}
+        <AnimatePresence mode="popLayout" initial={false} custom={fly}>
+          <DeckCard
+            key={card.id}
+            card={card}
+            today={isToday}
+            canSwipe={order.length > 1}
+            onSwipe={go}
+            onOpen={() => onOpen(card)}
+          />
+        </AnimatePresence>
+      </div>
+    </section>
+  );
+}
+
+const deckMotion = {
+  enter: { opacity: 0, scale: 0.95, y: 10 },
+  shown: { opacity: 1, scale: 1, y: 0, x: 0 },
+  gone: (fly: number) => ({ opacity: 0, x: fly * 440, transition: { duration: 0.3, ease: "easeIn" as const } }),
+};
+
+/** The card on top: follows the finger (tilting a little); far or fast enough, it flies off. */
+function DeckCard({
+  ref,
+  card,
+  today,
+  canSwipe,
+  onSwipe,
+  onOpen,
 }: {
-  videos: MindItem[];
-  onEdit: (video: MindItem) => void;
-  onPaste: () => void;
+  ref?: Ref<HTMLDivElement>;
+  card: MindItem;
+  today: boolean;
+  canSwipe: boolean;
+  onSwipe: (step: 1 | -1) => void;
+  onOpen: () => void;
 }) {
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-260, 260], [-8, 8]);
+  // A drag isn't a tap: no editing when the finger lets go.
+  const draggedAt = useRef(0);
+  return (
+    <motion.div
+      ref={ref}
+      className="relative z-10"
+      style={{ x, rotate }}
+      variants={deckMotion}
+      initial="enter"
+      animate="shown"
+      exit="gone"
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      drag={canSwipe ? "x" : false}
+      dragSnapToOrigin
+      dragElastic={0.9}
+      onDragEnd={(_, info) => {
+        draggedAt.current = Date.now();
+        const swing = info.offset.x + info.velocity.x * 0.2;
+        if (Math.abs(swing) > 110) onSwipe(swing < 0 ? 1 : -1);
+      }}
+    >
+      <ReminderCard
+        card={card}
+        large
+        today={today}
+        onOpen={() => Date.now() - draggedAt.current > 300 && onOpen()}
+        className="cursor-grab active:cursor-grabbing"
+      />
+    </motion.div>
+  );
+}
+
+function Videos({ videos, onEdit }: { videos: MindItem[]; onEdit: (video: MindItem) => void }) {
   if (videos.length === 0) {
     return (
       <Empty
         icon={SquarePlay}
         text="Pin the videos that help – a YouTube talk, a TikTok. Add one with +, a shared link is enough."
-        onPaste={onPaste}
       />
     );
   }

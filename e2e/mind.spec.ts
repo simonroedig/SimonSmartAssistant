@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 });
 
-test("mind: a reminder as a card – marked words, the one for today, change and delete it", async ({ page }) => {
+test("mind: a reminder as a card – highlighted and italic words, today's on a stack to flip through, change and delete it", async ({ page }) => {
   await page.goto("/mind");
   const stamp = Date.now() % 100000;
   const tabs = page.getByRole("navigation", { name: "Main" }).last();
@@ -16,7 +16,7 @@ test("mind: a reminder as a card – marked words, the one for today, change and
   await page.getByRole("button", { name: "New reminder" }).click();
   const sheet = page.getByRole("dialog", { name: "New reminder" });
   await expect(sheet.getByLabel("The reminder")).toBeFocused();
-  await page.keyboard.type(`Small steps ==still count ${stamp}==. Keep going.`);
+  await page.keyboard.type(`Small steps ==still count ${stamp}==. *Keep going.*`);
   await sheet.getByLabel("Title (if any)").fill(`Small steps ${stamp}`);
   await sheet.getByLabel("From (if you like)").fill("A good book");
   await expect(sheet.locator("mark")).toHaveText(`still count ${stamp}`);
@@ -28,8 +28,24 @@ test("mind: a reminder as a card – marked words, the one for today, change and
   const card = page.getByRole("button", { name: new RegExp(`^Small steps ${stamp}`) }).last();
   await expect(card).toBeVisible();
   await expect(card.locator("mark")).toHaveText(`still count ${stamp}`);
+  await expect(card.locator("em")).toHaveText("Keep going.");
   await expect(card).toContainText("— A good book");
-  await expect(page.getByText(/^(For today|Another one)$/)).toBeVisible();
+
+  // On top: today's, on a stack – swiped aside (or the arrows), the next one comes up.
+  const deckTitle = page.getByText(/^For today · \w+day, \d+ \w+$/);
+  await expect(deckTitle).toBeVisible();
+  const top = page.locator("[data-swipe] .z-10").first();
+  const box = (await top.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 40);
+  await page.mouse.down();
+  for (const dx of [20, 60, 120, 180, 240]) await page.mouse.move(box.x + box.width / 2 - dx, box.y + 40);
+  await page.mouse.up();
+  await expect(page.getByText(/^2 of \d+$/)).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Next reminder" }).click();
+  await expect(page.getByText(/^3 of \d+$/)).toBeVisible();
+  await page.getByRole("button", { name: "Today's" }).click();
+  await expect(deckTitle).toBeVisible();
 
   // A tap opens it to change; closing saves.
   await card.click();
@@ -47,34 +63,18 @@ test("mind: a reminder as a card – marked words, the one for today, change and
   await expect(page.getByRole("button", { name: new RegExp(`^Tiny steps ${stamp}`) }).last()).toBeVisible();
 });
 
-test("mind: several pasted at once – cards and a video; videos open where they play", async ({ page }) => {
+test("mind: pinned videos – YouTube with its still, a shared TikTok text; they open where they play", async ({
+  page,
+}) => {
   await page.goto("/mind");
   const stamp = Date.now() % 100000;
-  await page.getByRole("button", { name: "Add several at once" }).first().click();
-  const sheet = page.getByRole("dialog", { name: "Add several at once" });
-  await sheet
-    .getByLabel("Reminders and videos to add")
-    .fill(
-      [
-        `# Two ways ${stamp}`,
-        "Plans change… 😔",
-        "Plans change!!! 😄",
-        "— A friend",
-        "---",
-        `Rest is part of the work ${stamp}.`,
-        "---",
-        `# A calm view ${stamp}`,
-        "https://youtu.be/abcDEF12345",
-      ].join("\n"),
-    );
-  await sheet.getByRole("button", { name: "Add 2 reminders and 1 video" }).click();
-  await expect(sheet).toBeHidden();
-  await expect(page.getByRole("button", { name: new RegExp(`^Two ways ${stamp}`) }).last()).toContainText(
-    "— A friend",
-  );
-
   // Videos: a sideways swipe away (or the chip); YouTube shows its still, a tap plays it.
   await page.getByRole("tab", { name: /Videos/ }).click();
+  await page.getByRole("button", { name: "Pin a video" }).click();
+  const add = page.getByRole("dialog", { name: "Pin a video" });
+  await add.getByLabel("Link").fill("https://youtu.be/abcDEF12345");
+  await add.getByLabel("Title").fill(`A calm view ${stamp}`);
+  await page.keyboard.press("Escape");
   const video = page.getByRole("link", { name: new RegExp(`A calm view ${stamp}`) });
   await expect(video).toHaveAttribute("href", "https://youtu.be/abcDEF12345");
   await expect(video).toHaveAttribute("target", "_blank");
@@ -106,9 +106,15 @@ test("mind: several pasted at once – cards and a video; videos open where they
 test("mind: Let go – + for a situation, check it off, the done ones as a list (not in Notes any more)", async ({
   page,
 }) => {
-  await page.goto("/mind?tab=letgo");
+  await page.goto("/mind?tab=videos");
   const stamp = Date.now() % 100000;
-  await expect(page.getByRole("tab", { name: /Let go/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("button", { name: "Pin a video" })).toBeVisible();
+  const plus = (await page.getByRole("button", { name: "Pin a video" }).boundingBox())!;
+  // Its + sits where the others' does – right away, not sliding in with the content.
+  await page.getByRole("tab", { name: /Let go/ }).click();
+  const fab = (await page.getByRole("button", { name: "New situation" }).boundingBox())!;
+  expect(Math.abs(fab.y - plus.y)).toBeLessThan(2);
+  expect(Math.abs(fab.x - plus.x)).toBeLessThan(2);
 
   // + : the questions in a sheet, the first one ready to type into.
   await page.getByRole("button", { name: "New situation" }).click();

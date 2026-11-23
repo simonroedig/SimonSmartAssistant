@@ -2,44 +2,52 @@
 
 import { Pencil, Play } from "lucide-react";
 import type { MindItem } from "@/data/core";
-import { markedParts, videoInfo } from "@/lib/mind";
-import { TONE_STYLES } from "@/lib/tones";
+import { styledParts, videoInfo } from "@/lib/mind";
+import { TODAY_CARD, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 
 export const MIND_TONE = TONE_STYLES.teal;
 
-/** A card's text: ==marked== words like a highlighter on paper. */
-export function MarkedText({ text }: { text: string }) {
+/** A card's text: ==highlighted== like a highlighter on paper, *italic*, or both. */
+export function StyledText({ text }: { text: string }) {
   return (
     <>
-      {markedParts(text).map((part, i) =>
-        part.mark ? (
-          <mark
+      {styledParts(text).map((part, i) => {
+        const Tag = part.mark ? "mark" : part.italic ? "em" : "span";
+        return (
+          <Tag
             key={i}
-            className="rounded-[0.25em] bg-teal-300/45 box-decoration-clone px-[0.15em] text-inherit dark:bg-teal-300/22"
+            className={cn(
+              part.italic && "italic",
+              part.mark &&
+                "rounded-[0.25em] bg-teal-300/45 box-decoration-clone px-[0.15em] text-inherit dark:bg-teal-300/22",
+            )}
           >
             {part.text}
-          </mark>
-        ) : (
-          <span key={i}>{part.text}</span>
-        ),
-      )}
+          </Tag>
+        );
+      })}
     </>
   );
 }
 
 /**
- * A reminder as a card: set like a page of a good book – a serif title, the text, and
- * who said it in small capitals. `large` for the one of the day.
+ * A reminder as a card: a title, the text, and who said it in small capitals. `large`
+ * for flipping through them (the one for today framed); small
+ * ones (the list) can be cut after a few lines (`clamp`).
  */
 export function ReminderCard({
   card,
   large = false,
+  today = false,
+  clamp = false,
   onOpen,
   className,
 }: {
   card: Pick<MindItem, "title" | "body" | "source">;
   large?: boolean;
+  today?: boolean;
+  clamp?: boolean;
   /** Without it, the card is only shown (a preview). */
   onOpen?: () => void;
   className?: string;
@@ -49,10 +57,16 @@ export function ReminderCard({
     <Tag
       {...(onOpen ? { type: "button" as const, onClick: onOpen } : {})}
       className={cn(
-        "relative block w-full overflow-hidden rounded-(--radius-card) border border-line bg-surface/55 text-left shadow-(--shadow-card) backdrop-blur-md",
-        "bg-[linear-gradient(150deg,color-mix(in_oklab,var(--color-teal-400)_13%,transparent),transparent_55%)]",
-        // The one of the day: centred, like a printed card.
-        large ? "px-6 pt-7 pb-6 text-center md:px-10 md:pt-9 md:pb-7" : "px-5 pt-5 pb-4",
+        "relative block w-full overflow-hidden border border-line bg-surface/55 text-left shadow-(--shadow-card) backdrop-blur-md",
+        today
+          ? cn(
+              TODAY_CARD,
+              "bg-[radial-gradient(120%_90%_at_50%_0%,color-mix(in_oklab,var(--color-teal-400)_24%,transparent),transparent_70%)]",
+            )
+          : "bg-[linear-gradient(150deg,color-mix(in_oklab,var(--color-teal-400)_13%,transparent),transparent_55%)]",
+        large
+          ? "rounded-(--radius-card) px-6 pt-6 pb-6 text-center md:px-10 md:pt-8 md:pb-7"
+          : "rounded-2xl px-3.5 pt-3 pb-3",
         onOpen && "transition-[filter,scale] hover:brightness-[1.04] active:scale-[0.99]",
         className,
       )}
@@ -60,8 +74,8 @@ export function ReminderCard({
       {card.title && (
         <span
           className={cn(
-            "relative block font-serif leading-[1.12] font-semibold tracking-tight text-balance",
-            large ? "text-[1.75rem] md:text-[2.1rem]" : "text-[1.3rem]",
+            "block font-semibold tracking-tight text-balance",
+            large ? "text-[1.5rem] leading-tight md:text-[1.8rem]" : "text-[0.95rem] leading-snug",
           )}
         >
           {card.title}
@@ -69,15 +83,23 @@ export function ReminderCard({
       )}
       <span
         className={cn(
-          "relative block font-serif whitespace-pre-line text-fg/90 [overflow-wrap:anywhere]",
-          card.title && (large ? "mt-3" : "mt-2"),
-          large ? "text-[1.2rem] leading-relaxed md:text-[1.3rem]" : "text-[1.02rem] leading-relaxed",
+          "block whitespace-pre-line [overflow-wrap:anywhere]",
+          card.title && (large ? "mt-2.5" : "mt-1"),
+          large
+            ? "text-[1.1rem] leading-relaxed text-fg/90 md:text-[1.25rem]"
+            : "text-[0.85rem] leading-snug text-fg/80",
+          clamp && "line-clamp-6",
         )}
       >
-        <MarkedText text={card.body} />
+        <StyledText text={card.body} />
       </span>
       {card.source && (
-        <span className="relative mt-4 block text-[0.7rem] font-semibold tracking-[0.14em] text-faint uppercase">
+        <span
+          className={cn(
+            "block font-semibold text-faint uppercase",
+            large ? "mt-4 text-[0.7rem] tracking-[0.14em]" : "mt-2 truncate text-[0.62rem] tracking-[0.1em]",
+          )}
+        >
           — {card.source}
         </span>
       )}

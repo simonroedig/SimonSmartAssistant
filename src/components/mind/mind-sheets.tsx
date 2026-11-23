@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardPaste, Trash2, TriangleAlert } from "lucide-react";
+import { Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,10 @@ import { AutoTextarea, Input, Label } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { type MindItem, newId } from "@/data/core";
 import { useAddMind, useDeleteMind, useUpdateMind } from "@/data/mind";
-import { firstLink, type MindKind, parseMindList, videoInfo } from "@/lib/mind";
+import { firstLink, type MindKind, videoInfo } from "@/lib/mind";
 import { FIELD_FOCUS } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-import { MIND_TONE, ReminderCard } from "./mind-parts";
+import { ReminderCard } from "./mind-parts";
 
 export type ItemSheetState = { kind: MindKind; item: MindItem | null } | null;
 
@@ -112,10 +112,10 @@ function CardForm({ item, open, onClose }: FormProps) {
             minRows={3}
             maxRows={14}
             maxLength={4000}
-            className="font-serif text-[1.02rem]"
           />
           <p className="mt-1.5 px-1 text-xs text-faint">
-            Mark words with <span className="font-mono">==two equals signs==</span> – they get highlighted.
+            <span className="font-mono">==highlight==</span>, <span className="font-mono">*italic*</span> – or
+            both: <span className="font-mono">==*like this*==</span>.
           </p>
         </div>
         <div>
@@ -248,87 +248,6 @@ function VideoForm({ item, open, onClose }: FormProps) {
             maxLength={4000}
           />
         </div>
-      </div>
-    </Sheet>
-  );
-}
-
-const EXAMPLE = `# Two ways to see it
-Plans change… 😔
-Plans change!!! 😄
-— A friend
----
-# A video
-https://youtu.be/…`;
-
-/** Several at once: pasted as text, one block each, between lines of ---. */
-export function PasteSheet({
-  open,
-  draft,
-  onDraft,
-  onClose,
-  onAdded,
-}: {
-  open: boolean;
-  /** Kept while the page is open (closing doesn't lose it). */
-  draft: string;
-  onDraft: (text: string) => void;
-  onClose: () => void;
-  onAdded: (kinds: MindKind[]) => void;
-}) {
-  const add = useAddMind();
-  const items = parseMindList(draft);
-  const cards = items.filter((i) => i.kind === "card").length;
-  const videos = items.length - cards;
-  const summary = [
-    cards && `${cards} ${cards === 1 ? "reminder" : "reminders"}`,
-    videos && `${videos} ${videos === 1 ? "video" : "videos"}`,
-  ]
-    .filter(Boolean)
-    .join(" and ");
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(o) => !o && onClose()}
-      title="Add several at once"
-      description="One block each, between lines of ---"
-      className={FIELD_FOCUS.teal}
-      size="half"
-      footer={
-        <>
-          <Button
-            variant="primary"
-            disabled={items.length === 0}
-            className={cn("ui-action shadow-none", MIND_TONE.solid)}
-            onClick={() => {
-              add.mutate(items.map((i) => ({ ...i, id: newId() })));
-              onAdded([...new Set(items.map((i) => i.kind))]);
-              onDraft("");
-              onClose();
-            }}
-          >
-            <ClipboardPaste /> {items.length ? `Add ${summary}` : "Add"}
-          </Button>
-          <Button variant="ghost" className="ml-auto" onClick={onClose}>
-            Cancel
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-3">
-        <AutoTextarea
-          aria-label="Reminders and videos to add"
-          value={draft}
-          onChange={(e) => onDraft(e.target.value)}
-          placeholder={EXAMPLE}
-          minRows={9}
-          maxRows={18}
-          className="font-mono text-[0.85rem] leading-5"
-        />
-        <p className="px-1 text-xs leading-relaxed text-faint">
-          A first line with <span className="font-mono"># …</span> is the title, a last line with{" "}
-          <span className="font-mono">— …</span> says who it&apos;s from, a link on its own is a video.
-        </p>
       </div>
     </Sheet>
   );

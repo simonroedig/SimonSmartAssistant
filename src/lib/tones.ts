@@ -151,6 +151,10 @@ export const PINNED_FRAME = "border-orange-400/90 dark:border-orange-300/75";
 export const PINNED_CARD =
   "border-orange-400/90 outline-1 -outline-offset-2 outline-orange-400/90 dark:border-orange-300/75 dark:outline-orange-300/75";
 
+/** Mind's reminder for today: the same 2px frame, in Mind's teal. */
+export const TODAY_CARD =
+  "border-teal-500/80 outline-1 -outline-offset-2 outline-teal-500/80 dark:border-teal-300/70 dark:outline-teal-300/70";
+
 /**
  * A section's add button: solid in the section's colour once there is something
  * to add, a soft tint before (a faded solid colour looks muddy on dark backgrounds).

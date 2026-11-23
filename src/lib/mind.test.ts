@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardOfTheDay, firstLink, markedParts, parseMindList, toMindRow, videoInfo, webLink } from "./mind";
+import { cardOfTheDay, dayShuffle, firstLink, plainCardText, styledParts, toMindRow, videoInfo, webLink } from "./mind";
 
 describe("mind", () => {
   it("knows YouTube (with a still), TikTok and other links", () => {
@@ -24,13 +24,28 @@ describe("mind", () => {
     expect(toMindRow({ id: "1", kind: "card", title: " T ", body: "x\n", source: "", url: "https://a.b" }).url).toBeNull();
   });
 
-  it("finds the ==marked== parts", () => {
-    expect(markedParts("Just take ==a step.== Now")).toEqual([
-      { text: "Just take ", mark: false },
-      { text: "a step.", mark: true },
-      { text: " Now", mark: false },
+  it("finds the ==highlighted== and *italic* parts, also mixed", () => {
+    const plain = { mark: false, italic: false };
+    expect(styledParts("Just take ==a step.== Now")).toEqual([
+      { text: "Just take ", ...plain },
+      { text: "a step.", mark: true, italic: false },
+      { text: " Now", ...plain },
     ]);
-    expect(markedParts("a == b")).toEqual([{ text: "a == b", mark: false }]);
+    expect(styledParts("*Slowly*, then ==*all at once*==")).toEqual([
+      { text: "Slowly", mark: false, italic: true },
+      { text: ", then ", ...plain },
+      { text: "all at once", mark: true, italic: true },
+    ]);
+    expect(styledParts("*a ==b== c*")).toEqual([
+      { text: "a ", mark: false, italic: true },
+      { text: "b", mark: true, italic: true },
+      { text: " c", mark: false, italic: true },
+    ]);
+    // Stars inside a word or alone stay as they are, like a lone "==".
+    for (const text of ["a == b", "Nobody cares a sh*t… and a sh*t!", "2 * 3 * 4", "**"]) {
+      expect(styledParts(text)).toEqual([{ text, ...plain }]);
+    }
+    expect(plainCardText("==*Breathe*== in")).toBe("Breathe in");
   });
 
   it("picks the same card all day", () => {
@@ -41,33 +56,12 @@ describe("mind", () => {
     expect(days.size).toBeGreaterThan(1);
   });
 
-  it("reads a pasted list: title, text, who said it, links as videos", () => {
-    const list = parseMindList(
-      [
-        "# Two ways to see it",
-        "Plans change… 😔",
-        "Plans change!!! 😄",
-        "— A friend",
-        "---",
-        "Rest is part of the work.",
-        "",
-        "---",
-        "# A calm view",
-        "https://youtu.be/abcDEF12345",
-        "---",
-        "   ",
-      ].join("\n"),
-    );
-    expect(list).toEqual([
-      {
-        kind: "card",
-        title: "Two ways to see it",
-        body: "Plans change… 😔\nPlans change!!! 😄",
-        source: "A friend",
-        url: null,
-      },
-      { kind: "card", title: "", body: "Rest is part of the work.", source: "", url: null },
-      { kind: "video", title: "A calm view", body: "", source: "", url: "https://youtu.be/abcDEF12345" },
-    ]);
+  it("flips through today's card first, then all the others in a daily order", () => {
+    const cards = ["a", "b", "c", "d", "e"].map((id) => ({ id }));
+    const order = dayShuffle(cards, "2026-11-23");
+    expect(order[0]).toBe(cardOfTheDay(cards, "2026-11-23"));
+    expect(new Set(order.map((c) => c.id))).toEqual(new Set(["a", "b", "c", "d", "e"]));
+    expect(dayShuffle([...cards].reverse(), "2026-11-23")).toEqual(order);
+    expect(dayShuffle([], "2026-11-23")).toEqual([]);
   });
 });
