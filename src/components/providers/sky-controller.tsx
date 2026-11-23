@@ -114,9 +114,12 @@ function useHomeLayout(home: boolean): SkyLayout {
       const screen = getComputedStyle(document.documentElement).getPropertyValue("--screen-h").trim();
       const vh = screen.endsWith("px") ? parseFloat(screen) : window.innerHeight;
       const box = hero.getBoundingClientRect();
+      // The sun and moon keep to the right of the clock: from its text on, or – in a tile, behind
+      // frosted glass – from the start of what stands beside it ([data-sky-beside]).
+      const beside = hero.querySelector("[data-sky-beside]");
       const range = document.createRange();
       range.selectNodeContents(time);
-      const text = range.getBoundingClientRect();
+      const text = beside ? { right: beside.getBoundingClientRect().left } : range.getBoundingClientRect();
       const y = window.scrollY;
       let below = hero.nextElementSibling;
       while (below && below.getBoundingClientRect().height === 0) below = below.nextElementSibling;

@@ -62,7 +62,9 @@ test("backup: everything in one file, the vault included – and when it was mad
   await expect(menu(page).locator('[data-hint="due"]')).toHaveCount(0);
 });
 
-test("menu icons: a quiet count from the chosen number on, and a star for starred backlog items", async ({ page }) => {
+test("menu icons: a quiet count – always or from the chosen number on – and a star for starred backlog items", async ({
+  page,
+}) => {
   await mockWeather(page);
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -94,6 +96,11 @@ test("menu icons: a quiet count from the chosen number on, and a star for starre
   await expect(menu(page).getByRole("link", { name: "Backlog" }).locator('[data-hint="star"]')).toBeVisible();
   await item.getByRole("button", { name: "Remove star" }).click();
 
+  // Always (the default): the number is there whatever it is – 0 too.
   await openSettings(page);
-  await pickCount(page, "Shopping count", "5+");
+  await pickCount(page, "Shopping count", "Always");
+  await expect(menu(page).getByRole("link", { name: "Shopping" }).locator('[data-hint="count"]')).toHaveAttribute(
+    "data-count",
+    /^\d\+?$/,
+  );
 });

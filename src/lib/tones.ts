@@ -125,9 +125,12 @@ export const STARRED_FRAME = "border-yellow-500/60 dark:border-yellow-300/45";
 
 /** A pinned note's sheet, opened: framed in the notes' orange (`Sheet`'s `frame`). */
 export const PINNED_FRAME = "border-orange-400/90 dark:border-orange-300/75";
-/** …and its card: the same 2px frame (border plus a ring inside). */
+/**
+ * …and its card: the same 2px frame – its 1px border plus a 1px outline just inside (a ring
+ * wouldn't do: the card's shadow replaces it).
+ */
 export const PINNED_CARD =
-  "border-orange-400/90 ring-1 ring-orange-400/90 ring-inset dark:border-orange-300/75 dark:ring-orange-300/75";
+  "border-orange-400/90 outline-1 -outline-offset-2 outline-orange-400/90 dark:border-orange-300/75 dark:outline-orange-300/75";
 
 /**
  * A section's add button: solid in the section's colour once there is something

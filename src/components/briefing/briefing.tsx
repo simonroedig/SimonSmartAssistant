@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronDown, Newspaper, Settings2, TriangleAlert } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { ChevronDown, ChevronRight, Newspaper, Settings2, TriangleAlert } from "lucide-react";
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
@@ -11,7 +11,7 @@ import { useBriefings, useMarkBriefingRead } from "@/data/briefings";
 import { useNow } from "@/hooks/use-now";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
-import { briefingState } from "@/lib/briefing";
+import { briefingState, briefingTeaser } from "@/lib/briefing";
 import { afterSheetClosed } from "@/lib/history";
 import {
   formatDayMonthShort,
@@ -29,64 +29,71 @@ import { MarkdownView } from "./markdown-view";
 const tone = TONE_STYLES.accent;
 
 /**
- * Home: the daily briefing, one tap away. A dot (and a little note under the button)
- * while today's is new; amber when today's run didn't come through.
+ * Home: the daily briefing as the clock tile's footer – what today's says in its first line,
+ * a dot while it's new, amber when today's run didn't come through or nothing came.
  */
-export function BriefingButton({ className }: { className?: string }) {
+export function BriefingFooter({ className }: { className?: string }) {
   const briefings = useBriefings();
   const now = useNow("minute");
   const [open, setOpen] = useState(false);
   const list = briefings.data ?? [];
   const state = now ? briefingState(list, now) : null;
+  const latest = state?.latest ?? null;
   const trouble = !!state && (state.failed || (state.missing && list.length > 0));
-  const label = state?.unread ? "Daily briefing (new)" : "Daily briefing";
+  const teaser = latest && latest.status !== "error" ? briefingTeaser(latest.content) : null;
+
+  let title = "Daily briefing";
+  let line: string | null = null;
+  if (state?.failed) {
+    title = "Today's briefing failed";
+    line = "Tap for what happened";
+  } else if (state?.today) {
+    title = "Today's briefing";
+    line = teaser;
+  } else if (state?.missing && list.length > 0) {
+    title = "No briefing today yet";
+    line = latest ? `Last one: ${formatWeekday(new Date(latest.created_at))}` : null;
+  } else if (latest) {
+    line = teaser && `${formatWeekday(new Date(latest.created_at))} · ${teaser}`;
+  } else if (state) {
+    line = "Not set up yet – tap to see how";
+  }
 
   return (
-    <div className={cn("relative shrink-0", className)}>
+    <>
       <button
         type="button"
-        aria-label={label}
-        title="Daily briefing"
+        aria-label={state?.unread ? "Daily briefing (new)" : "Daily briefing"}
         onClick={() => setOpen(true)}
         className={cn(
-          "relative grid size-12 place-items-center rounded-2xl transition-colors hover:bg-surface-hover active:bg-surface-hover",
-          tone.text,
+          "flex w-full min-w-0 items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-hover/60 active:bg-surface-hover/60",
+          className,
         )}
       >
-        <Newspaper className="size-[1.55rem]" strokeWidth={1.9} />
+        {trouble ? (
+          <TriangleAlert className="size-5 shrink-0 text-amber-500 dark:text-amber-300" strokeWidth={1.9} />
+        ) : (
+          <Newspaper className={cn("size-5 shrink-0", tone.text)} strokeWidth={1.9} />
+        )}
+        <span className="min-w-0 flex-1">
+          <span className={cn("block truncate text-sm font-semibold", trouble && "text-amber-700 dark:text-amber-200")}>
+            {title}
+          </span>
+          {line && <span className="block truncate text-[0.8rem] text-muted">{line}</span>}
+        </span>
         {(state?.unread || trouble) && (
           <span
             data-briefing-dot={state?.unread ? "new" : "trouble"}
             className={cn(
-              "absolute top-2 right-2 size-2.5 rounded-full ring-2 ring-bg",
+              "size-2.5 shrink-0 rounded-full",
               state?.unread ? "bg-accent" : "bg-amber-500 dark:bg-amber-300",
             )}
           />
         )}
+        <ChevronRight className="size-4 shrink-0 text-faint" />
       </button>
-      {/* Today's is here and not read yet: a small note says so – a tap opens it. */}
-      <AnimatePresence>
-        {state?.unread && !open && (
-          <motion.button
-            type="button"
-            onClick={() => setOpen(true)}
-            initial={{ opacity: 0, y: -6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute top-full right-0 z-20 mt-1 w-max max-w-[15rem] origin-top-right rounded-2xl px-3.5 py-2.5 text-left text-sm shadow-(--shadow-card) glass-strong"
-          >
-            <span className="flex items-center gap-1.5 font-semibold">
-              <span className="size-2 rounded-full bg-accent" /> Your briefing is here
-            </span>
-            <span className="block text-xs text-muted">
-              {formatWeekday(new Date(state.latest!.created_at))} · tap to read
-            </span>
-          </motion.button>
-        )}
-      </AnimatePresence>
       <BriefingSheet open={open} onClose={() => setOpen(false)} briefings={list} loading={briefings.isPending} />
-    </div>
+    </>
   );
 }
 

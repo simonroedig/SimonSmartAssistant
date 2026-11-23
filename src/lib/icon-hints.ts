@@ -5,14 +5,17 @@
  */
 
 export type IconHintPreferences = {
-  /** Show the backlog's open items from this many on (0: never). */
+  /** Show the backlog's open items from this many on (0: always, even none; HINT_OFF: never). */
   backlog: number;
   /** The same for the shopping list. */
   shopping: number;
 };
 
-export const HINT_FROM_OPTIONS = [0, 3, 5, 8, 10] as const;
-export const DEFAULT_ICON_HINTS: IconHintPreferences = { backlog: 5, shopping: 5 };
+/** No number on the icon. */
+export const HINT_OFF = -1;
+/** Off, always (0 too), or from 3, 5 or 10 items on. */
+export const HINT_FROM_OPTIONS = [HINT_OFF, 0, 3, 5, 10] as const;
+export const DEFAULT_ICON_HINTS: IconHintPreferences = { backlog: 0, shopping: 0 };
 
 export function parseIconHints(value: unknown): IconHintPreferences {
   const v = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -24,9 +27,9 @@ export function parseIconHints(value: unknown): IconHintPreferences {
   };
 }
 
-/** The count to show, if any: from `from` items on (0 turns it off). */
+/** The count to show, if any: from `from` items on (0: always, HINT_OFF: never). */
 export function hintCount(open: number, from: number): number | undefined {
-  return from > 0 && open >= from ? open : undefined;
+  return from !== HINT_OFF && open >= from ? open : undefined;
 }
 
 /** How a count reads on the icon (it stays small). */

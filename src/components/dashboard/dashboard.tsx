@@ -2,7 +2,6 @@
 
 import { NotesBoard } from "@/components/notes/notes-board";
 import { TodayCard } from "@/components/planner/today-card";
-import { BriefingButton } from "@/components/briefing/briefing";
 import { ShoppingList } from "@/components/shopping/shopping-list";
 import { TodoList } from "@/components/todos/todo-list";
 import { WeatherCard } from "@/components/weather/weather-card";
@@ -24,12 +23,8 @@ export function Dashboard() {
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 pt-[calc(var(--safe-top)+1rem)] md:grid-cols-2 md:p-(--gutter) md:pl-0 xl:h-dvh xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,0.95fr)] xl:overflow-hidden">
       {/* Column 1: clock + weather */}
       <div className="flex min-h-0 flex-col gap-4">
-        {/* Aurora Sky looks at this to put the sky around the clock. */}
-        <div data-sky-window className="flex items-start gap-3 px-2 pt-2 md:pt-1">
-          <ClockHero className="flex-1" compact={!wide} />
-          {/* The daily briefing, one tap away (Media and Settings are on the tab bar's second page). */}
-          <BriefingButton className="-mt-1 -mr-1.5" />
-        </div>
+        {/* The clock tile – Aurora Sky puts its sky and moon around the clock. */}
+        <ClockHero wide={wide} />
         {/* Launcher app on the phone: web search and app updates right on the home screen. */}
         <WebSearchBar />
         <LauncherUpdateBanner />

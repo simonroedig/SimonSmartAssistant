@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { briefingState, datedItem } from "./briefing";
+import { briefingState, briefingTeaser, datedItem } from "./briefing";
 
 const at = (iso: string, extra: Partial<{ status: string; read_at: string | null }> = {}) => ({
   status: "ok",
@@ -61,5 +61,15 @@ describe("datedItem", () => {
     expect(datedItem([t("KI-Gipfel in Paris am 3.11.")], written)).toBeNull();
     expect(datedItem([t("3.11.")], written)).toBeNull();
     expect(datedItem([t("31.2. – Kein Tag")], written)).toBeNull();
+  });
+});
+
+describe("briefing teaser", () => {
+  it("takes the first line of substance, without markdown", () => {
+    expect(briefingTeaser("## 🔥 Heute wichtig\n\n- **KI-Gipfel** in [Paris](https://x.y) – mehr\n- B")).toBe(
+      "KI-Gipfel in Paris – mehr",
+    );
+    expect(briefingTeaser("# Title\n---\n> quote\n1. First *point*")).toBe("First point");
+    expect(briefingTeaser("## Only headings\n")).toBeNull();
   });
 });

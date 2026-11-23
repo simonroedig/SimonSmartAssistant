@@ -73,12 +73,13 @@ test("daily briefing: set up in Settings, handed in by the task, new on Home unt
     prompt: "Briefing für Dienstag, 10. November 2026.",
   });
 
-  // Home: the button says it's new, a note under it too; a tap opens it.
+  // Home: the clock tile's footer says it's new and what's in it; a tap opens it.
   await page.goto("/");
   const button = page.getByRole("button", { name: "Daily briefing (new)" });
-  await expect(button).toBeVisible();
-  const note = page.getByRole("button", { name: /Your briefing is here/ });
-  await note.click();
+  await expect(button).toContainText("Today's briefing");
+  await expect(button).toContainText("KI-Gipfel");
+  await expect(button.locator("[data-briefing-dot=new]")).toBeVisible();
+  await button.click();
   const sheet = page.getByRole("dialog", { name: "Daily briefing" });
   await expect(sheet.getByRole("heading", { name: "🔥 Heute wichtig" })).toBeVisible();
   await expect(sheet.locator("strong", { hasText: "KI-Gipfel" })).toBeVisible();
@@ -90,16 +91,19 @@ test("daily briefing: set up in Settings, handed in by the task, new on Home unt
   // Read now – on every screen (it is saved).
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
-  await expect(note).toHaveCount(0);
+  await expect(page.locator("[data-briefing-dot=new]")).toHaveCount(0);
   await page.waitForTimeout(300);
   await page.reload();
   await expect(page.getByRole("button", { name: "Daily briefing", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Your briefing is here/ })).toHaveCount(0);
+  await expect(page.locator("[data-briefing-dot=new]")).toHaveCount(0);
 
   // A run that couldn't finish (e.g. Claude's usage limit) says so – the last briefing is a tap away.
   await asTask("briefing_post", key, { failed: "Claude's usage limit was reached" });
   await page.reload();
   await expect(page.locator("[data-briefing-dot=trouble]")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Daily briefing", exact: true })).toContainText(
+    "Today's briefing failed",
+  );
   await page.getByRole("button", { name: "Daily briefing", exact: true }).click();
   await expect(sheet.getByText("This briefing couldn't be made.")).toBeVisible();
   await expect(sheet.getByText("Claude's usage limit was reached", { exact: false })).toBeVisible();

@@ -40,6 +40,25 @@ export function briefingState<T extends BriefingLike>(list: T[], now: Date): Bri
   };
 }
 
+/**
+ * A briefing's first line of substance, for Home: headings, quotes and rules skipped, list
+ * marks, links and emphasis dropped ("**KI-Gipfel** in [Paris](…)" → "KI-Gipfel in Paris").
+ */
+export function briefingTeaser(content: string): string | null {
+  for (const raw of content.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#") || line.startsWith(">") || /^[-*_]{3,}$/.test(line)) continue;
+    const text = line
+      .replace(/^([-*+]|\d+\.)\s+/, "")
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/(\*\*|__|\*|`|~~)/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (text) return text;
+  }
+  return null;
+}
+
 // --- "Add to planner" ------------------------------------------------------------
 
 const MONTHS: Record<string, number> = {
