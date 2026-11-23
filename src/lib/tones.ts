@@ -106,7 +106,9 @@ export const FIELD_FOCUS = {
   yellow:
     "[--field-focus:color-mix(in_oklab,var(--color-yellow-400)_80%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-yellow-300)_75%,transparent)]",
   rose: "[--field-focus:color-mix(in_oklab,var(--color-rose-500)_55%,transparent)]",
-  orange: "[--field-focus:color-mix(in_oklab,var(--color-orange-400)_65%,transparent)]",
+  // The notes icon's orange, like the yellow above.
+  orange:
+    "[--field-focus:color-mix(in_oklab,var(--color-orange-500)_80%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-orange-300)_80%,transparent)]",
   fuchsia: "[--field-focus:color-mix(in_oklab,var(--color-fuchsia-500)_55%,transparent)]",
   /** Searches: a quiet grey. */
   quiet: "[--field-focus:var(--text-faint)]",
