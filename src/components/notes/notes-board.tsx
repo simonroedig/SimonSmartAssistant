@@ -44,15 +44,6 @@ import { positionAtStart, positionForMove } from "@/lib/ordering";
 import { FIELD_FOCUS, PINNED_CARD, PINNED_FRAME, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { lockVault, useVaultOpen } from "@/lib/vault";
-import { formatDayMonthShort } from "@/lib/date";
-import {
-  NOTE_TEMPLATES,
-  noteTemplate,
-  TEMPLATE_IDS,
-  templateContent,
-  type TemplateEntry,
-  type TemplateId,
-} from "@/lib/note-templates";
 import { afterSheetClosed, inPageDepth, pushInPage } from "@/lib/history";
 import { matchesSearch, searchTerms } from "@/lib/note-search";
 import {
@@ -73,7 +64,6 @@ import {
   NotesTabs,
   VAULT_TONE,
 } from "./note-categories";
-import { TEMPLATE_TONE, TemplateIcon, TemplateTile, TemplateView } from "./template-note";
 import { VaultPinSheet, type VaultPinMode } from "./vault-pin-sheet";
 
 export function noteLabel(note: Pick<Note, "title" | "body">): string {
@@ -194,21 +184,20 @@ function useVaultGuard() {
 /** A view's name in the browser history (so the back gesture leaves a category). */
 function viewKey(view: NoteFilter): string {
   if (typeof view === "string") return view;
-  return "category" in view ? `c:${view.category}` : `t:${view.template}`;
+  return `c:${view.category}`;
 }
 
 function viewFromKey(key: unknown): NoteFilter | null {
   if (typeof key !== "string") return null;
   if (key.startsWith("c:")) return { category: key.slice(2) };
-  if (key.startsWith("t:") && noteTemplate(key.slice(2))) return { template: key.slice(2) as TemplateId };
   return null;
 }
 
 /**
  * Notes as an overview with a level below it (page), or as a scrollable list (home card).
- * The page starts with All: pinned notes, what isn't sorted yet, and every category –
- * and each template's collection, striped – as a tile with a peek. A tile opens it, a
- * level deeper; back (the arrow, the back gesture or a swipe to the right) returns.
+ * The page starts with All: pinned notes, what isn't sorted yet, and every category as a
+ * tile with a peek. A tile opens it, a level deeper; back (the arrow, the back gesture or a
+ * swipe to the right) returns. ("Let go", a note from a template, lives in Mind.)
  */
 export function NotesBoard({
   variant = "page",
@@ -242,21 +231,11 @@ export function NotesBoard({
   const categoryList = useMemo(() => categories.data ?? [], [categories.data]);
   const byId = useMemo(() => new Map(categoryList.map((c) => [c.id, c])), [categoryList]);
   const everything = useMemo(() => notes.data ?? [], [notes.data]);
-  // A template's collection is one note behind the scenes, but never shows as one.
+  // A template's collection (Let go, shown in Mind) is one note behind the scenes, but never shows as one.
   const board = useMemo(() => everything.filter((n) => !n.template), [everything]);
-  const collections = useMemo(
-    () =>
-      TEMPLATE_IDS.flatMap((id) => {
-        const note = everything.find((n) => n.template === id);
-        return note ? [{ template: NOTE_TEMPLATES[id], note }] : [];
-      }),
-    [everything],
-  );
   const vaultList = useMemo(() => (vaultOpen ? (vaultNotes.data ?? []) : []), [vaultOpen, vaultNotes.data]);
   const openCategory = typeof view === "object" && "category" in view ? view.category : null;
-  const openTemplate = typeof view === "object" && "template" in view ? view.template : null;
-  const collection = collections.find((c) => c.template.id === openTemplate) ?? null;
-  const deeper = openCategory !== null || openTemplate !== null;
+  const deeper = openCategory !== null;
 
   // --- Going a level deeper, and back -------------------------------------------
   // A level deeper has its own history entry: the phone's back gesture returns to All.
@@ -302,14 +281,6 @@ export function NotesBoard({
     }
     setViewState(next);
   };
-  /** From the search into a template's collection: the search's history entry becomes its. */
-  const openFromSearch = (next: NoteFilter) => {
-    if (window.history.state?.notesSearch) {
-      window.history.replaceState({ notesView: viewKey(next), inPage: inPageDepth() }, "");
-    } else pushInPage({ notesView: viewKey(next) });
-    setQuery(null);
-    setViewState(next);
-  };
   const back = () => {
     if (window.history.state?.notesView) window.history.back();
     else setViewState("all");
@@ -328,7 +299,6 @@ export function NotesBoard({
   // Gone meanwhile (deleted here or on another device) – not one just being added.
   const saving = useIsMutating({ mutationKey: ["note_categories"] }) + useIsMutating({ mutationKey: ["notes"] }) > 0;
   if (!saving && openCategory && categories.data && !byId.has(openCategory)) setViewState("all");
-  if (!saving && openTemplate && notes.data && !collection) setViewState("all");
 
   // --- Nothing typed gets lost ---------------------------------------------------
   // Backups of notes written on this device: once the server has them (no save on the
@@ -426,27 +396,6 @@ export function NotesBoard({
     }
     if (Object.keys(patch).length > 0) update.mutate({ id: note.id, patch });
     if (patch.vault === true && !inVault) toast("Moved to the vault", { icon: <Lock className="size-4" /> });
-  };
-
-  /** A template's collection: made once, then opened. */
-  const startCollection = (id: TemplateId) => {
-    if (!collections.some((c) => c.template.id === id)) {
-      add.mutate(
-        prepareNote({
-          title: NOTE_TEMPLATES[id].name,
-          body: "",
-          template: id,
-          entries: [],
-          position: positionAtStart(everything.filter((n) => !n.pinned)),
-        }),
-      );
-    }
-    enter({ template: id });
-  };
-  const saveEntries = (note: Note, entries: TemplateEntry[]) => {
-    const template = noteTemplate(note.template);
-    if (!template) return;
-    update.mutate({ id: note.id, patch: templateContent(template, entries, formatDayMonthShort) });
   };
 
   const openVault = () => {
@@ -581,9 +530,6 @@ export function NotesBoard({
   );
 
   const category = openCategory ? byId.get(openCategory) : undefined;
-  const missingTemplates = TEMPLATE_IDS.filter((id) => !collections.some((c) => c.template.id === id)).map(
-    (id) => NOTE_TEMPLATES[id],
-  );
 
   // All: pinned (only those without a category – the others are pinned in theirs),
   // then what isn't sorted yet, then the categories.
@@ -607,19 +553,13 @@ export function NotesBoard({
         )}
         <section>
           <h2 className={sectionTitle}>Categories</h2>
-          {/* Templates' collections first (fixed), then the categories – press and hold (or drag
-              with the mouse) to move one; their order is the same everywhere. */}
+          {/* Press and hold (or drag with the mouse) to move one; their order is the same everywhere. */}
           <SortableList
             items={categoryList}
             layout="grid"
             withHandle={false}
             className={tiles}
             onMove={(id, index) => moveCategory.mutate({ id, position: positionForMove(categoryList, id, index) })}
-            before={collections.map(({ template, note }) => (
-              <li key={template.id}>
-                <TemplateTile template={template} note={note} onOpen={() => enter({ template: template.id })} />
-              </li>
-            ))}
             after={
               <li>
                 <button
@@ -650,15 +590,13 @@ export function NotesBoard({
     );
   };
 
-  // Search: the notes themselves (with their category), and a template's collection whose
-  // entries match – in the vault only the vault's notes.
+  // Search: the notes themselves (with their category) – in the vault only the vault's notes.
   const results = () => {
     const pool = inVault ? vaultList : board;
     const found = pool.filter((n) =>
       matchesSearch(terms, n.title, n.body, n.category_id ? byId.get(n.category_id)?.name : null),
     );
-    const foundCollections = inVault ? [] : collections.filter((c) => matchesSearch(terms, c.note.body));
-    const count = found.length + foundCollections.length;
+    const count = found.length;
     if (count === 0) {
       return (
         <div className="flex flex-col items-center gap-2 py-16 text-center text-muted">
@@ -673,11 +611,6 @@ export function NotesBoard({
           {count} found{inVault ? " in the vault" : ""}
         </h2>
         <ul className={grid}>
-          {foundCollections.map(({ template, note }) => (
-            <li key={note.id}>
-              <TemplateTile template={template} note={note} onOpen={() => openFromSearch({ template: template.id })} />
-            </li>
-          ))}
           {found.map((note) => (
             <li key={note.id}>
               <NoteCard
@@ -737,33 +670,16 @@ export function NotesBoard({
               onClick={back}
               className={cn(
                 "-ml-2 flex min-h-12 max-w-full items-center gap-2 rounded-2xl py-1.5 pr-3 pl-1 text-lg font-semibold transition-colors hover:bg-surface-hover active:bg-surface-hover",
-                collection ? TEMPLATE_TONE.text : category ? PALETTE[categoryColor(category)].ink : undefined,
+                category ? PALETTE[categoryColor(category)].ink : undefined,
               )}
             >
               <ChevronLeft className="size-6 shrink-0 text-muted" />
-              {collection ? (
-                <TemplateIcon template={collection.template} className="size-5 shrink-0" />
-              ) : (
-                <span className="size-2.5 shrink-0 rounded-full bg-current" />
-              )}
-              <span className="truncate">{collection?.template.name ?? category?.name}</span>
-              {!collection && <span className="text-sm font-medium text-faint tabular-nums">{shown.length}</span>}
+              <span className="size-2.5 shrink-0 rounded-full bg-current" />
+              <span className="truncate">{category?.name}</span>
+              <span className="text-sm font-medium text-faint tabular-nums">{shown.length}</span>
             </button>
           </h2>
-          {collection ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Delete ${collection.template.name}`}
-              title="Delete – it goes to the trash"
-              onClick={() => {
-                deleteWithUndo(collection.note, collection.template.name);
-                back();
-              }}
-            >
-              <Trash2 />
-            </Button>
-          ) : category ? (
+          {category ? (
             <Button
               variant="ghost"
               size="icon"
@@ -788,7 +704,7 @@ export function NotesBoard({
           className="mb-2 md:mb-4"
         />
       )}
-      {!collection && !searching && (
+      {!searching && (
         <Composer
           onCreate={(draft, pin) => create(draft, pin)}
           placementCategory={openCategory}
@@ -831,14 +747,6 @@ export function NotesBoard({
             </div>
           ) : searching ? (
             results()
-          ) : collection ? (
-            <div className="mt-1 md:mt-2">
-              <TemplateView
-                template={collection.template}
-                note={collection.note}
-                onChange={(entries) => saveEntries(collection.note, entries)}
-              />
-            </div>
           ) : view === "all" ? (
             overview()
           ) : (
@@ -848,26 +756,22 @@ export function NotesBoard({
       </div>
       {/* A new note right away, like the planner's +: on phones by the thumb (it takes
           less room than a bar, so more notes show), on wide screens in the corner as well
-          as "Take a note…" at the top. (A template's collection has its own +.) */}
-      {!collection && (
-        <Fab
-          aria-label={inVault ? "Add a note to the vault" : "Add a note"}
-          onClick={() => setEditor({ mode: "create", placement: here })}
-          className={cn(
-            // Phones: the same spot as the planner's + (1rem inside its card, plus the card's 1px border).
-            "max-md:absolute max-md:right-[calc(1rem+1px)] max-md:bottom-[calc(1rem+1px)] md:fixed md:right-[calc(2*var(--gutter))] md:bottom-[calc(2*var(--gutter))]",
-            TONE_STYLES.orange.solid,
-          )}
-        />
-      )}
+          as "Take a note…" at the top. */}
+      <Fab
+        aria-label={inVault ? "Add a note to the vault" : "Add a note"}
+        onClick={() => setEditor({ mode: "create", placement: here })}
+        className={cn(
+          // Phones: the same spot as the planner's + (1rem inside its card, plus the card's 1px border).
+          "max-md:absolute max-md:right-[calc(1rem+1px)] max-md:bottom-[calc(1rem+1px)] md:fixed md:right-[calc(2*var(--gutter))] md:bottom-[calc(2*var(--gutter))]",
+          TONE_STYLES.orange.solid,
+        )}
+      />
       {editorSheet}
       <CategorySheet
         state={categorySheet}
         onClose={() => setCategorySheet(null)}
         onCreated={(id) => afterSheetClosed(() => enter({ category: id }))}
         onDeleted={(id) => openCategory === id && afterSheetClosed(back)}
-        templates={missingTemplates}
-        onTemplate={(id) => afterSheetClosed(() => startCollection(id))}
       />
       <VaultPinSheet
         open={pinSheet !== null}

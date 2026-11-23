@@ -9,6 +9,8 @@ export const WEATHER_HOSTS = [
 export const MEDIA_HOSTS = ["https://api.tvmaze.com", "https://en.wikipedia.org"];
 /** …and where their posters come from. */
 export const MEDIA_IMAGE_HOSTS = ["https://static.tvmaze.com", "https://upload.wikimedia.org"];
+/** Mind's pinned YouTube videos: their stills (no request to YouTube itself). */
+export const VIDEO_IMAGE_HOSTS = ["https://i.ytimg.com"];
 
 function supabaseOrigins(supabaseUrl: string): string[] {
   if (!supabaseUrl) return [];
@@ -46,7 +48,7 @@ export function buildContentSecurityPolicy({
     "script-src": ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(isDev ? ["'unsafe-eval'"] : [])],
     // Inline style attributes are needed by animation libraries and React.
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "blob:", "data:", ...MEDIA_IMAGE_HOSTS],
+    "img-src": ["'self'", "blob:", "data:", ...MEDIA_IMAGE_HOSTS, ...VIDEO_IMAGE_HOSTS],
     "font-src": ["'self'"],
     "connect-src": connect,
     "manifest-src": ["'self'"],

@@ -2,7 +2,17 @@
  * One colour per section, used for the navigation, card headers and accents.
  * Home and the generic UI use the violet accent.
  */
-export type Tone = "accent" | "rose" | "emerald" | "amber" | "yellow" | "orange" | "sky" | "fuchsia" | "slate";
+export type Tone =
+  | "accent"
+  | "rose"
+  | "emerald"
+  | "amber"
+  | "yellow"
+  | "orange"
+  | "sky"
+  | "fuchsia"
+  | "teal"
+  | "slate";
 
 export const TONE_STYLES: Record<
   Tone,
@@ -52,6 +62,12 @@ export const TONE_STYLES: Record<
     text: "text-fuchsia-600 dark:text-fuchsia-300",
     soft: "bg-fuchsia-500/12 dark:bg-fuchsia-400/14",
     solid: "bg-fuchsia-500 text-white dark:bg-fuchsia-300 dark:text-fuchsia-950",
+  },
+  // Mind.
+  teal: {
+    text: "text-teal-600 dark:text-teal-300",
+    soft: "bg-teal-500/14 dark:bg-teal-400/14",
+    solid: "bg-teal-500 text-white dark:bg-teal-300 dark:text-teal-950",
   },
   slate: {
     text: "text-slate-500 dark:text-slate-300",
@@ -110,6 +126,7 @@ export const FIELD_FOCUS = {
   orange:
     "[--field-focus:color-mix(in_oklab,var(--color-orange-500)_80%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-orange-300)_80%,transparent)]",
   fuchsia: "[--field-focus:color-mix(in_oklab,var(--color-fuchsia-500)_55%,transparent)]",
+  teal: "[--field-focus:color-mix(in_oklab,var(--color-teal-500)_60%,transparent)] dark:[--field-focus:color-mix(in_oklab,var(--color-teal-300)_70%,transparent)]",
   /** Searches and the quick add fields (shopping, backlog): a quiet grey, like the web search. */
   quiet: "[--field-focus:var(--text-faint)]",
 } as const;

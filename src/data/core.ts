@@ -25,6 +25,7 @@ export type Birthday = Tables<"birthdays">;
 export type BlockedApp = Tables<"blocked_apps">;
 export type NoteCategory = Tables<"note_categories">;
 export type MediaTitle = Tables<"media_titles">;
+export type MindItem = Tables<"mind_items">;
 export type Briefing = Tables<"briefings">;
 export type BriefingSettings = Tables<"briefing_settings">;
 export type UserSettingsRow = Tables<"user_settings">;
@@ -41,6 +42,7 @@ export type SyncedTable =
   | "blocked_apps"
   | "note_categories"
   | "media_titles"
+  | "mind_items"
   | "briefings"
   | "briefing_settings";
 
@@ -61,6 +63,7 @@ export const queryKeys = {
   birthdays: ["birthdays"] as const,
   blockedApps: ["blocked_apps"] as const,
   media: ["media_titles"] as const,
+  mind: ["mind_items"] as const,
   briefings: ["briefings"] as const,
   briefingSettings: ["briefing_settings"] as const,
   /** A show's episodes from TVmaze (public data, cached on the device). */

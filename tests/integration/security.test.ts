@@ -35,6 +35,7 @@ const TABLES = [
   "blocked_apps",
   "note_categories",
   "media_titles",
+  "mind_items",
   "briefings",
   "briefing_settings",
 ] as const;
@@ -578,6 +579,43 @@ describe("database security", () => {
     }
 
     const { error: deleteError } = await alice.client.from("media_titles").delete().eq("id", show!.id);
+    expect(deleteError).toBeNull();
+  });
+
+  it("keeps Mind's cards and videos private and only stores web links", async () => {
+    const { data: card, error } = await alice.client
+      .from("mind_items")
+      .insert({ kind: "card", title: "Fun", body: "Do it for fun." })
+      .select()
+      .single();
+    expect(error).toBeNull();
+    expect(card!.user_id).toBe(alice.userId);
+
+    const { data: seenByBob } = await bob.client.from("mind_items").select("*").eq("id", card!.id);
+    expect(seenByBob).toEqual([]);
+    const { data: changedByBob } = await bob.client
+      .from("mind_items")
+      .update({ body: "Hijacked" })
+      .eq("id", card!.id)
+      .select();
+    expect(changedByBob).toEqual([]);
+    const { error: spoofError } = await bob.client
+      .from("mind_items")
+      .insert({ kind: "card", body: "Spoof", user_id: alice.userId });
+    expect(spoofError?.code).toBe("42501");
+
+    const invalidRows: Database["public"]["Tables"]["mind_items"]["Insert"][] = [
+      { kind: "video", url: "javascript:alert(1)" },
+      { kind: "video" },
+      { kind: "card", body: "   " },
+      { kind: "quote", body: "x" },
+    ];
+    for (const bad of invalidRows) {
+      const { error: invalid } = await alice.client.from("mind_items").insert(bad);
+      expect(invalid?.code, JSON.stringify(bad)).toBe("23514");
+    }
+
+    const { error: deleteError } = await alice.client.from("mind_items").delete().eq("id", card!.id);
     expect(deleteError).toBeNull();
   });
 

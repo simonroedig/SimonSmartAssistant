@@ -12,6 +12,7 @@ describe("navigation order", () => {
       "notes",
       "weather",
       "media",
+      "mind",
     ]);
   });
 
@@ -46,7 +47,7 @@ describe("navigation order", () => {
     });
   });
 
-  it("adds Media to a rail order saved before it existed (under Weather by default)", () => {
+  it("adds Media and Mind to a rail order saved before they existed", () => {
     expect(parseNavigation({ rail: ["notes", "planner", "shopping", "backlog", "weather"] }).rail).toEqual([
       "notes",
       "planner",
@@ -54,7 +55,11 @@ describe("navigation order", () => {
       "backlog",
       "weather",
       "media",
+      "mind",
     ]);
+    expect(
+      parseNavigation({ rail: ["media", "notes", "planner", "shopping", "backlog", "weather"] }).rail,
+    ).toEqual(["media", "notes", "planner", "shopping", "backlog", "weather", "mind"]);
   });
 
   it("floats the menus unless attached – phone and rail each on their own", () => {

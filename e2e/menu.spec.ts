@@ -90,12 +90,12 @@ test("menu: the order of the phone's tab bar and of the side bar is set in Setti
   await saved(page, () => rail.getByRole("button", { name: "Weather" }).click());
   await expect
     .poll(() => labels(page, "first"))
-    .toEqual(["Home", "Weather", "Shopping", "Backlog", "Notes", "Planner", "Media", "Settings"]);
+    .toEqual(["Home", "Weather", "Shopping", "Backlog", "Notes", "Planner", "Media", "Mind", "Settings"]);
   await rail.getByRole("button", { name: "Weather" }).click();
   await saved(page, () => rail.getByRole("button", { name: "Planner" }).click());
   await expect
     .poll(() => labels(page, "first"))
-    .toEqual(["Home", "Planner", "Shopping", "Backlog", "Notes", "Weather", "Media", "Settings"]);
+    .toEqual(["Home", "Planner", "Shopping", "Backlog", "Notes", "Weather", "Media", "Mind", "Settings"]);
 });
 
 test("menu: the phone's tab bar swipes to Media, Weather and Settings; Home has the daily briefing up top", async ({

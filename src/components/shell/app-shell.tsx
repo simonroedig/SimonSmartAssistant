@@ -21,7 +21,7 @@ import { isTextField } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { AppLink, useTrackHomeBelow } from "./app-link";
 import { NavHintsProvider, navHintText, NavIcon, useNavHint } from "./nav-hints";
-import { HOME_ITEM, isActive, MEDIA_ITEM, navItem, SETTINGS_ITEM, WEATHER_ITEM, type NavItem } from "./nav-items";
+import { HOME_ITEM, isActive, navItem, SECTION_ITEMS, SETTINGS_ITEM, type NavItem } from "./nav-items";
 
 const NavigationContext = createContext<NavigationPreferences>(DEFAULT_NAVIGATION);
 
@@ -30,9 +30,7 @@ export function useNavigationPreferences(): NavigationPreferences {
   return useContext(NavigationContext);
 }
 
-const MORE_ITEMS: NavItem[] = PHONE_MORE.map((id) =>
-  id === "media" ? MEDIA_ITEM : id === "weather" ? WEATHER_ITEM : SETTINGS_ITEM,
-);
+const MORE_ITEMS: NavItem[] = PHONE_MORE.map((id) => (id === "settings" ? SETTINGS_ITEM : SECTION_ITEMS[id]));
 
 function SyncDot() {
   const status = useSyncStatus();
@@ -309,7 +307,7 @@ function BottomNav({
 }) {
   const items = order.map(navItem);
   const pager = useRef<HTMLDivElement>(null);
-  // A second page (swiped to) with Media, Weather and Settings.
+  // A second page (swiped to) with Media, Mind, Weather and Settings.
   const onMorePage = MORE_ITEMS.some((item) => isCurrent(item.href));
   // Showing a page of the second set: the bar shows that set (and the first one otherwise).
   useEffect(() => {

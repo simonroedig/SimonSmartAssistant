@@ -23,6 +23,7 @@ const TABLE_KEYS: Record<SyncedTable, readonly unknown[][]> = {
   blocked_apps: [[...queryKeys.blockedApps]],
   note_categories: [[...queryKeys.noteCategories], [...queryKeys.notes]],
   media_titles: [[...queryKeys.media]],
+  mind_items: [[...queryKeys.mind]],
   // A new briefing (written by the scheduled task) shows up on every screen at once.
   briefings: [[...queryKeys.briefings]],
   briefing_settings: [[...queryKeys.briefingSettings]],

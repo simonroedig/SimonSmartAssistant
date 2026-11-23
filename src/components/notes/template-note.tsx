@@ -100,11 +100,14 @@ export function TemplateView({
   template,
   note,
   onChange,
+  fabClassName,
 }: {
   template: NoteTemplate;
   note: Note;
   /** The entries changed (saved by the caller, with their text). */
   onChange: (entries: TemplateEntry[]) => void;
+  /** Where the + sits and its colour (the page's). */
+  fabClassName: string;
 }) {
   const entries = readEntries(note.entries);
   const { open, done } = sortEntries(entries.filter((e) => !isEntryEmpty(e)));
@@ -208,10 +211,7 @@ export function TemplateView({
       <Fab
         aria-label={`New ${template.entry}`}
         onClick={() => setSheet({ entry: newEntry(), isNew: true })}
-        className={cn(
-          "max-md:absolute max-md:right-[calc(1rem+1px)] max-md:bottom-[calc(1rem+1px)] md:fixed md:right-[calc(2*var(--gutter))] md:bottom-[calc(2*var(--gutter))]",
-          TEMPLATE_TONE.solid,
-        )}
+        className={fabClassName}
       />
 
       <EntrySheet

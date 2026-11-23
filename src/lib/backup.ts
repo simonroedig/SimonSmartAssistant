@@ -19,6 +19,7 @@ export const BACKUP_TABLES = [
   "shopping_history",
   "birthdays",
   "media_titles",
+  "mind_items",
   "blocked_apps",
   "briefing_settings",
   "briefings",

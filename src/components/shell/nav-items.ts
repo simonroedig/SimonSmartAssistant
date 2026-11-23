@@ -1,4 +1,4 @@
-import { CalendarClock, CloudSun, House, ListTodo, Popcorn, Settings2, StickyNote } from "lucide-react";
+import { CalendarClock, CloudSun, House, ListTodo, Popcorn, Settings2, Sprout, StickyNote } from "lucide-react";
 import type { ComponentType } from "react";
 import type { SectionId } from "@/lib/navigation";
 import { ShoppingIcon } from "./hint-icons";
@@ -18,6 +18,7 @@ export const BACKLOG_ITEM: NavItem = { href: "/todos", label: "Backlog", icon: L
 export const NOTES_ITEM: NavItem = { href: "/notes", label: "Notes", icon: StickyNote, tone: "orange" };
 export const WEATHER_ITEM: NavItem = { href: "/weather", label: "Weather", icon: CloudSun, tone: "sky" };
 export const MEDIA_ITEM: NavItem = { href: "/media", label: "Media", icon: Popcorn, tone: "fuchsia" };
+export const MIND_ITEM: NavItem = { href: "/mind", label: "Mind", icon: Sprout, tone: "teal" };
 export const SETTINGS_ITEM: NavItem = { href: "/settings", label: "Settings", icon: Settings2, tone: "slate" };
 
 /** The sections that can be ordered in Settings (Home and Settings keep their place). */
@@ -28,6 +29,7 @@ export const SECTION_ITEMS: Record<SectionId, NavItem> = {
   notes: NOTES_ITEM,
   weather: WEATHER_ITEM,
   media: MEDIA_ITEM,
+  mind: MIND_ITEM,
 };
 
 export function navItem(id: SectionId | "home"): NavItem {

@@ -358,8 +358,8 @@ test("media: in the rail under Weather, and on the phone's tab bar beside Weathe
     labels
       .map((l) => l.trim())
       .filter(Boolean)
-      .slice(-3),
-  ).toEqual(["Weather", "Media", "Settings"]);
+      .slice(-4),
+  ).toEqual(["Weather", "Media", "Mind", "Settings"]);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

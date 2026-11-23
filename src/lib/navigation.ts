@@ -7,7 +7,7 @@
  * cookie, so the server already renders the bar in the right order.
  */
 
-export type SectionId = "planner" | "shopping" | "backlog" | "notes" | "weather" | "media";
+export type SectionId = "planner" | "shopping" | "backlog" | "notes" | "weather" | "media" | "mind";
 export type PhoneHome = "middle" | "left";
 /** Floating cards with a margin, or attached to the screen edges. */
 export type NavStyle = "floating" | "attached";
@@ -25,16 +25,18 @@ export type NavigationPreferences = {
 };
 
 /** The second page of the phone's tab bar (swiped to). */
-export const PHONE_MORE: ("media" | "weather" | "settings")[] = ["media", "weather", "settings"];
+export const PHONE_MORE: ("media" | "mind" | "weather" | "settings")[] = ["media", "mind", "weather", "settings"];
 
-export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather", "media"];
-/** The first page of the phone's tab bar (Weather, Media and Settings are on its second). */
+export const RAIL_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes", "weather", "media", "mind"];
+/** Sections added later, oldest first: a saved rail order without them gets them at its end. */
+const LATER_SECTIONS: SectionId[] = ["media", "mind"];
+/** The first page of the phone's tab bar (Media, Mind, Weather and Settings are on its second). */
 export const PHONE_SECTIONS: SectionId[] = ["planner", "shopping", "backlog", "notes"];
 
 export const DEFAULT_NAVIGATION: NavigationPreferences = {
   phone: ["shopping", "backlog", "planner", "notes"],
   phoneHome: "middle",
-  rail: ["planner", "shopping", "backlog", "notes", "weather", "media"],
+  rail: ["planner", "shopping", "backlog", "notes", "weather", "media", "mind"],
   phoneStyle: "floating",
   railStyle: "floating",
 };
@@ -60,13 +62,17 @@ export function parseNavigation(value: unknown): NavigationPreferences {
   };
 }
 
-/** A rail order saved before Media existed keeps its order, with Media added at the end. */
+/** A rail order saved before Media (or Mind) existed keeps its order, with the new ones added at the end. */
 function withNewSections(value: unknown): SectionId[] | null {
-  const before = orderOf(
-    value,
-    RAIL_SECTIONS.filter((s) => s !== "media"),
-  );
-  return before ? [...before, "media"] : null;
+  for (let i = LATER_SECTIONS.length - 1; i >= 0; i--) {
+    const missing = LATER_SECTIONS.slice(i);
+    const before = orderOf(
+      value,
+      RAIL_SECTIONS.filter((s) => !missing.includes(s)),
+    );
+    if (before) return [...before, ...missing];
+  }
+  return null;
 }
 
 function navStyle(value: unknown): NavStyle {

@@ -8,17 +8,15 @@ import { newId, type NoteCategory } from "@/data/core";
 import { categoryColor, useDeleteCategory, useSaveCategory } from "@/data/note-categories";
 import { PALETTE, PALETTE_COLORS, type PaletteColor } from "@/lib/palette";
 import { FIELD_FOCUS, TONE_STYLES } from "@/lib/tones";
-import type { NoteTemplate, TemplateId } from "@/lib/note-templates";
 import { cn } from "@/lib/utils";
-import { TEMPLATE_PATTERN, TEMPLATE_TONE, TemplateIcon } from "./template-note";
 import { CHIP, CHIP_IDLE, CHIP_ON } from "@/components/ui/chip";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 
 /**
  * What the notes page shows: the overview of everything but the vault ("all"), the
- * vault, one category, or a template's collection (a level deeper, with a way back).
+ * vault, or one category (a level deeper, with a way back).
  */
-export type NoteFilter = "all" | "vault" | { category: string } | { template: TemplateId };
+export type NoteFilter = "all" | "vault" | { category: string };
 
 export const VAULT_TONE = TONE_STYLES.slate;
 
@@ -199,16 +197,11 @@ export function CategorySheet({
   onClose,
   onCreated,
   onDeleted,
-  templates = [],
-  onTemplate,
 }: {
   state: CategorySheetState;
   onClose: () => void;
   onCreated?: (id: string) => void;
   onDeleted?: (id: string) => void;
-  /** Templates that can be added as a collection of their own (instead of a category). */
-  templates?: NoteTemplate[];
-  onTemplate?: (id: TemplateId) => void;
 }) {
   // A fresh form per opening, kept while it animates out.
   const [shown, setShown] = useState({ state, count: 0 });
@@ -221,8 +214,6 @@ export function CategorySheet({
       onClose={onClose}
       onCreated={onCreated}
       onDeleted={onDeleted}
-      templates={templates}
-      onTemplate={onTemplate}
     />
   );
 }
@@ -233,16 +224,12 @@ function CategoryForm({
   onClose,
   onCreated,
   onDeleted,
-  templates,
-  onTemplate,
 }: {
   state: CategorySheetState;
   open: boolean;
   onClose: () => void;
   onCreated?: (id: string) => void;
   onDeleted?: (id: string) => void;
-  templates: NoteTemplate[];
-  onTemplate?: (id: TemplateId) => void;
 }) {
   const editing = state?.mode === "edit" ? state.category : null;
   const [name, setName] = useState(editing?.name ?? "");
@@ -338,29 +325,6 @@ function CategoryForm({
             </button>
           ))}
         </div>
-        {/* Or a template's collection: one of a kind, with its own way of adding and checking off. */}
-        {!editing && templates.length > 0 && onTemplate && (
-          <div className="flex flex-col gap-2 border-t border-line pt-4">
-            <p className="text-xs font-semibold tracking-wide text-faint uppercase">Or something special</p>
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => {
-                  onTemplate(template.id);
-                  onClose();
-                }}
-                className={cn("flex items-start gap-3 rounded-2xl px-4 py-3 text-left", TEMPLATE_PATTERN)}
-              >
-                <TemplateIcon template={template} className={cn("mt-0.5 size-5 shrink-0", TEMPLATE_TONE.text)} />
-                <span className="min-w-0">
-                  <span className="block font-semibold">{template.name}</span>
-                  <span className="block text-sm text-muted">{template.description}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </form>
     </Sheet>
   );

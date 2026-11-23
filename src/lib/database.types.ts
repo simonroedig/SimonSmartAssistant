@@ -195,6 +195,43 @@ export type Database = {
         };
         Relationships: [];
       };
+      mind_items: {
+        Row: {
+          body: string;
+          created_at: string;
+          id: string;
+          kind: string;
+          source: string;
+          title: string;
+          updated_at: string;
+          url: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          body?: string;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          source?: string;
+          title?: string;
+          updated_at?: string;
+          url?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          source?: string;
+          title?: string;
+          updated_at?: string;
+          url?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       note_categories: {
         Row: {
           color: string;
