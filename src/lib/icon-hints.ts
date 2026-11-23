@@ -13,9 +13,10 @@ export type IconHintPreferences = {
 
 /** No number on the icon. */
 export const HINT_OFF = -1;
-/** Off, always (0 too), or from 3, 5 or 10 items on. */
-export const HINT_FROM_OPTIONS = [HINT_OFF, 0, 3, 5, 10] as const;
-export const DEFAULT_ICON_HINTS: IconHintPreferences = { backlog: 0, shopping: 0 };
+/** Off, always (0 too), or from 1, 3 or 5 items on. */
+export const HINT_FROM_OPTIONS = [HINT_OFF, 0, 1, 3, 5] as const;
+/** From 1 on: an empty list keeps the plain icon, anything in it shows its number. */
+export const DEFAULT_ICON_HINTS: IconHintPreferences = { backlog: 1, shopping: 1 };
 
 export function parseIconHints(value: unknown): IconHintPreferences {
   const v = value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};

@@ -163,7 +163,7 @@ export function NavigationSection() {
 
 /**
  * From how many open items the menu's icon shows their number (drawn into the icon, in the
- * section's colour – no red badge): always (0 too), from a few on, or never. A starred backlog
+ * section's colour – no red badge): always (0 too), from 1 (the default) or a few on, or never. A starred backlog
  * item always turns the icon's box into a star.
  */
 function IconCountRow({ label, kind }: { label: string; kind: keyof IconHintPreferences }) {
@@ -172,8 +172,8 @@ function IconCountRow({ label, kind }: { label: string; kind: keyof IconHintPref
   const update = useUpdateSettings();
   const hint =
     kind === "backlog"
-      ? "The number of open items on the menu's icon – always, or from a few on. A starred one turns its box into a star"
-      : "The number of items to buy on the menu's icon – always, or from a few on";
+      ? "The number of open items on the menu's icon – always, from 1 or from a few on. A starred one turns its box into a star"
+      : "The number of items to buy on the menu's icon – always, from 1 or from a few on";
   return (
     <Row label={label} hint={hint}>
       <Segmented

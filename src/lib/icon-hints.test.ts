@@ -4,7 +4,8 @@ import { backupDue, DEFAULT_ICON_HINTS, hintCount, hintCountLabel, HINT_OFF, par
 describe("icon hints", () => {
   it("reads the chosen counts, falling back to the defaults", () => {
     expect(parseIconHints(null)).toEqual(DEFAULT_ICON_HINTS);
-    expect(parseIconHints({ backlog: -1, shopping: 10 })).toEqual({ backlog: -1, shopping: 10 });
+    expect(parseIconHints({ backlog: -1, shopping: 0 })).toEqual({ backlog: -1, shopping: 0 });
+    expect(DEFAULT_ICON_HINTS).toEqual({ backlog: 1, shopping: 1 });
     expect(parseIconHints({ backlog: 4, shopping: "5" })).toEqual(DEFAULT_ICON_HINTS);
   });
 
@@ -13,6 +14,8 @@ describe("icon hints", () => {
     expect(hintCount(5, 5)).toBe(5);
     expect(hintCount(12, 5)).toBe(12);
     expect(hintCount(0, 0)).toBe(0);
+    expect(hintCount(0, 1)).toBeUndefined();
+    expect(hintCount(1, 1)).toBe(1);
     expect(hintCount(40, HINT_OFF)).toBeUndefined();
     expect(hintCountLabel(7)).toBe("7");
     expect(hintCountLabel(120)).toBe("99+");

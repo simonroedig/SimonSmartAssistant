@@ -96,11 +96,17 @@ test("menu icons: a quiet count – always or from the chosen number on – and 
   await expect(menu(page).getByRole("link", { name: "Backlog" }).locator('[data-hint="star"]')).toBeVisible();
   await item.getByRole("button", { name: "Remove star" }).click();
 
-  // Always (the default): the number is there whatever it is – 0 too.
+  // Always: the number is there whatever it is – 0 too.
   await openSettings(page);
   await pickCount(page, "Shopping count", "Always");
   await expect(menu(page).getByRole("link", { name: "Shopping" }).locator('[data-hint="count"]')).toHaveAttribute(
     "data-count",
     /^\d\+?$/,
+  );
+  // Back to the default: from 1 on.
+  await pickCount(page, "Shopping count", "1+");
+  await expect(menu(page).getByRole("link", { name: "Shopping" }).locator('[data-hint="count"]')).toHaveAttribute(
+    "data-count",
+    /^[1-9]\+?$/,
   );
 });
