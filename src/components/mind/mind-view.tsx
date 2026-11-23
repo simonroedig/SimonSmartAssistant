@@ -13,6 +13,7 @@ import type { MindItem, Note } from "@/data/core";
 import { useMind } from "@/data/mind";
 import { prepareNote, useAddNote, useNotes, useUpdateNote } from "@/data/notes";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useScrollReset } from "@/hooks/use-scroll-reset";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useToday } from "@/hooks/use-today";
@@ -90,6 +91,7 @@ export function MindView({ initialTab }: { initialTab?: string }) {
     phone && sheet === null,
   );
   const row = useScrollToPressed(tab);
+  const scroller = useScrollReset(tab);
   const count: Record<MindTab, number> = { cards: cards.length, videos: videos.length, letgo: letGoOpen };
 
   const open = (kind: MindKind, item: MindItem | null) => setSheet({ kind, item });
@@ -133,7 +135,7 @@ export function MindView({ initialTab }: { initialTab?: string }) {
           </div>
 
           {/* Phones: this part scrolls (room at its end for the + button). */}
-          <div className="relative [touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-24">
+          <div ref={scroller} className="relative [touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-24">
             <motion.div
               key={tab}
               initial={{ opacity: 0, x: shown.direction * 28 }}

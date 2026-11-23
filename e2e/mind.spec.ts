@@ -47,6 +47,13 @@ test("mind: a reminder as a card – highlighted and italic words, today's on a 
   await page.getByRole("button", { name: "Today's" }).click();
   await expect(deckTitle).toBeVisible();
 
+  // Scrolled down, the next tab still starts at its top.
+  const scroller = page.locator(".max-md\\:overflow-y-auto").first();
+  await scroller.evaluate((el) => (el.scrollTop = 400));
+  await page.getByRole("tab", { name: /Videos/ }).click();
+  await expect.poll(() => scroller.evaluate((el) => el.scrollTop)).toBe(0);
+  await page.getByRole("tab", { name: /Reminders/ }).click();
+
   // A tap opens it to change; closing saves.
   await card.click();
   const edit = page.getByRole("dialog", { name: "Reminder" });

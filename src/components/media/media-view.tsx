@@ -13,6 +13,7 @@ import type { MediaTitle } from "@/data/core";
 import { useLiveStatus, useMedia } from "@/data/media";
 import { liveCheckFor } from "@/lib/live";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useScrollReset } from "@/hooks/use-scroll-reset";
 import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useSwipe } from "@/hooks/use-swipe";
 import {
@@ -109,6 +110,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
     phone && !adding && openId === null,
   );
   const row = useScrollToPressed(tab);
+  const scroller = useScrollReset(tab);
 
   return (
     // Phones: the title and the tabs stay; only the list below them scrolls (like the notes).
@@ -157,7 +159,7 @@ export function MediaView({ initialTab }: { initialTab?: string }) {
           </div>
 
           {/* Phones: this part scrolls (room at its end for the + button). */}
-          <div className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-24">
+          <div ref={scroller} className="[touch-action:pan-y] max-md:-mx-4 max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pb-24">
             <motion.div
               key={tab}
               initial={{ opacity: 0, x: shown.direction * 28 }}
