@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Eraser, Plus, ShoppingBasket, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Eraser, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ShoppingIcon } from "@/components/shell/hint-icons";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -247,7 +248,7 @@ export function ShoppingList({
           </div>
         ) : open.length === 0 && done.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center text-muted">
-            <ShoppingBasket className="size-8 text-faint" />
+            <ShoppingIcon className="size-8 text-faint" />
             <p className="text-sm">Nothing to buy. Enjoy the free fridge space.</p>
           </div>
         ) : (
@@ -331,7 +332,7 @@ export function ShoppingList({
   if (variant === "card") {
     return (
       <Card className={cn("overflow-hidden", className)}>
-        <CardHeader icon={<ShoppingBasket />} title="Shopping" count={open.length} tone="emerald" href="/shopping" />
+        <CardHeader icon={<ShoppingIcon />} title="Shopping" count={open.length} tone="emerald" href="/shopping" />
         <div className={cn("px-4 pb-4", !limit && "min-h-0 flex-1 overflow-y-auto")}>{body}</div>
       </Card>
     );

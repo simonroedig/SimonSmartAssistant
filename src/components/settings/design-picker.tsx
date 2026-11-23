@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, ShoppingBasket } from "lucide-react";
+import { Check } from "lucide-react";
+import { ShoppingIcon } from "@/components/shell/hint-icons";
 import { DESIGNS } from "@/lib/designs";
 import type { DesignId } from "@/lib/device";
 import { TONE_STYLES } from "@/lib/tones";
@@ -42,7 +43,7 @@ export function DesignPicker({ value, onChange }: { value: DesignId; onChange: (
                       TONE_STYLES.emerald.text,
                     )}
                   >
-                    <ShoppingBasket />
+                    <ShoppingIcon />
                   </span>
                   <span className="ui-title truncate text-[0.8rem] font-semibold text-fg">Shopping</span>
                 </span>

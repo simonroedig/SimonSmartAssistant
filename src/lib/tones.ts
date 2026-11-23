@@ -61,10 +61,10 @@ export const TONE_STYLES: Record<
 };
 
 /**
- * A picked day: grey with a thin frame – always the most visible day. Frames that mark
- * something (a picked day, a starred item, a pinned note) are all 1px; only the colour differs.
+ * A picked day: grey with a clear 2px frame – always the most visible day. Frames that mark
+ * something (a picked day, a starred item, a pinned note) are all 2px; only the colour differs.
  */
-export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-1 ring-slate-400/55 ring-inset dark:ring-white/40";
+export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-2 ring-slate-400/55 ring-inset dark:ring-white/40";
 /**
  * "Now" / "Today" (weather hours and days, the planner's week strip and
  * calendars): quietly marked with a light tint and its label or number in the
@@ -114,18 +114,20 @@ export const FIELD_FOCUS = {
 
 /** A starred backlog item: the star filled in the backlog's yellow. */
 export const STAR_ON = "fill-current text-yellow-500 dark:text-yellow-300";
-/** …and its row: framed and tinted in the same yellow, so it stands out. */
-export const STARRED_ROW =
-  "border-yellow-500/60 bg-yellow-400/[0.09] dark:border-yellow-300/45 dark:bg-yellow-300/[0.06]";
 /**
- * …and its sheet, opened: the same yellow frame while "Important" is on (follows the
- * switch inside, marked `data-star`).
+ * …and its row: framed (2px – its 1px border plus a 1px ring inside, so nothing moves) and
+ * tinted in the same yellow, so it stands out.
  */
-export const STARRED_SHEET =
-  "has-[[data-star][aria-pressed=true]]:border-yellow-500/60 dark:has-[[data-star][aria-pressed=true]]:border-yellow-300/45";
+export const STARRED_ROW =
+  "border-yellow-500/60 ring-1 ring-yellow-500/60 ring-inset bg-yellow-400/[0.09] dark:border-yellow-300/45 dark:ring-yellow-300/45 dark:bg-yellow-300/[0.06]";
+/** …and its sheet, opened (`Sheet`'s `frame`). */
+export const STARRED_FRAME = "border-yellow-500/60 dark:border-yellow-300/45";
 
-/** A pinned note: framed in the notes' orange – on its card and in its sheet. */
+/** A pinned note's sheet, opened: framed in the notes' orange (`Sheet`'s `frame`). */
 export const PINNED_FRAME = "border-orange-400/90 dark:border-orange-300/75";
+/** …and its card: the same 2px frame (border plus a ring inside). */
+export const PINNED_CARD =
+  "border-orange-400/90 ring-1 ring-orange-400/90 ring-inset dark:border-orange-300/75 dark:ring-orange-300/75";
 
 /**
  * A section's add button: solid in the section's colour once there is something

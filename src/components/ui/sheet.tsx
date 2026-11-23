@@ -66,6 +66,7 @@ export function Sheet({
   footer,
   className,
   size = "md",
+  frame,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -76,6 +77,11 @@ export function Sheet({
   className?: string;
   /** Width on larger screens; "half" is about half the screen (e.g. for writing notes). */
   size?: "sm" | "md" | "lg" | "half";
+  /**
+   * A 2px frame in this colour (border-colour classes) – a starred item, a pinned note. On a
+   * phone it fades out towards the bottom, where the screen's own rounded corners would cut it.
+   */
+  frame?: string;
 }) {
   const isPhone = useMediaQuery("(max-width: 767px)");
   const dragControls = useDragControls();
@@ -120,7 +126,8 @@ export function Sheet({
               >
                 <motion.div
                   className={cn(
-                    "pointer-events-auto flex max-h-[min(88dvh,100%)] w-full flex-col overflow-hidden glass-strong outline-none",
+                    "pointer-events-auto relative flex max-h-[min(88dvh,100%)] w-full flex-col overflow-hidden glass-strong outline-none",
+                    frame && "border-transparent",
                     isPhone
                       ? "rounded-t-(--radius-card) border-b-0 pb-[var(--safe-bottom)]"
                       : cn(
@@ -143,6 +150,17 @@ export function Sheet({
                   dragListener={false}
                   onDragEnd={onDragEnd}
                 >
+                  {frame && (
+                    <div
+                      aria-hidden="true"
+                      data-sheet-frame
+                      className={cn(
+                        "pointer-events-none absolute inset-0 z-10 rounded-[inherit] border-2",
+                        frame,
+                        isPhone && "border-b-0 [mask-image:linear-gradient(to_bottom,#000_45%,transparent_90%)]",
+                      )}
+                    />
+                  )}
                   {isPhone && (
                     <div
                       className="flex shrink-0 cursor-grab touch-none justify-center pt-3 pb-1 active:cursor-grabbing"

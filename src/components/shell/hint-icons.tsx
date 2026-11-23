@@ -76,21 +76,26 @@ export function BacklogIcon({ star, count, ...props }: IconProps & { star?: bool
   );
 }
 
+/**
+ * Lucide's basket, a little taller (rim at 9 instead of 11), so a number fits inside with room
+ * above and below; drawn this way with and without the number, so it doesn't jump.
+ */
 export function ShoppingIcon({ count, ...props }: IconProps & { count?: number }) {
   return (
     <Svg {...props}>
-      <path d="M2 11h20" />
-      <path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.7-7.4" />
-      <path d="m19 11-4-7" />
-      <path d="m5 11 4-7" />
+      <path d="M2 9h20" />
+      <path d="m3.5 9 1.8 9.4a2 2 0 0 0 2 1.6h9.4a2 2 0 0 0 2-1.6l1.8-9.4" />
+      <path d="m19 9-4-5.5" />
+      <path d="m5 9 4-5.5" />
       {count !== undefined ? (
-        // The handles stay; the number takes the place of the weave, centred in the basket.
-        <Count x={12} y={16.1} value={count} size={8.6} />
+        // The number takes the place of the weave. Its ink sits ~0.7 above y, so this puts it a
+        // touch above the middle of the basket (9–20) – optically centred, as the basket narrows.
+        <Count x={12} y={14.85} value={count} size={9} />
       ) : (
         <>
-          <path d="m15 11-1 9" />
-          <path d="M4.5 15.5h15" />
-          <path d="m9 11 1 9" />
+          <path d="m15 9-1 11" />
+          <path d="M4.6 14.5h14.8" />
+          <path d="m9 9 1 11" />
         </>
       )}
     </Svg>

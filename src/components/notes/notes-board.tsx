@@ -41,7 +41,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSwipe } from "@/hooks/use-swipe";
 import { PALETTE } from "@/lib/palette";
 import { positionAtStart, positionForMove } from "@/lib/ordering";
-import { FIELD_FOCUS, PINNED_FRAME, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
+import { FIELD_FOCUS, PINNED_CARD, PINNED_FRAME, TOAST_TONE, TONE_STYLES } from "@/lib/tones";
 import { cn } from "@/lib/utils";
 import { lockVault, useVaultOpen } from "@/lib/vault";
 import { formatDayMonthShort } from "@/lib/date";
@@ -107,7 +107,7 @@ function NoteCard({
         // Pinned: framed in the notes' orange, so it stands out – pin only what matters.
         note.pinned
           ? cn(
-              PINNED_FRAME,
+              PINNED_CARD,
               "bg-orange-500/[0.07] hover:border-orange-500 dark:bg-orange-400/[0.08] dark:hover:border-orange-300",
             )
           : "hover:border-line-strong",
@@ -1233,7 +1233,8 @@ function NoteEditorSheet({
       open={open}
       onOpenChange={(o) => !o && close()}
       title={note ? "Note" : placement.vault ? "New note in the vault" : "New note"}
-      className={cn(FIELD_FOCUS.orange, pinned && PINNED_FRAME)}
+      className={FIELD_FOCUS.orange}
+      frame={pinned ? PINNED_FRAME : undefined}
       size="half"
       footer={
         <>

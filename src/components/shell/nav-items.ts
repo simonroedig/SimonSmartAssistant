@@ -1,22 +1,19 @@
-import {
-  CalendarClock,
-  CloudSun,
-  House,
-  ListTodo,
-  Popcorn,
-  Settings2,
-  ShoppingBasket,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarClock, CloudSun, House, ListTodo, Popcorn, Settings2, StickyNote } from "lucide-react";
+import type { ComponentType } from "react";
 import type { SectionId } from "@/lib/navigation";
+import { ShoppingIcon } from "./hint-icons";
 import type { Tone } from "@/lib/tones";
 
-export type NavItem = { href: string; label: string; icon: LucideIcon; tone: Tone };
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+  tone: Tone;
+};
 
 export const HOME_ITEM: NavItem = { href: "/", label: "Home", icon: House, tone: "accent" };
 export const PLANNER_ITEM: NavItem = { href: "/planner", label: "Planner", icon: CalendarClock, tone: "rose" };
-export const SHOPPING_ITEM: NavItem = { href: "/shopping", label: "Shopping", icon: ShoppingBasket, tone: "emerald" };
+export const SHOPPING_ITEM: NavItem = { href: "/shopping", label: "Shopping", icon: ShoppingIcon, tone: "emerald" };
 export const BACKLOG_ITEM: NavItem = { href: "/todos", label: "Backlog", icon: ListTodo, tone: "yellow" };
 export const NOTES_ITEM: NavItem = { href: "/notes", label: "Notes", icon: StickyNote, tone: "orange" };
 export const WEATHER_ITEM: NavItem = { href: "/weather", label: "Weather", icon: CloudSun, tone: "sky" };
