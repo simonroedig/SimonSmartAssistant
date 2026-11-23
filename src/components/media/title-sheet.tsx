@@ -1,5 +1,6 @@
 "use client";
 
+import { useScrollToPressed } from "@/hooks/use-scroll-to-pressed";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUp,
@@ -141,6 +142,8 @@ function SeriesProgress({ title }: { title: MediaTitle }) {
   const [season, setSeason] = useState<number | null>(null);
   const [catchUp, setCatchUp] = useState<string[]>([]);
   const shown = season ?? state.next?.season ?? seasons.at(-1) ?? 1;
+  // The season being watched scrolls into view (e.g. season 9 of 9), also once the list arrives.
+  const seasonRow = useScrollToPressed(`${shown}/${seasons.length}`);
   const next = state.next;
 
   return (
@@ -183,7 +186,7 @@ function SeriesProgress({ title }: { title: MediaTitle }) {
             />
           </div>
           {/* Scrolls sideways itself: a swipe here doesn't do anything else. */}
-          <div className="-mx-1 mt-2 no-scrollbar flex gap-1.5 overflow-x-auto px-1 pb-1" data-swipe>
+          <div ref={seasonRow} className="-mx-1 mt-2 no-scrollbar flex gap-1.5 overflow-x-auto px-1 pb-1" data-swipe>
             {seasons.map((s) => {
               const eps = state.episodes!.filter((e) => e.season === s);
               const all = eps.every((e) => state.watched.has(episodeKey(e.season, e.number)));
