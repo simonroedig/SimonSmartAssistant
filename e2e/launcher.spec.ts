@@ -129,6 +129,16 @@ test("launcher: Home switches to the apps; open, search and come back with the h
     (window as unknown as { __launcherEmit: (e: unknown) => void }).__launcherEmit({ type: "home" }),
   );
   await expect(page).toHaveURL(/\/apps$/);
+  // Back from another app, though, everything stays where it was.
+  await tabs.getByRole("link", { name: "Planner" }).click();
+  await expect(page).toHaveURL(/\/planner$/);
+  await page.evaluate(() =>
+    (window as unknown as { __launcherEmit: (e: unknown) => void }).__launcherEmit({ type: "home", returning: true }),
+  );
+  await page.waitForTimeout(400);
+  await expect(page).toHaveURL(/\/planner$/);
+  await tabs.getByRole("link", { name: "Apps" }).click();
+  await expect(page).toHaveURL(/\/apps$/);
 
   // Tapping it on the apps flips back to the home screen – and that sticks the same way.
   await tabs.getByRole("link", { name: "Apps" }).click();
