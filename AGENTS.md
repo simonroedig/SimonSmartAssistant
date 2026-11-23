@@ -22,7 +22,7 @@ Private dashboard for one user: wall touch display (Raspberry Pi kiosk), phone P
 - **Security model:** every table has `user_id uuid default auth.uid()`, RLS policies
   `(select auth.uid()) = user_id`, explicit `grant … to authenticated`, nothing for `anon`.
   New tables must follow this pattern (see `supabase/migrations/20261006120000_init.sql`) and get a
-  case in `tests/integration/security.test.ts`. Never use the service-role/secret key in the app.
+  case in `tests/integration/security.test.ts`, and go into `BACKUP_TABLES` (`src/lib/backup.ts`; a unit test checks). Never use the service-role/secret key in the app.
 - **Schema changes:** add a new timestamped file in `supabase/migrations/` (never edit applied ones),
   run `npx supabase db reset`, then `npm run db:types`. Bulk inserts: pass full rows or
   `{ defaultToNull: false }`.

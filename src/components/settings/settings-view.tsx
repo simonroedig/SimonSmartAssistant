@@ -21,6 +21,7 @@ import { formatLocationLong } from "@/lib/weather/open-meteo";
 import { Passkeys } from "./passkeys";
 import { BlockedAppsSection, LauncherSection } from "@/components/launcher/launcher-widgets";
 import { VaultSection } from "@/components/notes/vault-settings";
+import { BackupSection } from "./backup-section";
 import { BriefingSection } from "./briefing-settings";
 import { BirthdaysSection, HolidaysSection, useCalendarPreferences } from "./calendar-settings";
 import { DesignPicker } from "./design-picker";
@@ -73,6 +74,7 @@ export function SettingsView() {
       <PageHeader title="Settings" subtitle={email ?? undefined} />
       <PageBody className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
         <div className="flex flex-col gap-4">
+          <BackupSection />
           <Section icon={<MapPin />} title="Weather location" description="Used for the forecast and sunrise/sunset.">
             {settingsLoading ? (
               <div className="skeleton h-12" />
