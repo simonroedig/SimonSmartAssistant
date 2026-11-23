@@ -60,8 +60,11 @@ export const TONE_STYLES: Record<
   },
 };
 
-/** A picked day: grey with a clear ring – always the most visible day. */
-export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-2 ring-slate-400/55 ring-inset dark:ring-white/40";
+/**
+ * A picked day: grey with a thin frame – always the most visible day. Frames that mark
+ * something (a picked day, a starred item, a pinned note) are all 1px; only the colour differs.
+ */
+export const SELECTED_DAY = "bg-surface-hover shadow-sm ring-1 ring-slate-400/55 ring-inset dark:ring-white/40";
 /**
  * "Now" / "Today" (weather hours and days, the planner's week strip and
  * calendars): quietly marked with a light tint and its label or number in the

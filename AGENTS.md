@@ -57,6 +57,9 @@ Learned over many rounds – following these saves going back and forth.
   `src/lib/note-drafts.ts`); a failed save says so in amber and offers to save again – never a silent rollback.
 - **Colours:** each section has its tone (`src/lib/tones.ts`); app-wide things use the accent, not sky blue (that
   clashes with the weather). Unsure or failed states are amber and say why – never silent, never a wrong yes.
+- **Consistent marks:** one look per kind of mark across the app. Frames that highlight something (picked day,
+  starred item, pinned note – closed and opened) are all 1px, only their colour differs (`src/lib/tones.ts`); a new
+  highlight reuses them instead of a second outline style.
 - **Spare resources:** check or fetch only while something is on screen, cache it, keep stored history short
   (briefings: 14 days).
 - **Pragmatic:** the simplest thing that works well; no new packages without need; make it extensible only where
