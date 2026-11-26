@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Play } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
 import type { MindItem } from "@/data/core";
 import { styledParts, videoInfo } from "@/lib/mind";
 import { TODAY_CARD, TONE_STYLES } from "@/lib/tones";
@@ -31,9 +32,33 @@ export function StyledText({ text }: { text: string }) {
   );
 }
 
+/** The text's biggest size that fits its box: from 1.6rem down to 0.85rem, again when the box resizes. */
+function useFitText(on: boolean, content: string) {
+  const box = useRef<HTMLSpanElement>(null);
+  const text = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const outer = box.current;
+    const inner = text.current;
+    if (!on || !outer || !inner) return;
+    const fit = () => {
+      let size = 1.6;
+      inner.style.fontSize = `${size}rem`;
+      while (size > 0.85 && inner.offsetHeight > outer.clientHeight) {
+        size = Math.round((size - 0.05) * 100) / 100;
+        inner.style.fontSize = `${size}rem`;
+      }
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(outer);
+    return () => observer.disconnect();
+  }, [on, content]);
+  return { box, text };
+}
+
 /**
  * A reminder as a card: a title, the text, and who said it in small capitals. `large`
- * for flipping through them (the one for today framed); small
+ * for flipping through them (always the same size; the one for today framed); small
  * ones (the list) can be cut after a few lines (`clamp`).
  */
 export function ReminderCard({
@@ -53,6 +78,7 @@ export function ReminderCard({
   className?: string;
 }) {
   const Tag = onOpen ? "button" : "div";
+  const { box, text } = useFitText(large, `${card.title}\n${card.body}`);
   return (
     <Tag
       {...(onOpen ? { type: "button" as const, onClick: onOpen } : {})}
@@ -65,41 +91,65 @@ export function ReminderCard({
             )
           : "bg-[linear-gradient(150deg,color-mix(in_oklab,var(--color-teal-400)_13%,transparent),transparent_55%)]",
         large
-          ? "rounded-(--radius-card) px-6 pt-8 pb-6 text-center md:px-10 md:pt-9 md:pb-7"
+          ? "flex flex-col rounded-(--radius-card) px-6 pt-9 pb-6 text-center md:px-10 md:pt-10 md:pb-7"
           : "rounded-2xl px-3.5 pt-3 pb-3",
         onOpen && "transition-[filter,scale] hover:brightness-[1.04] active:scale-[0.99]",
         className,
       )}
     >
-      {card.title && (
+      {large ? (
+        // A fixed size: the text takes the biggest type that still fits (and scrolls if even
+        // the smallest doesn't), centred in the card.
+        <span ref={box} className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none]">
+          <span ref={text} className="my-auto block text-[1.6rem]">
+            {card.title && (
+              <span className="block text-[1.3em] leading-tight font-semibold tracking-tight text-balance">
+                {card.title}
+              </span>
+            )}
+            <span
+              className={cn(
+                "block leading-relaxed whitespace-pre-line text-fg/90 [overflow-wrap:anywhere]",
+                card.title && "mt-[0.5em]",
+              )}
+            >
+              <StyledText text={card.body} />
+            </span>
+          </span>
+        </span>
+      ) : (
+        <>
+        {card.title && (
+          <span
+            className={cn(
+              "block font-semibold tracking-tight text-balance",
+              card.number != null && "pr-5",
+              "text-[0.95rem] leading-snug",
+            )}
+          >
+            {card.title}
+          </span>
+        )}
         <span
           className={cn(
-            "block font-semibold tracking-tight text-balance",
-            card.number != null && !large && "pr-5",
-            large ? "text-[1.5rem] leading-tight md:text-[1.8rem]" : "text-[0.95rem] leading-snug",
+            "block whitespace-pre-line [overflow-wrap:anywhere]",
+            card.title && (large ? "mt-2.5" : "mt-1"),
+            !card.title && card.number != null && !large && "pr-5",
+            large
+              ? "text-[1.1rem] leading-relaxed text-fg/90 md:text-[1.25rem]"
+              : "text-[0.85rem] leading-snug text-fg/80",
+            clamp && "line-clamp-6",
           )}
         >
-          {card.title}
+          <StyledText text={card.body} />
         </span>
+        </>
       )}
-      <span
-        className={cn(
-          "block whitespace-pre-line [overflow-wrap:anywhere]",
-          card.title && (large ? "mt-2.5" : "mt-1"),
-          !card.title && card.number != null && !large && "pr-5",
-          large
-            ? "text-[1.1rem] leading-relaxed text-fg/90 md:text-[1.25rem]"
-            : "text-[0.85rem] leading-snug text-fg/80",
-          clamp && "line-clamp-6",
-        )}
-      >
-        <StyledText text={card.body} />
-      </span>
       {card.source && (
         <span
           className={cn(
             "block font-semibold text-faint uppercase",
-            large ? "mt-4 text-[0.7rem] tracking-[0.14em]" : "mt-2 truncate text-[0.62rem] tracking-[0.1em]",
+            large ? "mt-4 shrink-0 text-[0.7rem] tracking-[0.14em]" : "mt-2 truncate text-[0.62rem] tracking-[0.1em]",
           )}
         >
           — {card.source}

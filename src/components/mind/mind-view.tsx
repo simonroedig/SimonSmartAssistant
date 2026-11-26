@@ -340,7 +340,8 @@ function DeckCard({
   return (
     <motion.div
       ref={ref}
-      className="relative z-10"
+      // Always the same size, like a deck of cards: half the screen and more.
+      className="relative z-10 h-[clamp(18rem,58dvh,32rem)]"
       style={{ x, rotate }}
       variants={deckMotion}
       initial="enter"
@@ -362,7 +363,7 @@ function DeckCard({
         large
         today={today}
         onOpen={() => !dragged.current && onOpen()}
-        className="cursor-grab active:cursor-grabbing"
+        className="h-full cursor-grab active:cursor-grabbing"
       />
     </motion.div>
   );
