@@ -100,7 +100,12 @@ export function ReminderCard({
       {large ? (
         // A fixed size: the text takes the biggest type that still fits (and scrolls if even
         // the smallest doesn't), centred in the card.
-        <span ref={box} className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none]">
+        <span
+          ref={box}
+          // Only up and down here: a sideways swipe stays the card's (a scroll box would otherwise
+          // hand it to the browser, and the swipe would stop halfway).
+          className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto [scrollbar-width:none]"
+        >
           <span ref={text} className="my-auto block text-[1.6rem]">
             {card.title && (
               <span className="block text-[1.3em] leading-tight font-semibold tracking-tight text-balance">

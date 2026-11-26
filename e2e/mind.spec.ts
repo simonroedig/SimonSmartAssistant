@@ -170,3 +170,32 @@ test("mind: Let go – + for a situation, check it off, the done ones as a list 
   await page.getByRole("button", { name: "New category" }).click();
   await expect(page.getByText("Or something special")).toHaveCount(0);
 });
+
+test.describe("on a touch screen", () => {
+  test.use({ hasTouch: true, isMobile: true });
+
+  test("mind: swipe after swipe flips the cards – every one counts, also with long texts", async ({ page }) => {
+    await page.goto("/mind");
+    const stamp = Date.now() % 100000;
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole("button", { name: "New reminder" }).click();
+      // Long enough that the card's text box scrolls.
+      await page.keyboard.type(`Swipe ${i} ${stamp} ` + "quiet words ".repeat(60));
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("button", { name: new RegExp(`^Swipe ${i} ${stamp}`) }).last()).toBeVisible();
+    }
+    const total = Number(/\d+/.exec((await page.getByRole("heading", { name: /^All reminders/ }).textContent())!)![0]);
+    const cdp = await page.context().newCDPSession(page);
+    for (let n = 2; n <= 4; n++) {
+      const box = (await page.locator("[data-swipe] .z-10:not(.pointer-events-none)").boundingBox())!;
+      const [x, y] = [box.x + box.width * 0.75, box.y + box.height / 2];
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+      for (let k = 1; k <= 8; k++) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x - k * 30, y: y + k }] });
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await expect(page.getByText(new RegExp(`^${n} of ${total}$`))).toBeVisible();
+    }
+    await expect(page.getByRole("tab", { name: /Reminders/ })).toHaveAttribute("aria-selected", "true");
+  });
+});

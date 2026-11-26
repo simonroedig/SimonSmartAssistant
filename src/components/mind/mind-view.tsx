@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Quote, SquarePlay, Undo2, Wind } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { AnimatePresence, motion, useMotionValue, useTransform } from "motion/react";
+import { AnimatePresence, motion, useIsPresent, useMotionValue, useTransform } from "motion/react";
 import { type Ref, useMemo, useRef, useState } from "react";
 import { TemplateView } from "@/components/notes/template-note";
 import { FILL_BODY, FillPage, PageBody, PageHeader } from "@/components/shell/page-header";
@@ -337,11 +337,13 @@ function DeckCard({
   // A drag isn't a tap: no editing when the finger (or mouse) lets go. Marked as soon as
   // it starts – the click comes before the drag's end is reported.
   const dragged = useRef(false);
+  // Flying off, it no longer takes touches: the next swipe is for the card coming up.
+  const present = useIsPresent();
   return (
     <motion.div
       ref={ref}
       // Always the same size, like a deck of cards: half the screen and more.
-      className="relative z-10 h-[clamp(18rem,58dvh,32rem)]"
+      className={cn("relative z-10 h-[clamp(18rem,58dvh,32rem)]", !present && "pointer-events-none")}
       style={{ x, rotate }}
       variants={deckMotion}
       initial="enter"
