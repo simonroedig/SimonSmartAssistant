@@ -342,8 +342,9 @@ function DeckCard({
   return (
     <motion.div
       ref={ref}
-      // Always the same size, like a deck of cards: half the screen and more.
-      className={cn("relative z-10 h-[clamp(18rem,58dvh,32rem)]", !present && "pointer-events-none")}
+      // Always the same size, like a deck of cards – ending about three quarters down the screen,
+      // so the list peeks out below (and leaves room to swipe to the next tab).
+      className={cn("relative z-10 h-[clamp(16rem,calc(72dvh-12rem),32rem)]", !present && "pointer-events-none")}
       style={{ x, rotate }}
       variants={deckMotion}
       initial="enter"
