@@ -10,7 +10,7 @@ export const DESIGNS: { id: DesignId; name: string; description: string }[] = [
   {
     id: "sky",
     name: "Aurora Sky",
-    description: "The sky over your city, live: sun and moon, the time of day and the weather",
+    description: "The sky over your city, live: the sun, the time of day and the weather",
   },
   {
     id: "studio",

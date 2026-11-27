@@ -45,17 +45,18 @@ test("Aurora Sky: the sky follows time and weather, and leaves nothing behind wh
   const html = page.locator("html");
   await expect(html).toHaveAttribute("data-design", "sky");
 
-  // Home: the full scene around the clock (sun or moon, horizon), the weather on <html>.
+  // Home: the full scene around the clock (the horizon; the sun by day), the weather on <html>.
   await page.getByRole("link", { name: "Home" }).first().click();
   await expect(html).toHaveAttribute("data-sky", "partly");
   const sky = () => page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-sky"));
   const sun = () => page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-sun"));
-  await expect.poll(sun).toContain("circle at");
-  expect(await page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-ground"))).toContain("rgb");
+  const ground = () => page.evaluate(() => document.documentElement.style.getPropertyValue("--hz-ground"));
+  await expect.poll(ground).toContain("rgb");
 
   // Another section: only the mood at the top.
   await page.goto("/shopping");
-  await expect.poll(sun).not.toContain("circle at");
+  await expect.poll(ground).not.toContain("rgb");
+  expect(await sun()).not.toContain("circle at");
   await expect.poll(sky).toContain("linear-gradient");
 
   // Back to Aurora: none of the sky's colours stay on the page.

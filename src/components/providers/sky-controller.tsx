@@ -13,6 +13,12 @@ import { CALM_LAYOUT, computeSky, SKY_VARS, skyWeather, type SkyLayout } from "@
 import { isoToMinutes } from "@/lib/weather/open-meteo";
 
 /**
+ * The moon at night: switched off for now – behind the clock tile's frosted glass it was
+ * only a blur next to the date. The night sky keeps its colours (true brings it back).
+ */
+const SHOW_MOON = false;
+
+/**
  * Aurora Sky: keeps the sky on <html> in step with the time, the sun, the weather
  * and light/dark (once a minute, and whenever one of them changes). Draws nothing
  * itself; only active while that design is chosen on this device.
@@ -56,7 +62,7 @@ function Sky() {
       temperature: fresh ? forecast.current.temperature : null,
       dark,
       layout,
-      moon: moonPhase(now),
+      moon: SHOW_MOON ? moonPhase(now) : null,
     });
     const root = document.documentElement;
     for (const [name, value] of Object.entries(sky.vars)) root.style.setProperty(name, value);

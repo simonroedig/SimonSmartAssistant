@@ -72,6 +72,15 @@ describe("computeSky", () => {
     expect(at(777, true)).not.toBe(at(777));
   });
 
+  it("leaves the moon out when asked to – the night sky and its stars stay", () => {
+    const night = computeSky({ ...base, minutes: 1390, dark: true, moon: null });
+    expect(night.vars["--hz-sun"]).toBe("linear-gradient(transparent, transparent)");
+    expect(Number(night.vars["--hz-stars"])).toBeGreaterThan(0);
+    expect(night.vars["--hz-ground"]).toContain("rgb");
+    // By day the sun is there all the same.
+    expect(body(computeSky({ ...base, moon: null }))).not.toBeNull();
+  });
+
   it("keeps other pages calm: no sun disc, no ground", () => {
     const calm = computeSky({ ...base, layout: CALM_LAYOUT });
     expect(calm.vars["--hz-sky"]).not.toContain("circle at");

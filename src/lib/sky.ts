@@ -54,8 +54,8 @@ export type SkyInput = {
   temperature?: number | null;
   dark: boolean;
   layout: SkyLayout;
-  /** The moon's phase (0 new, 0.5 full – see src/lib/moon.ts); a full moon without it. */
-  moon?: number;
+  /** The moon's phase (0 new, 0.5 full – see src/lib/moon.ts); a full moon without it, none with null. */
+  moon?: number | null;
 };
 
 type RGB = [number, number, number];
@@ -208,7 +208,7 @@ export function computeSky({
       body.push(
         `radial-gradient(circle at ${pct(gx)} ${pct(gy)}, ${rgb(core, g)} 0 calc(${disc} * var(--vmax)), ${rgb(glow, 0.55 * g)} calc(${disc + 0.3} * var(--vmax)), ${rgb(glow, 0.18 * g)} calc(${disc * 4} * var(--vmax)), transparent calc(${disc * 10} * var(--vmax)))`,
       );
-    } else {
+    } else if (moon !== null) {
       const clear = w === "clear" || w === "partly";
       const disc = land ? 1.5 : 2.2;
       // Its phase: the night sky's own colour covers the unlit part – from the left while
@@ -230,7 +230,7 @@ export function computeSky({
     }
     // The sun or moon in its own layer: cut off at the horizon (the top of the first
     // card below the clock), so it sets behind that card and never shines through cards.
-    vars["--hz-sun"] = body.join(",");
+    vars["--hz-sun"] = body.length ? body.join(",") : NONE;
     vars["--hz-sky"] = `linear-gradient(180deg, ${rgb(top)} 0%, ${rgb(mid)} ${pct(H * 0.6)}, ${rgb(hor)} ${pct(H)})`;
     // Below the horizon the sky flows softly into a calm ground the cards sit on
     // (no edge, no lines); the setting sun sinks into it.
